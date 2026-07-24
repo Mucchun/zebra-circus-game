@@ -3339,7 +3339,59 @@ function buildScene() {
   // Spectators live only on the bleachers (upgradeSeatedAudience). The old
   // floor-ring crowd near the center is intentionally not spawned.
   upgradePropVisuals();
+  upgradeBleachers();
   upgradeSeatedAudience();
+}
+
+// Replace the procedural ring bleachers with a Meshy-generated wooden
+// grandstand section, tiled around the arena. Plain game mode only.
+function upgradeBleachers() {
+  if (typeof STUDIO_AUTHORING_MODE !== 'undefined' && STUDIO_AUTHORING_MODE) return;
+  const oldIds = [...BLEACHER_SEAT_IDS, ...BLEACHER_RISER_IDS, ...BLEACHER_STRUT_IDS];
+  const hideOld = () => oldIds.forEach((id) => {
+    const t = editableObjects.get(id);
+    if (t) t.traverse((o) => { if (o.isMesh) o.visible = false; });
+  });
+  const loader = new THREE.GLTFLoader();
+  loader.load('models/props/bleacher-wood.glb', (gltf) => {
+    // The scene document applies asynchronously and re-shows authored meshes;
+    // hide the old procedural rings now and re-assert a few times.
+    hideOld();
+    [400, 1200, 3000, 6000].forEach((d) => setTimeout(hideOld, d));
+
+    const N = 22;                 // segments around the ring
+    const R_MID = 16.6;           // radial center of the stand
+    const TARGET_H = 3.2;         // full height of the stand
+    const TARGET_DEPTH = 6.2;     // radial depth (front bench -> back wall)
+
+    const base = gltf.scene;
+    const box0 = new THREE.Box3().setFromObject(base);
+    const size0 = box0.getSize(new THREE.Vector3());
+    // Model axes: X = width (tiling), Y = height, Z = depth (radial).
+    const arcWidth = (2 * Math.PI * R_MID) / N * 1.06; // slight overlap, no gaps
+    const sx = arcWidth / size0.x;
+    const sy = TARGET_H / size0.y;
+    const sz = TARGET_DEPTH / size0.z;
+
+    for (let i = 0; i < N; i++) {
+      const ang = (i / N) * Math.PI * 2;
+      const seg = base.clone(true);
+      seg.scale.set(sx, sy, sz);
+      // Rest on the ground and center its depth on R_MID.
+      const b = new THREE.Box3().setFromObject(seg);
+      const c = b.getCenter(new THREE.Vector3());
+      const grp = new THREE.Group();
+      grp.add(seg);
+      seg.position.x -= c.x;
+      seg.position.z -= c.z;
+      seg.position.y -= b.min.y;
+      grp.position.set(Math.cos(ang) * R_MID, 0, Math.sin(ang) * R_MID);
+      // Face the arena center (low front bench inward, back wall outward).
+      grp.lookAt(0, 0, 0);
+      grp.userData.bleacherUpgrade = true;
+      scene.add(grp);
+    }
+  }, undefined, () => { /* keep procedural bleachers if the model is missing */ });
 }
 
 // Replace the 40 authored seated audience members with Meshy-generated seated
