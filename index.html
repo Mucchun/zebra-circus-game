@@ -3336,8 +3336,94 @@ function buildScene() {
   buildTent();
   buildBleachers();
   addDecorations();
-  loadAndPlaceCrowd();
+  // Spectators live only on the bleachers (upgradeSeatedAudience). The old
+  // floor-ring crowd near the center is intentionally not spawned.
   upgradePropVisuals();
+  upgradeSeatedAudience();
+}
+
+// Replace the 40 authored seated audience members with Meshy-generated seated
+// spectators, reusing each authored member's footprint so they sit exactly in
+// the old bleacher positions. Plain game mode only (Studio parity preserved).
+function upgradeSeatedAudience() {
+  if (typeof STUDIO_AUTHORING_MODE !== 'undefined' && STUDIO_AUTHORING_MODE) return;
+  const files = ['models/crowd/seated-a.glb', 'models/crowd/seated-b.glb', 'models/crowd/seated-c.glb', 'models/crowd/seated-d.glb'];
+  const loader = new THREE.GLTFLoader();
+  const gltfs = [];
+  let done = 0;
+  files.forEach((f, i) => loader.load(
+    f,
+    (g) => { gltfs[i] = g; if (++done === files.length) applyAll(); },
+    undefined,
+    () => { if (++done === files.length) applyAll(); }
+  ));
+
+  function applyAll() {
+    const models = gltfs.filter(Boolean);
+    if (!models.length) return;
+    for (let i = 0; i < 40; i++) {
+      const id = `crowd-proc-${String(i).padStart(2, '0')}`;
+      attemptSeatSwap(id, models[i % models.length], 0);
+    }
+  }
+
+  // Seated spectator world height (a seated person is a bit shorter than
+  // standing). Matches the foreground ring crowd's visual scale.
+  const SEAT_TARGET_H = 1.5;
+  const placed = new Set();
+
+  function attemptSeatSwap(id, gltf, attempt) {
+    if (placed.has(id)) return;
+    const target = editableObjects.get(id);
+    const originalBox = target ? new THREE.Box3().setFromObject(target) : null;
+    if (!target || originalBox.isEmpty()) {
+      if (attempt < 40) setTimeout(() => attemptSeatSwap(id, gltf, attempt + 1), 400);
+      return;
+    }
+    // Read the authored seat's world transform, then hide its abstract mesh.
+    const seatCenter = originalBox.getCenter(new THREE.Vector3());
+    const worldQuat = target.getWorldQuaternion(new THREE.Quaternion());
+    hideSeatMeshes(target);
+
+    // Compute the actual bleacher seat-surface height at this radius so the
+    // character rests on the bench instead of sinking under it. Bleacher tiers
+    // (buildBleachers): r = 14 + tier*1.4, y = tier*0.55 + 0.28, seat tube r 0.22.
+    const radius = Math.hypot(seatCenter.x, seatCenter.z);
+    const tier = Math.max(0, Math.min(4, Math.round((radius - 14) / 1.4)));
+    const seatBaseY = tier * 0.55 + 0.28 + 0.2; // sit on top of the seat tube
+
+    // Build the Meshy model at a fixed seated height, feet at its own origin.
+    const model = gltf.scene.clone(true);
+    let box = new THREE.Box3().setFromObject(model);
+    const h = box.getSize(new THREE.Vector3()).y;
+    if (h <= 0) return;
+    model.scale.setScalar(SEAT_TARGET_H / h);
+    box = new THREE.Box3().setFromObject(model);
+    model.position.y -= box.min.y; // rest bottom on the group's origin
+
+    // Snap onto the actual seat ring (authored figures used a random Y, which
+    // left them under/through the benches) and face the arena center.
+    const ang = Math.atan2(seatCenter.z, seatCenter.x);
+    const ringR = 14 + tier * 1.4;
+    const group = new THREE.Group();
+    group.add(model);
+    group.position.set(Math.cos(ang) * ringR, seatBaseY, Math.sin(ang) * ringR);
+    // Face inward toward the arena center (models' default forward is +Z).
+    group.rotation.y = Math.atan2(-Math.cos(ang), -Math.sin(ang));
+    group.userData.seatedUpgrade = true;
+    scene.add(group);
+    placed.add(id);
+
+    // Scene doc applies asynchronously and may re-show the authored mesh; keep
+    // it hidden for a few seconds.
+    [800, 2000, 4000, 7000].forEach((delay) => setTimeout(() => hideSeatMeshes(target), delay));
+  }
+
+  function hideSeatMeshes(target) {
+    target.traverse((obj) => {
+      if (obj.isMesh || obj.isSprite) obj.visible = false;
+    });
+  }
 }
 
 // Swap selected authored props for richer Meshy-generated models in plain
@@ -3408,9 +3494,9 @@ function upgradePropVisuals() {
 
 function loadAndPlaceCrowd() {
   const gltfLoader = new THREE.GLTFLoader();
-  // These GLBs contain their textures. Spectators generated with Meshy AI
-  // (self-contained GLBs); the loader normalizes each to 1.2 units tall.
-  const crowdFiles = ['spectator-a','spectator-b','spectator-c','spectator-d'];
+  // Seated spectators generated with Meshy AI (self-contained GLBs);
+  // the loader normalizes each and rests its feet on the ground.
+  const crowdFiles = ['seated-a','seated-b','seated-c','seated-d'];
   const promises = crowdFiles.map(id =>
     new Promise(resolve => {
       gltfLoader.load(`models/crowd/${id}.glb`, gltf => {
@@ -3443,6 +3529,10 @@ function loadAndPlaceCrowd() {
       const box = new THREE.Box3().setFromObject(model);
       const h = box.getSize(new THREE.Vector3()).y;
       if (h > 0) model.scale.setScalar(1.2 / h);
+      // Sit the model's lowest point on the ground (Meshy pivots are centered,
+      // which otherwise sinks half the body below y=0).
+      const feet = new THREE.Box3().setFromObject(model);
+      model.position.y -= feet.min.y;
       root.add(model);
 
       root.position.set(

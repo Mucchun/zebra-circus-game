@@ -1,4 +1,8 @@
 test-output
 multiplayer/.wrangler
+multiplayer/node_modules
+desktop/node_modules
+node_modules
 _STATUS.md
 iter_visual_check
+*.zip
