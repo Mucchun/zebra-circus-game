@@ -140,6 +140,60 @@ body { background: #000; overflow: hidden; font-family: 'Source Sans 3', 'Barlow
   width: 300px; text-align: center;
 }
 #progress-lbl { color: var(--c-muted); font-size: 10px; margin-bottom: 5px; letter-spacing: 2px; text-transform: uppercase; font-weight: 600; }
+
+/* ── BALLOON BANK + PAUSE / SHOP ── */
+#balloon-bank {
+  position: absolute; top: 88px; right: 16px; pointer-events: none;
+  background: var(--c-panel); border: 1px solid var(--c-border);
+  padding: 6px 12px; font-family: 'Barlow Condensed', sans-serif;
+  font-size: 15px; font-weight: 700; letter-spacing: 1.5px; color: #ffd76a;
+}
+#pause-btn {
+  position: absolute; top: 16px; left: 16px; pointer-events: auto;
+  background: var(--c-panel); border: 1px solid var(--c-border); color: #fff;
+  font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 700;
+  letter-spacing: 3px; padding: 9px 16px; cursor: pointer;
+}
+#pause-btn:hover { border-color: #ffd76a; color: #ffd76a; }
+#pause-overlay {
+  position: fixed; inset: 0; z-index: 60; display: none;
+  align-items: center; justify-content: center;
+  background: rgba(4, 6, 14, 0.85);
+}
+#pause-panel {
+  width: min(520px, 92vw); max-height: 88vh; overflow-y: auto;
+  background: var(--c-panel); border: 1px solid var(--c-border);
+  border-top: 3px solid #ffd76a; padding: 26px 28px;
+  font-family: 'Barlow Condensed', sans-serif; color: #fff;
+}
+#pause-panel .pp-title { font-size: 30px; font-weight: 800; letter-spacing: 8px; }
+#pause-panel .pp-balance { margin: 10px 0 18px; font-size: 17px; letter-spacing: 2px; color: var(--c-muted); }
+#pause-panel .pp-balance b { color: #ffd76a; font-size: 21px; }
+.shop-card {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  border: 1px solid var(--c-border); padding: 13px 15px; margin-bottom: 11px;
+}
+.shop-card .sc-name { font-size: 17px; font-weight: 700; letter-spacing: 1.5px; }
+.shop-card .sc-sub { font-size: 12px; color: var(--c-muted); letter-spacing: 1px; margin-top: 3px; }
+.shop-card .sc-cost { font-size: 15px; color: #ffd76a; font-weight: 700; white-space: nowrap; }
+.shop-btn {
+  background: #1c2438; border: 1px solid var(--c-border); color: #fff; cursor: pointer;
+  font-family: inherit; font-size: 13px; font-weight: 700; letter-spacing: 2px; padding: 9px 14px;
+  white-space: nowrap;
+}
+.shop-btn:not(:disabled):hover { border-color: #ffd76a; color: #ffd76a; }
+.shop-btn:disabled { opacity: 0.38; cursor: default; }
+.shop-btn.arm { background: #ffd76a; color: #10131f; border-color: #ffd76a; }
+#wallet-codes { margin-top: 14px; }
+#wallet-codes .code-row {
+  font-family: 'Space Mono', monospace; font-size: 12px; color: #b9ffb0;
+  border-left: 3px solid #ffd76a; padding: 5px 10px; margin-top: 6px; background: rgba(255, 215, 106, 0.07);
+}
+#wallet-codes .code-hint { font-size: 11px; color: var(--c-muted); margin-top: 8px; letter-spacing: 0.5px; }
+#resume-btn {
+  margin-top: 18px; width: 100%; background: #ffd76a; border: 0; color: #10131f; cursor: pointer;
+  font-family: inherit; font-size: 16px; font-weight: 800; letter-spacing: 4px; padding: 13px;
+}
 #progress-track {
   background: rgba(255,255,255,0.05); height: 8px;
   border: 1px solid rgba(255,106,0,0.3); overflow: hidden;
@@ -440,6 +494,7 @@ body { background: #000; overflow: hidden; font-family: 'Source Sans 3', 'Barlow
     <span><span class="k">CLICK</span> &nbsp;Shoot / Scan</span>
     <span><span class="k">1 – 4</span> &nbsp;Switch device</span>
     <span><span class="k">Q</span> &nbsp;Drop device</span>
+    <span><span class="k">P</span> &nbsp;Pause &amp; balloon shop</span>
     <span><span class="k">QR board</span> &nbsp;Shoot to learn</span>
   </div>
   <button class="btn" id="tut-go-btn">LET'S GO</button>
@@ -492,6 +547,8 @@ body { background: #000; overflow: hidden; font-family: 'Source Sans 3', 'Barlow
     <div class="lbl">SCORE</div>
     <div id="score-value">0</div>
   </div>
+  <div id="balloon-bank">🎈 <span id="wallet-hud">0</span></div>
+  <button id="pause-btn" type="button">⏸ MENU</button>
 
   <div id="kill-feed"></div>
   <div id="crosshair"></div>
@@ -530,6 +587,30 @@ body { background: #000; overflow: hidden; font-family: 'Source Sans 3', 'Barlow
   <div id="effect-flash"></div>
 </div>
 
+<div id="pause-overlay">
+  <div id="pause-panel">
+    <div class="pp-title">PAUSED</div>
+    <div class="pp-balance">BALLOON BANK: <b id="wallet-balance">0</b> 🎈 <span style="font-size:12px">(pop balloons to earn)</span></div>
+    <div class="shop-card">
+      <div>
+        <div class="sc-name">ZEBRA PLUSH TOY</div>
+        <div class="sc-sub">Claim online — redemption code on purchase</div>
+      </div>
+      <div class="sc-cost">200 🎈</div>
+      <button class="shop-btn" id="shop-buy-plush" type="button">REDEEM</button>
+    </div>
+    <div class="shop-card">
+      <div>
+        <div class="sc-name">ZEBRA TERMINAL</div>
+        <div class="sc-sub">The real device. Yes, really.</div>
+      </div>
+      <div class="sc-cost">10,000 🎈</div>
+      <button class="shop-btn" id="shop-buy-terminal" type="button">REDEEM</button>
+    </div>
+    <div id="wallet-codes"></div>
+    <button id="resume-btn" type="button">RESUME</button>
+  </div>
+</div>
 <script src="vendor/three.min.js"></script>
 <script src="vendor/GLTFLoader.js"></script>
 <script>
@@ -4023,6 +4104,7 @@ function respawnBalloon(bo) {
 function popBalloon(bo, weapon) {
   if (!bo.alive) return;
   if (MP.enabled) MP.onLocalPop(bo, weapon);
+  if (!(MP.enabled && MP.remotePopInProgress())) earnBalloon();
   bo.alive = false;
   bo.mesh.userData.runtimeStateVisible = false;
   bo.mesh.visible = false;
@@ -4236,14 +4318,15 @@ function bindControls() {
     if (e.button!==0) return;
     mouseDown=true;
     // Fire regardless of pointer-lock state so the app is playable even if lock fails.
-    if (gameActive && !infoOpen) shoot();
+    if (gameActive && !infoOpen && !pauseOpen) shoot();
   });
   document.addEventListener('mouseup', e => { if(e.button===0) mouseDown=false; });
 
   document.addEventListener('keydown', e => {
     keys[e.code] = true;
-    if (gameActive && e.code==='KeyE') tryPickup();
-    if (gameActive && !infoOpen && !e.repeat && e.code==='KeyQ') dropWeapon();
+    if (gameActive && !pauseOpen && e.code==='KeyE') tryPickup();
+    if (gameActive && !e.repeat && e.code==='KeyP') { pauseOpen ? closePause() : openPause(); }
+    if (gameActive && !infoOpen && !pauseOpen && !e.repeat && e.code==='KeyQ') dropWeapon();
     if (gameActive && e.code==='Digit1') trySwitch(0);
     if (gameActive && e.code==='Digit2') trySwitch(1);
     if (gameActive && e.code==='Digit3') trySwitch(2);
@@ -4626,6 +4709,99 @@ function closeInfo({ resumeGame = false } = {}) {
 }
 
 // ═══════════════════════════════════════════════
+//  PAUSE MENU + BALLOON WALLET SHOP
+// ═══════════════════════════════════════════════
+let pauseOpen = false;
+const SHOP_ITEMS = {
+  plush: { cost: 200, label: 'ZEBRA PLUSH TOY', prefix: 'ZC-PLUSH' },
+  terminal: { cost: 10000, label: 'ZEBRA TERMINAL (REAL DEVICE)', prefix: 'ZC-TERM' },
+};
+const wallet = { earned: 0, spent: 0, codes: [] };
+try {
+  const stored = JSON.parse(localStorage.getItem('zebraBalloonWallet') || '{}');
+  if (Number.isFinite(stored.earned)) wallet.earned = Math.max(0, Math.floor(stored.earned));
+  if (Number.isFinite(stored.spent)) wallet.spent = Math.max(0, Math.floor(stored.spent));
+  if (Array.isArray(stored.codes)) wallet.codes = stored.codes.slice(0, 40);
+} catch (err) {}
+
+function walletBalance() { return Math.max(0, wallet.earned - wallet.spent); }
+function saveWallet() {
+  try { localStorage.setItem('zebraBalloonWallet', JSON.stringify(wallet)); } catch (err) {}
+}
+function earnBalloon() {
+  wallet.earned += 1;
+  saveWallet();
+  refreshWalletUi();
+}
+function redemptionCode(prefix) {
+  const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  const bytes = new Uint8Array(8);
+  (crypto.getRandomValues ? crypto.getRandomValues(bytes) : bytes.map(() => Math.floor(Math.random() * 255)));
+  let body = '';
+  bytes.forEach((value) => { body += alphabet[value % alphabet.length]; });
+  return `${prefix}-${body.slice(0, 4)}-${body.slice(4)}`;
+}
+function refreshWalletUi() {
+  const balance = walletBalance();
+  document.getElementById('wallet-hud').textContent = balance;
+  document.getElementById('wallet-balance').textContent = balance;
+  for (const [key, item] of Object.entries(SHOP_ITEMS)) {
+    const button = document.getElementById('shop-buy-' + key);
+    if (!button.classList.contains('arm')) {
+      button.disabled = balance < item.cost;
+      button.textContent = balance >= item.cost ? 'REDEEM' : `NEED ${item.cost - balance} MORE`;
+    }
+  }
+  const codes = document.getElementById('wallet-codes');
+  codes.innerHTML = wallet.codes.length
+    ? wallet.codes.map((entry) => `<div class="code-row">${entry.label}: <b>${entry.code}</b></div>`).join('')
+      + '<div class="code-hint">Save or screenshot your codes — show them to the Zebra Circus team to claim your reward.</div>'
+    : '';
+}
+function armThenRedeem(key) {
+  const item = SHOP_ITEMS[key];
+  const button = document.getElementById('shop-buy-' + key);
+  if (walletBalance() < item.cost) return;
+  if (!button.classList.contains('arm')) {
+    button.classList.add('arm');
+    button.textContent = 'CONFIRM?';
+    clearTimeout(button._disarm);
+    button._disarm = setTimeout(() => { button.classList.remove('arm'); refreshWalletUi(); }, 3500);
+    return;
+  }
+  clearTimeout(button._disarm);
+  button.classList.remove('arm');
+  wallet.spent += item.cost;
+  wallet.codes.push({ label: item.label, code: redemptionCode(item.prefix), at: Date.now() });
+  saveWallet();
+  refreshWalletUi();
+  addKillFeed(item.label + ' redeemed!');
+}
+function openPause() {
+  if (pauseOpen) return;
+  pauseOpen = true;
+  mouseDown = false;
+  refreshWalletUi();
+  document.getElementById('pause-overlay').style.display = 'flex';
+  if (document.pointerLockElement) document.exitPointerLock();
+}
+function closePause() {
+  if (!pauseOpen) return;
+  pauseOpen = false;
+  document.getElementById('pause-overlay').style.display = 'none';
+  if (gameActive) {
+    const canvas = document.getElementById('game-canvas');
+    if (document.pointerLockElement !== canvas) requestGamePointerLock();
+  }
+}
+document.getElementById('pause-btn').addEventListener('click', openPause);
+document.getElementById('resume-btn').addEventListener('click', closePause);
+document.getElementById('shop-buy-plush').addEventListener('click', () => armThenRedeem('plush'));
+document.getElementById('shop-buy-terminal').addEventListener('click', () => armThenRedeem('terminal'));
+document.getElementById('pause-overlay').addEventListener('mousedown', (event) => { event.stopPropagation(); });
+refreshWalletUi();
+
+// ═══════════════════════════════════════════════
 //  SCORE / UI
 // ═══════════════════════════════════════════════
 function addScore(pts) {
@@ -4698,13 +4874,13 @@ function updateGame(delta, t) {
   camera.rotation.x=pitch;
 
   // Player move
-  if((isLocked || pointerLockFallback) && gameActive && !infoOpen) movePlayer(delta);
+  if((isLocked || pointerLockFallback) && gameActive && !infoOpen && !pauseOpen) movePlayer(delta);
 
   // Multiplayer shared plaza (?mp=1) - full implementation at the end of this script.
   if (MP.enabled) MP.tick(delta, t);
 
   // Auto-fire for rapid weapon
-  if(mouseDown && gameActive && !infoOpen && currentWeapon>=0 && WEAPONS[currentWeapon].effect==='rapid') {
+  if(mouseDown && gameActive && !infoOpen && !pauseOpen && currentWeapon>=0 && WEAPONS[currentWeapon].effect==='rapid') {
     shoot();
   }
 
@@ -5193,7 +5369,7 @@ const MP = (() => {
     if (panel) return panel;
     panel = document.createElement('div');
     panel.id = 'mp-scoreboard';
-    panel.style.cssText = 'position:fixed;top:96px;right:16px;z-index:11;min-width:150px;padding:8px 10px;background:rgba(5,12,8,0.72);border:1px solid rgba(185,255,119,0.4);color:#dfffc8;font:600 12px/1.6 "Barlow Condensed",Arial,sans-serif;letter-spacing:0.06em;pointer-events:none;';
+    panel.style.cssText = 'position:fixed;top:132px;right:16px;z-index:11;min-width:150px;padding:8px 10px;background:rgba(5,12,8,0.72);border:1px solid rgba(185,255,119,0.4);color:#dfffc8;font:600 12px/1.6 "Barlow Condensed",Arial,sans-serif;letter-spacing:0.06em;pointer-events:none;';
     document.body.appendChild(panel);
     return panel;
   }
@@ -5266,7 +5442,7 @@ const MP = (() => {
     emoteKeysBound = true;
     document.addEventListener('keydown', (event) => {
       const kind = EMOTE_KEYS[event.code];
-      if (kind === undefined || !isConnected() || !gameActive || infoOpen) return;
+      if (kind === undefined || !isConnected() || !gameActive || infoOpen || pauseOpen) return;
       const now = performance.now();
       if (now - lastEmoteSentAt < 900) return;
       lastEmoteSentAt = now;
@@ -5471,6 +5647,7 @@ const MP = (() => {
     enabled,
     connected: isConnected,
     onLocalPop,
+    remotePopInProgress() { return applyingRemotePop; },
     noteLocalBonus(pts) { if (isConnected()) localScoreBonus += pts; },
     tick(delta) {
       if (disabledAfterErrors) return;

@@ -182,6 +182,12 @@ for (let attempt = 0; attempt < 4 && alphaServerScore === 0; attempt += 1) {
 }
 check("alpha aimed at a balloon", aimedOnce);
 check("balloon pop confirmed by the room", alphaServerScore > 0, `score=${alphaServerScore}`);
+const wallets = {
+  alpha: Number(await alpha.textContent("#wallet-hud")),
+  beta: Number(await beta.textContent("#wallet-hud")),
+};
+check("shooter earns balloon currency", wallets.alpha >= 1, JSON.stringify(wallets));
+check("remote pops earn the observer nothing", wallets.beta === 0, JSON.stringify(wallets));
 const parity = await Promise.all([alpha, beta].map((page) => page.evaluate(() => window.__mpDebug().balloonsAlive)));
 check("balloon state parity across players", parity[0] === parity[1], `alpha=${parity[0]} beta=${parity[1]}`);
 const betaSeesScore = await beta.evaluate(() => { const d = window.__mpDebug(); const other = Object.keys(d.scores).find((id) => id !== d.selfId); return d.scores[other] ?? 0; });
