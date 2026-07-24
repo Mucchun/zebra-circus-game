@@ -100,6 +100,35 @@ for (let i = 0; i < 4; i += 1) {
 }
 s = await state();
 check("rapid drop/pick cycles stay consistent", s.weapon === heldWeapon, JSON.stringify(s.weapon));
+
+// 5. Same-frame drop/re-pick race: the stale pickup animation must not eat
+// the mesh. Drop again after it would have finished and verify the device
+// is still visible in the world and collectible.
+await page.keyboard.press("q");
+await page.keyboard.press("e"); // immediate re-pick, inside the old anim's first frames
+await page.waitForTimeout(1400); // long past the stale animation's lifetime
+await page.keyboard.press("q");
+await page.waitForTimeout(900);
+const raceEntry = await page.evaluate((idx) => {
+  const s = JSON.parse(window.render_game_to_text());
+  const entry = s.layout.find((l) => l.id === `weapon-${idx}`);
+  return entry ? entry.worldPosition : null;
+}, heldWeapon?.toLowerCase());
+check("device survives same-frame drop/re-pick race", raceEntry !== null && raceEntry.y > 0.3 && raceEntry.y < 0.7, JSON.stringify(raceEntry));
+await page.keyboard.press("e");
+await page.waitForTimeout(350);
+s = await state();
+check("device still collectible after the race", s.weapon === heldWeapon, JSON.stringify(s.weapon));
+
+// 6. Holding Q must drop exactly one device, not the whole inventory.
+await page.keyboard.press("e");
+await page.waitForTimeout(200);
+const slotsBefore = (await state()).collected.length;
+await page.keyboard.down("q");
+await page.waitForTimeout(1200); // OS key repeat would fire many times
+await page.keyboard.up("q");
+s = await state();
+check("held Q drops only one device", s.collected.length === Math.max(0, slotsBefore - 1), `collected=${JSON.stringify(s.collected)}`);
 check("no page errors during weapon churn", errors.length === 0, errors.join(" | "));
 
 await browser.close();

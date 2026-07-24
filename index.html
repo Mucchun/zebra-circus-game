@@ -4243,7 +4243,7 @@ function bindControls() {
   document.addEventListener('keydown', e => {
     keys[e.code] = true;
     if (gameActive && e.code==='KeyE') tryPickup();
-    if (gameActive && !infoOpen && e.code==='KeyQ') dropWeapon();
+    if (gameActive && !infoOpen && !e.repeat && e.code==='KeyQ') dropWeapon();
     if (gameActive && e.code==='Digit1') trySwitch(0);
     if (gameActive && e.code==='Digit2') trySwitch(1);
     if (gameActive && e.code==='Digit3') trySwitch(2);
@@ -4271,12 +4271,15 @@ function pickupWeapon(obj) {
   collected.add(idx);
   obj.pl.intensity = 0;
 
-  // Pickup anim - aborts cleanly if the device is dropped mid-animation.
+  // Pickup anim - a generation token aborts stale animations even when the
+  // device is dropped and re-picked within a single frame.
+  obj.animToken = (obj.animToken || 0) + 1;
+  const myToken = obj.animToken;
   let t=0;
   const startY = obj.mesh.position.y;
   const go = () => {
     if (STUDIO_AUTHORING_MODE && studioAuthoring?.mode !== 'playing') return;
-    if (!obj.collected) return; // dropped again before the animation finished
+    if (obj.animToken !== myToken || !obj.collected) return; // superseded or dropped
     t+=0.06;
     if (t<=1) {
       obj.mesh.position.y = startY + t*0.6;
@@ -4308,6 +4311,7 @@ function dropWeapon() {
   slot.classList.add('empty');
 
   // Place the device just ahead of the player and let it settle to the floor.
+  obj.animToken = (obj.animToken || 0) + 1; // invalidate any in-flight pickup animation
   const forward = new THREE.Vector3();
   camera.getWorldDirection(forward);
   obj.collected = false;
