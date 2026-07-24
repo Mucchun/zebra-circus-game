@@ -3,8 +3,8 @@
   "engine": {
     "repository": "https://github.com/Sparkah/game-port-studio",
     "visibility": "private",
-    "version": "0.19.4",
-    "testedCommit": "2945182e35ebc8b41648d0826c3e8bef16b87ef3"
+    "version": "0.19.5",
+    "testedCommit": "d9995d4bd754ba058a266271e3dea97463ae73b9"
   },
   "adapter": "zebra-runtime",
   "scene": "zebra-circus.scene.json",

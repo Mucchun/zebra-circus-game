@@ -1015,7 +1015,8 @@ function validateGlbBytes(bytes) {
   }
 }
 function isCanonicalBase64(value) {
-  if (value.length % 4 !== 0 || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value)) return false;
+  if (value.length % 4 !== 0 || !/^[A-Za-z0-9+/]*={0,2}$/.test(value)) return false;
+  if (value.includes("=") && !/^[A-Za-z0-9+/]+={1,2}$/.test(value)) return false;
   try {
     return btoa(atob(value)) === value;
   } catch {
@@ -2394,8 +2395,8 @@ function decodeEmbeddedDataUri(value, label) {
   if (typeof value !== "string" || !value.toLowerCase().startsWith("data:")) {
     fail2(`${label} uses an external URI. Hosted GLBs must be self-contained.`);
   }
-  const match = /^data:([^;,\s]{1,96});base64,((?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?)$/i.exec(value);
-  if (!match) fail2(`${label} must use one complete base64 data URI.`);
+  const match = /^data:([^;,\s]{1,96});base64,([A-Za-z0-9+/]*={0,2})$/i.exec(value);
+  if (!match || match[2].length % 4 !== 0) fail2(`${label} must use one complete base64 data URI.`);
   let binary;
   try {
     binary = atob(match[2]);
@@ -3358,7 +3359,7 @@ function assertClaimEnvelope(claim2) {
     if (ids.has(descriptor.id)) throw new Error("The hosted claim repeats an uploaded asset.");
     ids.add(descriptor.id);
   }
-  if (claim2.repository !== "Mucchun/zebra-circus-game" || claim2.branch !== "scene-sync" || claim2.path !== "zebra-circus.scene.json") {
+  if (claim2.repository !== "Sparkah/zebra-circus-game" || claim2.branch !== "agent/game-port-studio-integration" || claim2.path !== "zebra-circus.scene.json") {
     throw new Error("The hosted claim targets a repository location outside the Zebra review branch.");
   }
 }
