@@ -30,6 +30,11 @@ const EMOTE_KINDS = 4;
 const POP_RANGE = 60; // whole-arena generosity; the real arbiter is gen + cooldown
 const WEAPON_POINTS = { MC9400: 10, MC3400: 5, PS30: 15, TC8300: 20 };
 const DEFAULT_POP_POINTS = 5;
+const PATRONUS_AVATARS = ["zebra", "lion", "elephant", "parrot", "monkey", "tiger"];
+
+function sanitizeAvatar(raw) {
+  return PATRONUS_AVATARS.includes(raw) ? raw : null;
+}
 
 const DEFAULT_ALLOWED_ORIGIN_SUFFIXES = [
   "zebra-circus-game.vercel.app",
@@ -260,6 +265,7 @@ export class ZebraPlazaRoom {
     if (message.type === "hello" && !player.hello) {
       player.hello = true;
       player.name = sanitizeDisplayName(message.name);
+      player.avatar = sanitizeAvatar(message.avatar);
       const spawn = this.spawnFor(this.playerCount());
       player.x = spawn.x;
       player.z = spawn.z;
@@ -391,6 +397,7 @@ export class ZebraPlazaRoom {
     return {
       id: player.id,
       name: player.name,
+      avatar: player.avatar ?? null,
       x: player.x,
       y: player.y,
       z: player.z,

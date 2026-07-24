@@ -4855,6 +4855,21 @@ const MP = (() => {
   const remotes = new Map();
   const avatarFiles = ['char1', 'char2', 'char4', 'char6', 'man', 'worker'];
   const avatarCache = new Map();
+  const PATRONI = ['zebra', 'lion', 'elephant', 'parrot', 'monkey', 'tiger'];
+  const patronusMissing = new Set(); // animals whose model failed to load this session
+
+  function hashString(text) {
+    let hash = 0;
+    for (let i = 0; i < text.length; i++) hash = (hash * 31 + text.charCodeAt(i)) >>> 0;
+    return hash;
+  }
+
+  let ownPatronus = params.get('mpAvatar') || '';
+  if (!PATRONI.includes(ownPatronus)) {
+    try { ownPatronus = localStorage.getItem('zebraPatronus') || ''; } catch (err) {}
+  }
+  if (!PATRONI.includes(ownPatronus)) ownPatronus = PATRONI[hashString(displayName) % PATRONI.length];
+  try { localStorage.setItem('zebraPatronus', ownPatronus); } catch (err) {}
   const balloonGens = Array.from({ length: 28 }, () => 1);
   const playerNames = new Map();
   let serverScores = {};
@@ -4899,6 +4914,39 @@ const MP = (() => {
     return hash % avatarFiles.length;
   }
 
+  function attachRemoteModel(remote, model, animations) {
+    const box = new THREE.Box3().setFromObject(model);
+    const size = box.getSize(new THREE.Vector3());
+    if (size.y > 0) model.scale.setScalar(1.65 / size.y);
+    // Recenter so feet sit at the group origin regardless of export pivot.
+    const scaled = new THREE.Box3().setFromObject(model);
+    model.position.y -= scaled.min.y;
+    remote.modelBaseY = model.position.y;
+    remote.model = model;
+    remote.root.add(model);
+    if (animations && animations.length) {
+      remote.mixer = new THREE.AnimationMixer(model);
+      const findClip = (pattern) => animations.find((clip) => pattern.test(clip.name));
+      const walkClip = findClip(/walk|run|move/i) || animations[0];
+      const idleClip = findClip(/idle|stand|breath/i) || null;
+      remote.walkAction = remote.mixer.clipAction(walkClip);
+      remote.idleAction = idleClip && idleClip !== walkClip ? remote.mixer.clipAction(idleClip) : null;
+      if (remote.idleAction) { remote.idleAction.play(); }
+      else { remote.walkAction.play(); remote.walkAction.paused = true; }
+      remote.animated = true;
+    }
+  }
+
+  function loadPatronus(remote, animal) {
+    return new Promise((resolve) => {
+      new THREE.GLTFLoader().load(`models/patronus/${animal}.glb`, (gltf) => {
+        if (!remotes.has(remote.id)) return resolve(true);
+        attachRemoteModel(remote, gltf.scene, gltf.animations);
+        resolve(true);
+      }, undefined, () => { patronusMissing.add(animal); resolve(false); });
+    });
+  }
+
   function addRemote(p) {
     if (!p || p.id === selfId || remotes.has(p.id)) return;
     playerNames.set(p.id, p.name || 'Guest');
@@ -4909,17 +4957,16 @@ const MP = (() => {
     label.position.y = 2.05;
     root.add(label);
     scene.add(root);
-    const remote = { root, model: null, buf: [{ t: Date.now(), x: p.x, y: p.y ?? 1.7, z: p.z, yaw: p.yaw ?? 0 }], walkPhase: 0, lastX: p.x, lastZ: p.z };
+    const remote = { id: p.id, root, model: null, mixer: null, walkAction: null, idleAction: null, animated: false, avatar: null, buf: [{ t: Date.now(), x: p.x, y: p.y ?? 1.7, z: p.z, yaw: p.yaw ?? 0 }], walkPhase: 0, lastX: p.x, lastZ: p.z };
     remotes.set(p.id, remote);
-    loadAvatarTemplate(avatarFiles[avatarIndexFor(p.id)]).then((template) => {
-      if (!template || !remotes.has(p.id)) return;
-      const model = template.clone(true);
-      const box = new THREE.Box3().setFromObject(model);
-      const h = box.getSize(new THREE.Vector3()).y;
-      if (h > 0) model.scale.setScalar(1.65 / h);
-      remote.model = model;
-      root.add(model);
+    const animal = PATRONI.includes(p.avatar) ? p.avatar : PATRONI[hashString(p.id) % PATRONI.length];
+    remote.avatar = animal;
+    const fallbackToCrowd = () => loadAvatarTemplate(avatarFiles[avatarIndexFor(p.id)]).then((template) => {
+      if (!template || !remotes.has(p.id) || remote.model) return;
+      attachRemoteModel(remote, template.clone(true), null);
     });
+    if (patronusMissing.has(animal)) fallbackToCrowd();
+    else loadPatronus(remote, animal).then((ok) => { if (!ok) fallbackToCrowd(); });
   }
 
   function removeRemote(id) {
@@ -5142,7 +5189,7 @@ const MP = (() => {
       if (!assignment.room) throw new Error(assignment.error || 'no room');
       room = assignment.room;
       socket = new WebSocket(`${wsBase}/room/${room}/ws`);
-      socket.addEventListener('open', () => socket.send(JSON.stringify({ type: 'hello', name: displayName })));
+      socket.addEventListener('open', () => socket.send(JSON.stringify({ type: 'hello', name: displayName, avatar: ownPatronus })));
       socket.addEventListener('message', (event) => {
         try { handleMessage(JSON.parse(event.data)); } catch (err) {}
       });
@@ -5224,13 +5271,31 @@ const MP = (() => {
       root.rotation.y = lerpAngle(root.rotation.y, target.yaw, Math.min(1, delta * 12));
       const speed = Math.hypot(targetX - remote.lastX, targetZ - remote.lastZ) / Math.max(delta, 0.016);
       remote.lastX = targetX; remote.lastZ = targetZ;
-      if (remote.model) {
+      if (remote.animated && remote.mixer) {
+        // Rigged patronus: clips own the motion; drive walk/idle by speed.
+        root.position.y = targetY;
+        const walking = speed > 0.4;
+        if (remote.idleAction) {
+          if (walking && !remote.walkActive) {
+            remote.walkActive = true;
+            remote.walkAction.reset().crossFadeFrom(remote.idleAction.play(), 0.18, false).play();
+          } else if (!walking && remote.walkActive) {
+            remote.walkActive = false;
+            remote.idleAction.reset().crossFadeFrom(remote.walkAction, 0.22, false).play();
+          }
+        } else {
+          remote.walkAction.paused = !walking;
+        }
+        remote.mixer.update(delta);
+      } else if (remote.model) {
+        const baseY = remote.modelBaseY ?? 0;
         if (speed > 0.4) {
           remote.walkPhase += delta * Math.min(speed, 7) * 2.2;
-          remote.model.position.y = targetY - root.position.y + Math.abs(Math.sin(remote.walkPhase)) * 0.06;
+          remote.model.position.y = baseY + Math.abs(Math.sin(remote.walkPhase)) * 0.06;
           remote.model.rotation.z = Math.sin(remote.walkPhase) * 0.045;
+          root.position.y = targetY;
         } else {
-          remote.model.position.y += (targetY - root.position.y - remote.model.position.y) * Math.min(1, delta * 10);
+          remote.model.position.y += (baseY - remote.model.position.y) * Math.min(1, delta * 10);
           remote.model.rotation.z *= Math.max(0, 1 - delta * 8);
           root.position.y = targetY;
         }
@@ -5292,7 +5357,7 @@ const MP = (() => {
             const size = new THREE.Box3().setFromObject(remote.model).getSize(new THREE.Vector3());
             modelHeight = Math.round(size.y * 100) / 100;
           }
-          return { id, x: remote.root.position.x, y: remote.root.position.y, z: remote.root.position.z, buffered: remote.buf.length, hasModel: !!remote.model, modelHeight, emoting: !!remote.emote };
+          return { id, x: remote.root.position.x, y: remote.root.position.y, z: remote.root.position.z, buffered: remote.buf.length, hasModel: !!remote.model, modelHeight, emoting: !!remote.emote, avatar: remote.avatar, animated: remote.animated };
         }),
       };
     },

@@ -13,9 +13,11 @@ const check = (name, pass, detail = "") => results.push(`${pass ? "PASS" : "FAIL
 
 const browser = await chromium.launch({ headless: true });
 
+const AVATARS = { Alpha: "zebra", Beta: "elephant" };
 async function boot(name) {
   const page = await browser.newPage({ viewport: { width: 900, height: 600 } });
-  await page.goto(`${GAME}/?mp=1&mpUrl=${encodeURIComponent(WS)}&mpName=${name}`, { waitUntil: "networkidle" });
+  const avatar = AVATARS[name] ? `&mpAvatar=${AVATARS[name]}` : "";
+  await page.goto(`${GAME}/?mp=1&mpUrl=${encodeURIComponent(WS)}&mpName=${name}${avatar}`, { waitUntil: "networkidle" });
   await page.waitForSelector("#play-btn", { state: "visible", timeout: 20000 });
   await page.click("#play-btn");
   await page.waitForSelector("#tut-go-btn", { state: "visible", timeout: 10000 });
@@ -38,9 +40,24 @@ check("beta connected to plaza", betaDebug.connected && betaDebug.room === "plaz
 check("alpha sees exactly one remote", alphaDebug.remotes.length === 1, `remotes=${alphaDebug.remotes.length}`);
 check("beta sees exactly one remote", betaDebug.remotes.length === 1, `remotes=${betaDebug.remotes.length}`);
 
-await alpha.waitForTimeout(2500);
-const betaModel = await beta.evaluate(() => window.__mpDebug().remotes[0]?.hasModel === true);
-check("beta's remote avatar model loaded", betaModel);
+async function waitForRemoteModel(page, timeoutMs = 25000) {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    if (await page.evaluate(() => window.__mpDebug().remotes[0]?.hasModel === true)) return true;
+    await page.waitForTimeout(500);
+  }
+  return false;
+}
+check("beta's remote avatar model loaded", await waitForRemoteModel(beta));
+check("alpha's remote avatar model loaded", await waitForRemoteModel(alpha));
+const remoteAvatars = {
+  betaSees: await beta.evaluate(() => window.__mpDebug().remotes[0]?.avatar),
+  alphaSees: await alpha.evaluate(() => window.__mpDebug().remotes[0]?.avatar),
+  alphaSeesAnimated: await alpha.evaluate(() => window.__mpDebug().remotes[0]?.animated),
+};
+check("beta sees alpha as the zebra patronus", remoteAvatars.betaSees === "zebra", JSON.stringify(remoteAvatars));
+check("alpha sees beta as the elephant patronus", remoteAvatars.alphaSees === "elephant");
+check("elephant patronus is rig-animated", remoteAvatars.alphaSeesAnimated === true);
 
 const before = await beta.evaluate(() => {
   const r = window.__mpDebug().remotes[0];
