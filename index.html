@@ -439,6 +439,7 @@ body { background: #000; overflow: hidden; font-family: 'Source Sans 3', 'Barlow
     <span><span class="k">E</span> &nbsp;Pick up device</span>
     <span><span class="k">CLICK</span> &nbsp;Shoot / Scan</span>
     <span><span class="k">1 – 4</span> &nbsp;Switch device</span>
+    <span><span class="k">Q</span> &nbsp;Drop device</span>
     <span><span class="k">QR board</span> &nbsp;Shoot to learn</span>
   </div>
   <button class="btn" id="tut-go-btn">LET'S GO</button>
@@ -3255,6 +3256,73 @@ function buildScene() {
   buildBleachers();
   addDecorations();
   loadAndPlaceCrowd();
+  upgradePropVisuals();
+}
+
+// Swap selected authored props for richer Meshy-generated models in plain
+// game mode. The Studio editor (and its Play resume) keeps the original
+// authored visuals so Edit/Play parity and the scene contract are untouched.
+function upgradePropVisuals() {
+  if (STUDIO_AUTHORING_MODE) return;
+  const swaps = [
+    { ids: ['center-plinth'], file: 'models/props/podium.glb' },
+    { ids: ['barrel-0', 'barrel-1', 'barrel-2', 'barrel-3'], file: 'models/props/barrel.glb' },
+  ];
+  const loader = new THREE.GLTFLoader();
+  swaps.forEach((swap) => {
+    loader.load(swap.file, (gltf) => {
+      swap.ids.forEach((id) => attemptPropSwap(id, gltf, 0));
+    }, undefined, () => { /* missing prop models: keep the authored visuals */ });
+  });
+
+  function attemptPropSwap(id, gltf, attempt) {
+    const target = editableObjects.get(id);
+    // Authored visuals load asynchronously from the scene asset pack; retry
+    // until this object actually has measurable geometry to replace.
+    const originalBox = target ? new THREE.Box3().setFromObject(target) : null;
+    if (!target || originalBox.isEmpty()) {
+      if (attempt < 30) setTimeout(() => attemptPropSwap(id, gltf, attempt + 1), 500);
+      return;
+    }
+    swapPropVisual(target, gltf, originalBox);
+  }
+
+  function swapPropVisual(target, gltf, originalBox) {
+    const originalSize = originalBox.getSize(new THREE.Vector3());
+    const originalCenter = originalBox.getCenter(new THREE.Vector3());
+    const model = gltf.scene.clone(true);
+    model.userData.isPropUpgrade = true;
+    const modelBox = new THREE.Box3().setFromObject(model);
+    const modelSize = modelBox.getSize(new THREE.Vector3());
+    if (modelSize.x <= 0 || modelSize.y <= 0 || modelSize.z <= 0) return;
+    // Keep the replacement inside the original footprint so collider
+    // boxes and shot raycasts behave exactly as before.
+    model.scale.setScalar(Math.min(originalSize.x / modelSize.x, originalSize.y / modelSize.y, originalSize.z / modelSize.z));
+    hideAuthoredMeshes(target, model);
+    target.add(model);
+    const placedBox = new THREE.Box3().setFromObject(model);
+    const placedCenter = placedBox.getCenter(new THREE.Vector3());
+    const desiredWorld = new THREE.Vector3(originalCenter.x, originalBox.min.y + (placedBox.max.y - placedBox.min.y) / 2, originalCenter.z);
+    const deltaLocal = target.worldToLocal(desiredWorld.clone()).sub(target.worldToLocal(placedCenter.clone()));
+    model.position.add(deltaLocal);
+    // The scene document applies asynchronously and can re-show or re-create
+    // authored visuals after this swap; re-assert a few times until stable.
+    [800, 2000, 4000, 7000].forEach((delay) => setTimeout(() => {
+      if (!model.parent) target.add(model);
+      hideAuthoredMeshes(target, model);
+    }, delay));
+  }
+
+  function hideAuthoredMeshes(target, upgradeModel) {
+    target.traverse((obj) => {
+      if (!(obj.isMesh || obj.isSprite) || !obj.visible) return;
+      let inUpgrade = false;
+      for (let node = obj; node; node = node.parent) {
+        if (node === upgradeModel) { inUpgrade = true; break; }
+      }
+      if (!inUpgrade) obj.visible = false;
+    });
+  }
 }
 
 function loadAndPlaceCrowd() {
@@ -4175,6 +4243,7 @@ function bindControls() {
   document.addEventListener('keydown', e => {
     keys[e.code] = true;
     if (gameActive && e.code==='KeyE') tryPickup();
+    if (gameActive && !infoOpen && e.code==='KeyQ') dropWeapon();
     if (gameActive && e.code==='Digit1') trySwitch(0);
     if (gameActive && e.code==='Digit2') trySwitch(1);
     if (gameActive && e.code==='Digit3') trySwitch(2);
@@ -4202,11 +4271,12 @@ function pickupWeapon(obj) {
   collected.add(idx);
   obj.pl.intensity = 0;
 
-  // Pickup anim
+  // Pickup anim - aborts cleanly if the device is dropped mid-animation.
   let t=0;
   const startY = obj.mesh.position.y;
   const go = () => {
     if (STUDIO_AUTHORING_MODE && studioAuthoring?.mode !== 'playing') return;
+    if (!obj.collected) return; // dropped again before the animation finished
     t+=0.06;
     if (t<=1) {
       obj.mesh.position.y = startY + t*0.6;
@@ -4220,10 +4290,60 @@ function pickupWeapon(obj) {
   const slot = document.getElementById('slot-'+idx);
   slot.classList.remove('empty'); slot.classList.add('has-it');
 
-  if (currentWeapon===-1) trySwitch(idx);
+  trySwitch(idx); // grabbing a device always equips it
   flashScreen(obj.w.accent, 0.35);
   showPrompt('Picked up '+obj.w.name+'!', 2200);
   addKillFeed(obj.w.name + ' equipped');
+}
+
+function dropWeapon() {
+  if (currentWeapon < 0) return;
+  const idx = currentWeapon;
+  const obj = weaponObjs.find(o => o.w === WEAPONS[idx]);
+  if (!obj || !obj.collected) return;
+
+  collected.delete(idx);
+  const slot = document.getElementById('slot-'+idx);
+  slot.classList.remove('has-it', 'active');
+  slot.classList.add('empty');
+
+  // Place the device just ahead of the player and let it settle to the floor.
+  const forward = new THREE.Vector3();
+  camera.getWorldDirection(forward);
+  obj.collected = false;
+  obj.mesh.visible = true;
+  obj.mesh.scale.setScalar(1);
+  obj.mesh.position.set(
+    camera.position.x + forward.x * 0.9,
+    camera.position.y - 0.3,
+    camera.position.z + forward.z * 0.9,
+  );
+  scene.add(obj.mesh);
+  obj.pl.intensity = 0.7;
+  // The float animation owns mesh.position.y via baseY, so tween baseY down.
+  const settleFrom = obj.mesh.position.y;
+  const settleTo = 0.45;
+  obj.baseY = settleFrom;
+  let settleT = 0;
+  const settle = () => {
+    if (obj.collected) return; // re-picked before it landed
+    settleT += 0.08;
+    const k = Math.min(1, settleT);
+    obj.baseY = settleFrom + (settleTo - settleFrom) * (1 - (1 - k) * (1 - k)); // ease-out fall
+    if (k < 1) requestAnimationFrame(settle);
+  };
+  settle();
+
+  const next = [...collected][0] ?? -1;
+  if (next >= 0) {
+    trySwitch(next);
+  } else {
+    currentWeapon = -1;
+    rebuildHeldMesh();
+    document.getElementById('weapon-info').style.display = 'none';
+  }
+  showPrompt('Dropped ' + obj.w.name, 1600);
+  addKillFeed(obj.w.name + ' dropped');
 }
 
 function trySwitch(idx) {
