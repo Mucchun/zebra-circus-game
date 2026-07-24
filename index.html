@@ -3108,6 +3108,94 @@ if (STUDIO_AUTHORING_MODE) {
   });
 }
 
+// ═══════════════════════════════════════════════
+//  LUNA ANALYTICS — playtime + brand-engagement tracking (monetization)
+//  Captures the metrics a sponsoring brand pays for: engaged playtime,
+//  which products players interact with, and click-throughs to the brand.
+//  Persists locally and (if configured) POSTs each event to your dashboard:
+//    window.LUNA_ANALYTICS_ENDPOINT = 'https://your-api/collect';
+//  Read a live summary any time: window.lunaAnalytics.summary()
+// ═══════════════════════════════════════════════
+const LunaAnalytics = (() => {
+  const KEY = 'luna_analytics_v1';
+  let store;
+  try { store = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (_) { store = {}; }
+  store.sessions = store.sessions || 0;
+  store.totalPlaytimeMs = store.totalPlaytimeMs || 0;
+  store.events = store.events || {};
+  store.products = store.products || {};
+  let lastTick = 0, sessionMs = 0, playing = false;
+
+  const persist = () => { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (_) {} };
+  const prod = (name) => (store.products[name] = store.products[name] || { pickups: 0, views: 0, visits: 0 });
+  const send = (type, data) => {
+    const ep = window.LUNA_ANALYTICS_ENDPOINT;
+    if (!ep) return;
+    try { navigator.sendBeacon(ep, JSON.stringify({ type, data, ts: Date.now(), session: store.sessions })); } catch (_) {}
+  };
+
+  function track(type, data = {}) {
+    store.events[type] = (store.events[type] || 0) + 1;
+    if (data.product) {
+      const p = prod(data.product);
+      if (type === 'device_pickup') p.pickups++;
+      else if (type === 'product_view') p.views++;
+      else if (type === 'product_visit') p.visits++;
+    }
+    persist();
+    send(type, data);
+  }
+  function startSession() {
+    if (playing) return;
+    playing = true; store.sessions++; sessionMs = 0; lastTick = Date.now();
+    persist(); send('session_start', {});
+  }
+  function tick() {
+    if (!playing) return;
+    const now = Date.now();
+    if (document.hasFocus()) { const dt = now - lastTick; sessionMs += dt; store.totalPlaytimeMs += dt; }
+    lastTick = now; persist();
+  }
+  function summary() {
+    return {
+      sessions: store.sessions,
+      totalPlaytimeMin: +(store.totalPlaytimeMs / 60000).toFixed(2),
+      thisSessionMin: +(sessionMs / 60000).toFixed(2),
+      events: { ...store.events },
+      products: JSON.parse(JSON.stringify(store.products)),
+    };
+  }
+  // Optional on-screen dashboard (press B) so playtime + engagement is visible.
+  let overlay = null, overlayTimer = null;
+  function renderOverlay() {
+    if (!overlay) return;
+    const s = summary();
+    const rows = Object.entries(s.products).map(([n, p]) =>
+      `<tr><td>${n}</td><td>${p.pickups}</td><td>${p.views}</td><td style="color:#ffd200">${p.visits}</td></tr>`).join('');
+    overlay.innerHTML =
+      `<div style="font:700 13px Barlow Condensed,sans-serif;letter-spacing:2px;color:#00c060;margin-bottom:6px">LUNA · ENGAGEMENT</div>` +
+      `<div style="font:12px monospace;line-height:1.6">` +
+      `session&nbsp;<b>${s.thisSessionMin.toFixed(1)} min</b> &nbsp;·&nbsp; total&nbsp;<b>${s.totalPlaytimeMin.toFixed(1)} min</b> &nbsp;·&nbsp; plays&nbsp;<b>${s.sessions}</b></div>` +
+      `<table style="font:11px monospace;margin-top:8px;border-collapse:collapse;width:100%">` +
+      `<tr style="color:#8090b0"><td>product</td><td>pick</td><td>view</td><td>visit</td></tr>${rows}</table>`;
+  }
+  function toggleOverlay() {
+    if (overlay) { clearInterval(overlayTimer); overlay.remove(); overlay = null; return; }
+    overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:70px;left:14px;z-index:99998;background:rgba(5,5,15,0.92);' +
+      'border:1px solid #00a651;border-top:3px solid #00a651;padding:12px 16px;min-width:240px;color:#d8ddf0;pointer-events:none;';
+    document.body.appendChild(overlay);
+    renderOverlay();
+    overlayTimer = setInterval(renderOverlay, 1000);
+  }
+
+  setInterval(tick, 2000);
+  window.addEventListener('beforeunload', tick);
+  document.addEventListener('visibilitychange', tick);
+  return { track, startSession, summary, toggleOverlay };
+})();
+window.lunaAnalytics = LunaAnalytics;
+
 async function startGame() {
   document.getElementById('start-screen').style.display = 'none';
   document.getElementById('tutorial-overlay').style.display = 'flex';
@@ -3127,6 +3215,7 @@ function dismissTutorial() {
   document.getElementById('tutorial-overlay').style.display = 'none';
   document.getElementById('hud').style.display = 'block';
   gameActive = true;
+  LunaAnalytics.startSession();
 }
 
 function restartGame() {
@@ -4509,6 +4598,7 @@ function bindControls() {
     keys[e.code] = true;
     if (gameActive && !pauseOpen && e.code==='KeyE') tryPickup();
     if (gameActive && !e.repeat && e.code==='KeyP') { pauseOpen ? closePause() : openPause(); }
+    if (!e.repeat && e.code==='KeyB') LunaAnalytics.toggleOverlay();
     if (gameActive && !infoOpen && !pauseOpen && !e.repeat && e.code==='KeyQ') dropWeapon();
     if (gameActive && !pauseOpen && e.code==='Digit1') trySwitch(0);
     if (gameActive && !pauseOpen && e.code==='Digit2') trySwitch(1);
@@ -4535,6 +4625,7 @@ function pickupWeapon(obj) {
   obj.collected = true;
   const idx = WEAPONS.indexOf(obj.w);
   collected.add(idx);
+  LunaAnalytics.track('device_pickup', { product: obj.w.name });
   obj.pl.intensity = 0;
 
   // Pickup anim - a generation token aborts stale animations even when the
@@ -4865,9 +4956,13 @@ function scanQR(qObj) {
   specEl.innerHTML = '';
   w.specs.forEach(s => { const li = document.createElement('li'); li.textContent = s; specEl.appendChild(li); });
   document.getElementById('prod-effect').textContent = w.effectDesc;
-  document.getElementById('prod-visit-btn').onclick = () => window.open(w.url, '_blank', 'noopener,noreferrer');
+  document.getElementById('prod-visit-btn').onclick = () => {
+    LunaAnalytics.track('product_visit', { product: w.name, url: w.url });
+    window.open(w.url, '_blank', 'noopener,noreferrer');
+  };
 
   document.getElementById('info-panel').style.display = 'block';
+  LunaAnalytics.track('product_view', { product: w.name });
   infoOpen = true;
   if(document.pointerLockElement) document.exitPointerLock();
 
