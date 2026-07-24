@@ -3408,9 +3408,9 @@ function upgradePropVisuals() {
 
 function loadAndPlaceCrowd() {
   const gltfLoader = new THREE.GLTFLoader();
-  // These GLBs contain their textures. The old person-a..f files reference
-  // absent external PNGs and produced a 404 for every crowd member.
-  const crowdFiles = ['char1','char2','char4','char6','man','worker'];
+  // These GLBs contain their textures. Spectators generated with Meshy AI
+  // (self-contained GLBs); the loader normalizes each to 1.2 units tall.
+  const crowdFiles = ['spectator-a','spectator-b','spectator-c','spectator-d'];
   const promises = crowdFiles.map(id =>
     new Promise(resolve => {
       gltfLoader.load(`models/crowd/${id}.glb`, gltf => {
