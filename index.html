@@ -4327,11 +4327,11 @@ function bindControls() {
     if (gameActive && !pauseOpen && e.code==='KeyE') tryPickup();
     if (gameActive && !e.repeat && e.code==='KeyP') { pauseOpen ? closePause() : openPause(); }
     if (gameActive && !infoOpen && !pauseOpen && !e.repeat && e.code==='KeyQ') dropWeapon();
-    if (gameActive && e.code==='Digit1') trySwitch(0);
-    if (gameActive && e.code==='Digit2') trySwitch(1);
-    if (gameActive && e.code==='Digit3') trySwitch(2);
-    if (gameActive && e.code==='Digit4') trySwitch(3);
-    if (gameActive && e.code==='Digit5') trySwitch(4);
+    if (gameActive && !pauseOpen && e.code==='Digit1') trySwitch(0);
+    if (gameActive && !pauseOpen && e.code==='Digit2') trySwitch(1);
+    if (gameActive && !pauseOpen && e.code==='Digit3') trySwitch(2);
+    if (gameActive && !pauseOpen && e.code==='Digit4') trySwitch(3);
+    if (gameActive && !pauseOpen && e.code==='Digit5') trySwitch(4);
     if (gameActive && e.code==='Digit6') trySwitch(5);
     if (e.code==='Escape') closeInfo();
   });
@@ -4773,6 +4773,7 @@ function armThenRedeem(key) {
   button.classList.remove('arm');
   wallet.spent += item.cost;
   wallet.codes.push({ label: item.label, code: redemptionCode(item.prefix), at: Date.now() });
+  if (wallet.codes.length > 40) wallet.codes = wallet.codes.slice(-40);
   saveWallet();
   refreshWalletUi();
   addKillFeed(item.label + ' redeemed!');
@@ -4795,6 +4796,7 @@ function closePause() {
   }
 }
 document.getElementById('pause-btn').addEventListener('click', openPause);
+document.getElementById('pause-btn').addEventListener('mousedown', (event) => { event.stopPropagation(); });
 document.getElementById('resume-btn').addEventListener('click', closePause);
 document.getElementById('shop-buy-plush').addEventListener('click', () => armThenRedeem('plush'));
 document.getElementById('shop-buy-terminal').addEventListener('click', () => armThenRedeem('terminal'));
