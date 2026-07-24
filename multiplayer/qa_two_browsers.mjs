@@ -53,11 +53,15 @@ check("alpha's remote avatar model loaded", await waitForRemoteModel(alpha));
 const remoteAvatars = {
   betaSees: await beta.evaluate(() => window.__mpDebug().remotes[0]?.avatar),
   alphaSees: await alpha.evaluate(() => window.__mpDebug().remotes[0]?.avatar),
-  alphaSeesAnimated: await alpha.evaluate(() => window.__mpDebug().remotes[0]?.animated),
+  elephant: await alpha.evaluate(() => { const r = window.__mpDebug().remotes[0]; return { animated: r?.animated, clipName: r?.clipName, clipDuration: r?.clipDuration }; }),
 };
 check("beta sees alpha as the zebra patronus", remoteAvatars.betaSees === "zebra", JSON.stringify(remoteAvatars));
 check("alpha sees beta as the elephant patronus", remoteAvatars.alphaSees === "elephant");
-check("elephant patronus is rig-animated", remoteAvatars.alphaSeesAnimated === true);
+check(
+  "elephant patronus plays a real walk clip",
+  remoteAvatars.elephant.animated === true && /walk/i.test(remoteAvatars.elephant.clipName ?? "") && remoteAvatars.elephant.clipDuration > 1,
+  JSON.stringify(remoteAvatars.elephant),
+);
 
 const before = await beta.evaluate(() => {
   const r = window.__mpDebug().remotes[0];

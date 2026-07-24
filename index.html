@@ -4914,7 +4914,8 @@ const MP = (() => {
     return hash % avatarFiles.length;
   }
 
-  function attachRemoteModel(remote, model, animations) {
+  function attachRemoteModel(remote, model, animations, ownsResources) {
+    remote.ownsResources = !!ownsResources;
     const box = new THREE.Box3().setFromObject(model);
     const size = box.getSize(new THREE.Vector3());
     if (size.y > 0) model.scale.setScalar(1.65 / size.y);
@@ -4929,6 +4930,8 @@ const MP = (() => {
       const findClip = (pattern) => animations.find((clip) => pattern.test(clip.name));
       const walkClip = findClip(/walk|run|move/i) || animations[0];
       const idleClip = findClip(/idle|stand|breath/i) || null;
+      remote.clipName = walkClip.name;
+      remote.clipDuration = walkClip.duration;
       remote.walkAction = remote.mixer.clipAction(walkClip);
       remote.idleAction = idleClip && idleClip !== walkClip ? remote.mixer.clipAction(idleClip) : null;
       if (remote.idleAction) { remote.idleAction.play(); }
@@ -4941,7 +4944,7 @@ const MP = (() => {
     return new Promise((resolve) => {
       new THREE.GLTFLoader().load(`models/patronus/${animal}.glb`, (gltf) => {
         if (!remotes.has(remote.id)) return resolve(true);
-        attachRemoteModel(remote, gltf.scene, gltf.animations);
+        attachRemoteModel(remote, gltf.scene, gltf.animations, true); // fresh parse: this remote owns the GPU resources
         resolve(true);
       }, undefined, () => { patronusMissing.add(animal); resolve(false); });
     });
@@ -4963,7 +4966,7 @@ const MP = (() => {
     remote.avatar = animal;
     const fallbackToCrowd = () => loadAvatarTemplate(avatarFiles[avatarIndexFor(p.id)]).then((template) => {
       if (!template || !remotes.has(p.id) || remote.model) return;
-      attachRemoteModel(remote, template.clone(true), null);
+      attachRemoteModel(remote, template.clone(true), null, false); // clone shares the cached template's GPU resources
     });
     if (patronusMissing.has(animal)) fallbackToCrowd();
     else loadPatronus(remote, animal).then((ok) => { if (!ok) fallbackToCrowd(); });
@@ -4974,6 +4977,32 @@ const MP = (() => {
     if (!remote) return;
     scene.remove(remote.root);
     remotes.delete(id);
+    // Free GPU memory: 7MB patronus textures across join/leave cycles add up.
+    if (remote.mixer) {
+      remote.mixer.stopAllAction();
+      remote.mixer.uncacheRoot(remote.model);
+    }
+    remote.root.traverse((obj) => {
+      if (obj.isSprite && obj.material) {
+        // The name tag owns its canvas texture; emote sprites share the cached one.
+        if (obj.material.map && obj.material.map.image instanceof HTMLCanvasElement) obj.material.map.dispose();
+        obj.material.dispose();
+        return;
+      }
+      if (!remote.ownsResources) return; // crowd clones share the template's geometry/materials
+      if (obj.isMesh || obj.isSkinnedMesh) {
+        if (obj.geometry) obj.geometry.dispose();
+        const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
+        materials.forEach((material) => {
+          if (!material) return;
+          for (const key of Object.keys(material)) {
+            const value = material[key];
+            if (value && value.isTexture) value.dispose();
+          }
+          material.dispose();
+        });
+      }
+    });
   }
 
   function clearRemotes() {
@@ -5357,7 +5386,7 @@ const MP = (() => {
             const size = new THREE.Box3().setFromObject(remote.model).getSize(new THREE.Vector3());
             modelHeight = Math.round(size.y * 100) / 100;
           }
-          return { id, x: remote.root.position.x, y: remote.root.position.y, z: remote.root.position.z, buffered: remote.buf.length, hasModel: !!remote.model, modelHeight, emoting: !!remote.emote, avatar: remote.avatar, animated: remote.animated };
+          return { id, x: remote.root.position.x, y: remote.root.position.y, z: remote.root.position.z, buffered: remote.buf.length, hasModel: !!remote.model, modelHeight, emoting: !!remote.emote, avatar: remote.avatar, animated: remote.animated, clipName: remote.clipName ?? null, clipDuration: remote.clipDuration ?? 0 };
         }),
       };
     },
