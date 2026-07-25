@@ -577,6 +577,7 @@ body { background: #000; overflow: hidden; font-family: 'Source Sans 3', 'Barlow
     <div class="wslot empty" id="slot-1" data-num="2"><div class="ico">MC3400</div></div>
     <div class="wslot empty" id="slot-2" data-num="3"><div class="ico">PS30</div></div>
     <div class="wslot empty" id="slot-3" data-num="4"><div class="ico">TC8300</div></div>
+    <div class="wslot empty" id="slot-4" data-num="5"><div class="ico">🦓 PLUSH</div></div>
   </div>
 
   <div id="progress-wrap">
@@ -706,6 +707,7 @@ let balloons = [], weaponObjs = [], qrObjs = [], particles = [], projectiles = [
 let comboCount = 0, comboExpireAt = 0;   // pop-chain combo
 const circusSpotlights = [];             // sweeping colored lights
 let plushieGltf = null, plushieTrophy = null; // Zebra plushie reward model
+let holdingPlushie = false;              // player is holding the plushie item
 let heldMesh = null;
 let promptTimer = null;
 let clock;
@@ -3224,6 +3226,7 @@ function dismissTutorial() {
   document.getElementById('hud').style.display = 'block';
   gameActive = true;
   LunaAnalytics.startSession();
+  if (wallet.plushAwarded) markPlushieSlot(); // restore owned plushie in inventory
 }
 
 function restartGame() {
@@ -3231,7 +3234,7 @@ function restartGame() {
   score = 0; currentWeapon = -1; collected.clear();
   balloons = []; weaponObjs = []; qrObjs = []; particles = []; projectiles = []; ringWaves = []; scanMarkers = [];
   heldMesh = null; mouseDown = false; infoOpen = false; milestoneShown = false;
-  rfidUnlocked = false; rfidCooldownUntil = 0; comboCount = 0; plushieTrophy = null;
+  rfidUnlocked = false; rfidCooldownUntil = 0; comboCount = 0; plushieTrophy = null; holdingPlushie = false;
   { const r = document.getElementById('__rfid'); if (r) r.style.display = 'none'; }
   document.getElementById('milestone-popup').style.display = 'none';
   document.getElementById('score-value').textContent = '0';
@@ -4845,7 +4848,7 @@ function bindControls() {
     if (gameActive && !pauseOpen && e.code==='Digit2') trySwitch(1);
     if (gameActive && !pauseOpen && e.code==='Digit3') trySwitch(2);
     if (gameActive && !pauseOpen && e.code==='Digit4') trySwitch(3);
-    if (gameActive && !pauseOpen && e.code==='Digit5') trySwitch(4);
+    if (gameActive && !pauseOpen && e.code==='Digit5') equipPlushie(); // plushie inventory item
     if (gameActive && e.code==='Digit6') trySwitch(5);
     if (e.code==='Escape') closeInfo();
   });
@@ -4950,6 +4953,11 @@ function dropWeapon() {
 
 function trySwitch(idx) {
   if (!collected.has(idx)) return;
+  if (holdingPlushie) {
+    holdingPlushie = false;
+    const ps = document.getElementById('slot-4');
+    if (ps) { ps.classList.remove('active'); ps.classList.add('has-it'); }
+  }
   currentWeapon = idx;
   for (let i=0;i<6;i++) {
     const s=document.getElementById('slot-'+i);
@@ -5331,49 +5339,44 @@ function earnBalloon() {
 function awardZebraPlushie() {
   LunaAnalytics.track('plushie_awarded', {});
   cheerCrowd();
-  for (let k = 0; k < 6; k++) {
-    spawnConfetti(new THREE.Vector3((Math.random() - 0.5) * 14, 5 + Math.random() * 4, (Math.random() - 0.5) * 14), 26, 0.3);
+  // Small celebratory confetti near the player (no big overlay/trophy).
+  spawnConfetti(camera.position.clone().add(new THREE.Vector3(0, 0.5, -2)), 24, 0.25);
+  markPlushieSlot();
+  showPrompt('🦓 ZEBRA PLUSHIE added to your inventory! Press 5 to hold · Claim online in Pause (P)', 5000);
+  addKillFeed('🦓 Zebra Plushie earned — added to inventory!');
+}
+
+// Show the plushie inventory slot as owned.
+function markPlushieSlot() {
+  const s = document.getElementById('slot-4');
+  if (s && !holdingPlushie) { s.classList.remove('empty'); s.classList.add('has-it'); }
+}
+
+// Hold the (small) plushie in first person — a pure inventory item, not a weapon.
+function equipPlushie() {
+  if (!wallet.plushAwarded || !plushieGltf) return;
+  if (heldMesh) { camera.remove(heldMesh); heldMesh = null; }
+  currentWeapon = -1;
+  holdingPlushie = true;
+  const g = new THREE.Group();
+  const m = plushieGltf.scene.clone(true);
+  const box = new THREE.Box3().setFromObject(m);
+  const h = box.getSize(new THREE.Vector3()).y || 1;
+  m.scale.setScalar(0.3 / h); // small — fits in the hand
+  const b2 = new THREE.Box3().setFromObject(m);
+  m.position.sub(b2.getCenter(new THREE.Vector3()));
+  g.add(m);
+  g.position.set(0.26, -0.32, -0.88); // held in front of the camera
+  heldMesh = g;
+  camera.add(g);
+  document.getElementById('weapon-info').style.display = 'none';
+  for (let i = 0; i < 6; i++) {
+    const s = document.getElementById('slot-' + i);
+    if (!s) continue;
+    if (i === 4) { s.classList.remove('empty', 'has-it'); s.classList.add('active'); }
+    else s.classList.toggle('active', false);
   }
-  // Spinning 3D plushie trophy above the center podium (if the model loaded).
-  if (plushieGltf && typeof scene !== 'undefined') {
-    const m = plushieGltf.scene.clone(true);
-    const box = new THREE.Box3().setFromObject(m);
-    const h = box.getSize(new THREE.Vector3()).y || 1;
-    m.scale.setScalar(1.6 / h);
-    m.position.set(0, 2.4, 0);
-    m.userData.plushieTrophy = true;
-    scene.add(m);
-    plushieTrophy = m;
-  }
-  if (document.pointerLockElement) document.exitPointerLock();
-  // Reward overlay with the online claim link (no code).
-  let el = document.getElementById('__plush');
-  if (!el) {
-    el = document.createElement('div');
-    el.id = '__plush';
-    el.style.cssText = 'position:fixed;inset:0;z-index:1200;display:flex;align-items:center;justify-content:center;'
-      + 'background:rgba(5,5,15,0.82);font-family:"Barlow Condensed",sans-serif;';
-    document.body.appendChild(el);
-  }
-  el.innerHTML =
-    '<div style="background:#0b0b16;border:2px solid #ffd200;border-top:6px solid #ffd200;max-width:440px;'
-    + 'padding:28px 30px;text-align:center;color:#fff;box-shadow:0 0 60px rgba(255,210,0,0.25)">'
-    + '<div style="font-size:44px">🦓</div>'
-    + '<div style="font-size:30px;font-weight:800;letter-spacing:2px;color:#ffd200;margin:6px 0">ZEBRA PLUSHIE UNLOCKED!</div>'
-    + '<div style="font-family:\'Source Sans 3\',sans-serif;font-size:14px;color:#cdd3ea;line-height:1.5;margin-bottom:18px">'
-    + 'You popped 200 balloons — your Zebra plushie is unlocked. Claim it online, no code needed.</div>'
-    + '<button id="__plush-claim" style="width:100%;background:#00a651;color:#fff;border:none;padding:12px;'
-    + 'font-family:\'Barlow Condensed\',sans-serif;font-weight:800;font-size:16px;letter-spacing:2px;cursor:pointer">'
-    + 'CLAIM YOUR ZEBRA PLUSHIE →</button>'
-    + '<button id="__plush-close" style="margin-top:10px;width:100%;background:transparent;color:#8090b0;border:1px solid #333;'
-    + 'padding:9px;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:2px;cursor:pointer">KEEP PLAYING</button>'
-    + '</div>';
-  el.style.display = 'flex';
-  document.getElementById('__plush-claim').onclick = () => {
-    LunaAnalytics.track('plushie_claim_click', {});
-    window.open(ZEBRA_PLUSH_URL, '_blank', 'noopener,noreferrer');
-  };
-  document.getElementById('__plush-close').onclick = () => { el.style.display = 'none'; };
+  showPrompt('🦓 Holding your Zebra Plushie', 1400);
 }
 function redemptionCode(prefix) {
   const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -5528,7 +5531,6 @@ function animate() {
 function updateGame(delta, t) {
 
   animateSpectators(t);
-  if (plushieTrophy) { plushieTrophy.rotation.y = t * 0.9; plushieTrophy.position.y = 2.4 + Math.sin(t * 1.5) * 0.15; }
   if (rfidUnlocked) updateRfidHud();
   for (const s of circusSpotlights) {
     const a = t * s.speed + s.phase;
