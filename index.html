@@ -593,11 +593,11 @@ body { background: #000; overflow: hidden; font-family: 'Source Sans 3', 'Barlow
     <div class="pp-balance">BALLOON BANK: <b id="wallet-balance">0</b> 🎈 <span style="font-size:12px">(pop balloons to earn)</span></div>
     <div class="shop-card">
       <div>
-        <div class="sc-name">ZEBRA PLUSH TOY</div>
-        <div class="sc-sub">Claim online — redemption code on purchase</div>
+        <div class="sc-name">ZEBRA PLUSH TOY 🦓</div>
+        <div class="sc-sub">Auto-unlocked at 200 balloons — claim online, no code</div>
       </div>
       <div class="sc-cost">200 🎈</div>
-      <button class="shop-btn" id="shop-buy-plush" type="button">REDEEM</button>
+      <button class="shop-btn" id="shop-buy-plush" type="button" disabled>AUTO</button>
     </div>
     <div class="shop-card">
       <div>
@@ -705,6 +705,7 @@ const WIN_SCORE = 200;
 let balloons = [], weaponObjs = [], qrObjs = [], particles = [], projectiles = [], ringWaves = [], scanMarkers = [];
 let comboCount = 0, comboExpireAt = 0;   // pop-chain combo
 const circusSpotlights = [];             // sweeping colored lights
+let plushieGltf = null, plushieTrophy = null; // Zebra plushie reward model
 let heldMesh = null;
 let promptTimer = null;
 let clock;
@@ -3230,7 +3231,7 @@ function restartGame() {
   score = 0; currentWeapon = -1; collected.clear();
   balloons = []; weaponObjs = []; qrObjs = []; particles = []; projectiles = []; ringWaves = []; scanMarkers = [];
   heldMesh = null; mouseDown = false; infoOpen = false; milestoneShown = false;
-  rfidUnlocked = false; rfidCooldownUntil = 0; comboCount = 0;
+  rfidUnlocked = false; rfidCooldownUntil = 0; comboCount = 0; plushieTrophy = null;
   { const r = document.getElementById('__rfid'); if (r) r.style.display = 'none'; }
   document.getElementById('milestone-popup').style.display = 'none';
   document.getElementById('score-value').textContent = '0';
@@ -3470,6 +3471,8 @@ function addCircusProps() {
     { file: 'models/props/clown.glb', angle: Math.PI * 1.5, radius: 10.4, height: 2.2 },
   ];
   const loader = new THREE.GLTFLoader();
+  // Preload the plushie reward model so it's ready for the 200-balloon trophy.
+  loader.load('models/props/zebra-plushie.glb', (g) => { plushieGltf = g; }, undefined, () => {});
   props.forEach((p) => {
     loader.load(p.file, (gltf) => {
       const model = gltf.scene;
@@ -5294,15 +5297,19 @@ function closeInfo({ resumeGame = false } = {}) {
 // ═══════════════════════════════════════════════
 let pauseOpen = false;
 const SHOP_ITEMS = {
-  plush: { cost: 200, label: 'ZEBRA PLUSH TOY', prefix: 'ZC-PLUSH' },
   terminal: { cost: 10000, label: 'ZEBRA TERMINAL (REAL DEVICE)', prefix: 'ZC-TERM' },
 };
-const wallet = { earned: 0, spent: 0, codes: [] };
+const PLUSH_GOAL = 200;
+// Where players go to claim their real Zebra plushie. TODO: point this at the
+// real Zebra store / plush-claim page when available.
+const ZEBRA_PLUSH_URL = 'https://www.zebra.com';
+const wallet = { earned: 0, spent: 0, codes: [], plushAwarded: false };
 try {
   const stored = JSON.parse(localStorage.getItem('zebraBalloonWallet') || '{}');
   if (Number.isFinite(stored.earned)) wallet.earned = Math.max(0, Math.floor(stored.earned));
   if (Number.isFinite(stored.spent)) wallet.spent = Math.max(0, Math.floor(stored.spent));
   if (Array.isArray(stored.codes)) wallet.codes = stored.codes.slice(0, 40);
+  wallet.plushAwarded = !!stored.plushAwarded;
 } catch (err) {}
 
 function walletBalance() { return Math.max(0, wallet.earned - wallet.spent); }
@@ -5311,8 +5318,62 @@ function saveWallet() {
 }
 function earnBalloon() {
   wallet.earned += 1;
+  // Auto-award the Zebra plushie the moment 200 balloons are reached — no
+  // points exchange, no redemption code.
+  if (wallet.earned >= PLUSH_GOAL && !wallet.plushAwarded) {
+    wallet.plushAwarded = true;
+    awardZebraPlushie();
+  }
   saveWallet();
   refreshWalletUi();
+}
+
+function awardZebraPlushie() {
+  LunaAnalytics.track('plushie_awarded', {});
+  cheerCrowd();
+  for (let k = 0; k < 6; k++) {
+    spawnConfetti(new THREE.Vector3((Math.random() - 0.5) * 14, 5 + Math.random() * 4, (Math.random() - 0.5) * 14), 26, 0.3);
+  }
+  // Spinning 3D plushie trophy above the center podium (if the model loaded).
+  if (plushieGltf && typeof scene !== 'undefined') {
+    const m = plushieGltf.scene.clone(true);
+    const box = new THREE.Box3().setFromObject(m);
+    const h = box.getSize(new THREE.Vector3()).y || 1;
+    m.scale.setScalar(1.6 / h);
+    m.position.set(0, 2.4, 0);
+    m.userData.plushieTrophy = true;
+    scene.add(m);
+    plushieTrophy = m;
+  }
+  if (document.pointerLockElement) document.exitPointerLock();
+  // Reward overlay with the online claim link (no code).
+  let el = document.getElementById('__plush');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = '__plush';
+    el.style.cssText = 'position:fixed;inset:0;z-index:1200;display:flex;align-items:center;justify-content:center;'
+      + 'background:rgba(5,5,15,0.82);font-family:"Barlow Condensed",sans-serif;';
+    document.body.appendChild(el);
+  }
+  el.innerHTML =
+    '<div style="background:#0b0b16;border:2px solid #ffd200;border-top:6px solid #ffd200;max-width:440px;'
+    + 'padding:28px 30px;text-align:center;color:#fff;box-shadow:0 0 60px rgba(255,210,0,0.25)">'
+    + '<div style="font-size:44px">🦓</div>'
+    + '<div style="font-size:30px;font-weight:800;letter-spacing:2px;color:#ffd200;margin:6px 0">ZEBRA PLUSHIE UNLOCKED!</div>'
+    + '<div style="font-family:\'Source Sans 3\',sans-serif;font-size:14px;color:#cdd3ea;line-height:1.5;margin-bottom:18px">'
+    + 'You popped 200 balloons — your Zebra plushie is unlocked. Claim it online, no code needed.</div>'
+    + '<button id="__plush-claim" style="width:100%;background:#00a651;color:#fff;border:none;padding:12px;'
+    + 'font-family:\'Barlow Condensed\',sans-serif;font-weight:800;font-size:16px;letter-spacing:2px;cursor:pointer">'
+    + 'CLAIM YOUR ZEBRA PLUSHIE →</button>'
+    + '<button id="__plush-close" style="margin-top:10px;width:100%;background:transparent;color:#8090b0;border:1px solid #333;'
+    + 'padding:9px;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:2px;cursor:pointer">KEEP PLAYING</button>'
+    + '</div>';
+  el.style.display = 'flex';
+  document.getElementById('__plush-claim').onclick = () => {
+    LunaAnalytics.track('plushie_claim_click', {});
+    window.open(ZEBRA_PLUSH_URL, '_blank', 'noopener,noreferrer');
+  };
+  document.getElementById('__plush-close').onclick = () => { el.style.display = 'none'; };
 }
 function redemptionCode(prefix) {
   const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -5326,6 +5387,12 @@ function refreshWalletUi() {
   const balance = walletBalance();
   document.getElementById('wallet-hud').textContent = balance;
   document.getElementById('wallet-balance').textContent = balance;
+  // Plush = auto-awarded: show progress or a claim link, never a manual redeem.
+  const plushBtn = document.getElementById('shop-buy-plush');
+  if (plushBtn) {
+    plushBtn.disabled = !wallet.plushAwarded;
+    plushBtn.textContent = wallet.plushAwarded ? 'CLAIM →' : `${Math.min(wallet.earned, PLUSH_GOAL)}/${PLUSH_GOAL}`;
+  }
   for (const [key, item] of Object.entries(SHOP_ITEMS)) {
     const button = document.getElementById('shop-buy-' + key);
     if (!button.classList.contains('arm')) {
@@ -5379,7 +5446,10 @@ function closePause() {
 document.getElementById('pause-btn').addEventListener('click', openPause);
 document.getElementById('pause-btn').addEventListener('mousedown', (event) => { event.stopPropagation(); });
 document.getElementById('resume-btn').addEventListener('click', closePause);
-document.getElementById('shop-buy-plush').addEventListener('click', () => armThenRedeem('plush'));
+// Plush is auto-awarded at 200 balloons; its button just opens the claim link.
+document.getElementById('shop-buy-plush').addEventListener('click', () => {
+  if (wallet.plushAwarded) window.open(ZEBRA_PLUSH_URL, '_blank', 'noopener,noreferrer');
+});
 document.getElementById('shop-buy-terminal').addEventListener('click', () => armThenRedeem('terminal'));
 document.getElementById('pause-overlay').addEventListener('mousedown', (event) => { event.stopPropagation(); });
 refreshWalletUi();
@@ -5458,6 +5528,7 @@ function animate() {
 function updateGame(delta, t) {
 
   animateSpectators(t);
+  if (plushieTrophy) { plushieTrophy.rotation.y = t * 0.9; plushieTrophy.position.y = 2.4 + Math.sin(t * 1.5) * 0.15; }
   if (rfidUnlocked) updateRfidHud();
   for (const s of circusSpotlights) {
     const a = t * s.speed + s.phase;
