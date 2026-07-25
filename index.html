@@ -4732,7 +4732,9 @@ function rebuildHeldMesh() {
   if (currentWeapon<0) return;
   heldMesh = makeWeaponMesh(WEAPONS[currentWeapon]);
   heldMesh.position.set(0.18, -0.34, -0.90);
-  heldMesh.rotation.set(-0.10, -1.2 + Math.PI + 75*Math.PI/180, 0.04);
+  // Meshy image-to-3D models face +Z (screen toward viewer), grip down. Orient
+  // for a first-person aim: screen toward player, tilted forward like scanning.
+  heldMesh.rotation.set(-0.45, 0.15, 0.0);
   heldMesh.scale.setScalar(0.9);
   camera.add(heldMesh);
 }
