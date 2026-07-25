@@ -3430,6 +3430,39 @@ function buildScene() {
   upgradePropVisuals();
   upgradeBleachers();
   upgradeSeatedAudience();
+  addCircusProps();
+}
+
+// Decorative Meshy-generated circus props placed around the arena edge.
+// Plain game mode only (Studio authoring keeps the canonical scene).
+function addCircusProps() {
+  if (typeof STUDIO_AUTHORING_MODE !== 'undefined' && STUDIO_AUTHORING_MODE) return;
+  const props = [
+    { file: 'models/props/popcorn-cart.glb', angle: Math.PI * 0.25, radius: 9.5, height: 1.9 },
+    { file: 'models/props/circus-cannon.glb', angle: Math.PI * 0.75, radius: 9.2, height: 1.7 },
+    { file: 'models/props/ticket-booth.glb', angle: Math.PI * 1.25, radius: 9.6, height: 2.9 },
+    { file: 'models/props/high-striker.glb', angle: Math.PI * 1.75, radius: 9.6, height: 3.6 },
+  ];
+  const loader = new THREE.GLTFLoader();
+  props.forEach((p) => {
+    loader.load(p.file, (gltf) => {
+      const model = gltf.scene;
+      let box = new THREE.Box3().setFromObject(model);
+      const h = box.getSize(new THREE.Vector3()).y;
+      if (h > 0) model.scale.setScalar(p.height / h);
+      box = new THREE.Box3().setFromObject(model);
+      const c = box.getCenter(new THREE.Vector3());
+      const grp = new THREE.Group();
+      grp.add(model);
+      model.position.x -= c.x;
+      model.position.z -= c.z;
+      model.position.y -= box.min.y; // rest on the ground
+      grp.position.set(Math.cos(p.angle) * p.radius, 0, Math.sin(p.angle) * p.radius);
+      grp.rotation.y = Math.atan2(-Math.cos(p.angle), -Math.sin(p.angle)); // face center
+      grp.userData.circusProp = true;
+      scene.add(grp);
+    }, undefined, () => { /* prop model missing: skip */ });
+  });
 }
 
 // Replace the procedural ring bleachers with a Meshy-generated wooden
