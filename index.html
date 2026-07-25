@@ -3465,6 +3465,9 @@ function addCircusProps() {
     { file: 'models/props/circus-cannon.glb', angle: Math.PI * 0.75, radius: 9.2, height: 1.7 },
     { file: 'models/props/ticket-booth.glb', angle: Math.PI * 1.25, radius: 9.6, height: 2.9 },
     { file: 'models/props/high-striker.glb', angle: Math.PI * 1.75, radius: 9.6, height: 3.6 },
+    { file: 'models/props/carousel.glb', angle: Math.PI * 0.0, radius: 11.0, height: 3.8, spin: 0.25 },
+    { file: 'models/props/elephant.glb', angle: Math.PI * 0.5, radius: 10.6, height: 2.4 },
+    { file: 'models/props/clown.glb', angle: Math.PI * 1.5, radius: 10.4, height: 2.2 },
   ];
   const loader = new THREE.GLTFLoader();
   props.forEach((p) => {
@@ -3544,11 +3547,12 @@ function upgradeBleachers() {
 // the old bleacher positions. Plain game mode only (Studio parity preserved).
 // Celebratory confetti burst (colorful pieces with gravity, reuses particles).
 const CONFETTI_COLORS = [0xff3b3b, 0xffd200, 0x2ec4ff, 0x38d66b, 0xff8ad1, 0xff6a00, 0xffffff];
-function spawnConfetti(pos, count = 22, spread = 0.22) {
+const CONFETTI_GEO = new THREE.PlaneGeometry(0.09, 0.14); // shared, not per-piece
+function spawnConfetti(pos, count = 16, spread = 0.22) {
   for (let i = 0; i < count; i++) {
     const col = CONFETTI_COLORS[(Math.random() * CONFETTI_COLORS.length) | 0];
     const pm = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.09, 0.14),
+      CONFETTI_GEO,
       new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 1, side: THREE.DoubleSide })
     );
     pm.position.copy(pos);
@@ -4533,7 +4537,7 @@ function popBalloon(bo, weapon) {
   showFloatingScore(weapon.pts);
 
   // Celebration: confetti + crowd cheer + pop-chain combo bonus.
-  spawnConfetti(pos, 20);
+  spawnConfetti(pos, 12);
   cheerCrowd();
   const nowMs = performance.now();
   comboCount = (nowMs < comboExpireAt) ? comboCount + 1 : 1;
@@ -5245,20 +5249,32 @@ function updateRfidHud() {
 function rfidBulkRead() {
   const now = performance.now();
   if (!rfidUnlocked || now < rfidCooldownUntil || !gameActive || infoOpen || pauseOpen) return;
-  rfidCooldownUntil = now + 12000;
+  rfidCooldownUntil = now + 300000; // 5 minutes
   updateRfidHud();
-  // Expanding RFID scan ring from the player.
   flashScreen(0x00a651, 0.25);
   cheerCrowd();
-  // Read (pop) every live balloon, staggered outward for a sweep feel.
-  const alive = balloons.filter(b => b.alive);
-  const cam = camera.position.clone();
-  alive.sort((a, b) => a.mesh.position.distanceTo(cam) - b.mesh.position.distanceTo(cam));
+  // Lightweight bulk "read": hide every live balloon and batch the score — no
+  // per-balloon PointLight/particle storm (that was the lag), just a few
+  // confetti bursts total.
   const w = currentWeapon >= 0 ? WEAPONS[currentWeapon] : WEAPONS[0];
-  alive.forEach((b, i) => setTimeout(() => {
-    if (b.alive) { spawnConfetti(b.mesh.position.clone(), 10); popBalloon(b, w); }
-  }, i * 60));
-  addKillFeed('📡 RFID BULK READ — ' + alive.length + ' tags read!');
+  const alive = balloons.filter(b => b.alive);
+  let scored = 0;
+  alive.forEach(b => {
+    if (!b.alive) return;
+    if (MP.enabled) MP.onLocalPop(b, w);
+    if (!(MP.enabled && MP.remotePopInProgress())) earnBalloon();
+    b.alive = false;
+    b.mesh.userData.runtimeStateVisible = false;
+    b.mesh.visible = false;
+    scored += w.pts;
+    setTimeout(() => { if (gameActive && !(MP.enabled && MP.connected())) respawnBalloon(b); }, 3500 + Math.random() * 2000);
+  });
+  if (scored) addScore(scored);
+  for (let k = 0; k < 5; k++) {
+    const p = new THREE.Vector3((Math.random() - 0.5) * 12, 4 + Math.random() * 3, (Math.random() - 0.5) * 12);
+    spawnConfetti(p, 16);
+  }
+  addKillFeed('📡 RFID BULK READ — ' + alive.length + ' tags read (+' + scored + ')');
 }
 
 function closeInfo({ resumeGame = false } = {}) {
