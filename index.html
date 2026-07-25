@@ -707,7 +707,12 @@ let heldMesh = null;
 let promptTimer = null;
 let clock;
 let simulationTime = 0;
+const seatedSpectators = []; // { group, baseY, baseRotY, phase, speed, cheerAt }
 let playerHeight = PLAYER_H;
+let verticalVel = 0;      // jump/gravity vertical velocity
+let grounded = true;
+const JUMP_SPEED = 7.5;   // initial jump impulse
+const GRAVITY = 22;       // downward accel
 let runtimeSceneSource = 'embedded';
 let runtimeSceneDocument = null;
 let liveEditorSceneApplied = false;
@@ -3519,8 +3524,31 @@ function upgradeBleachers() {
 // Replace the 40 authored seated audience members with Meshy-generated seated
 // spectators, reusing each authored member's footprint so they sit exactly in
 // the old bleacher positions. Plain game mode only (Studio parity preserved).
+// Procedural idle animation for the static Meshy spectators: a gentle seated
+// bob + side sway, with an occasional bigger "cheer" bounce so the crowd feels
+// alive. Called every frame from updateGame.
+function animateSpectators(t) {
+  for (const s of seatedSpectators) {
+    const bob = Math.sin(t * s.speed + s.phase) * 0.18;       // visible up/down
+    const sway = Math.sin(t * s.speed * 0.5 + s.phase) * 0.12; // lean side to side
+    let cheer = 0;
+    if (t >= s.cheerAt) {
+      const into = t - s.cheerAt;
+      if (into < 0.8) {
+        cheer = Math.sin((into / 0.8) * Math.PI) * 0.6;        // a clear hop
+      } else {
+        s.cheerAt = t + 3 + Math.random() * 7;                 // schedule next
+      }
+    }
+    s.group.position.y = s.baseY + bob + cheer;
+    s.group.rotation.z = sway;
+    s.group.rotation.y = s.baseRotY + Math.sin(t * s.speed * 0.7 + s.phase) * 0.1;
+  }
+}
+
 function upgradeSeatedAudience() {
   if (typeof STUDIO_AUTHORING_MODE !== 'undefined' && STUDIO_AUTHORING_MODE) return;
+  seatedSpectators.length = 0; // reset animation registry on scene (re)build
   const files = ['models/crowd/seated-a.glb', 'models/crowd/seated-b.glb', 'models/crowd/seated-c.glb', 'models/crowd/seated-d.glb'];
   const loader = new THREE.GLTFLoader();
   const gltfs = [];
@@ -3587,6 +3615,13 @@ function upgradeSeatedAudience() {
     group.userData.seatedUpgrade = true;
     scene.add(group);
     placed.add(id);
+    // Register for procedural idle animation (bob, sway, periodic cheer).
+    seatedSpectators.push({
+      group, baseY: seatBaseY, baseRotY: group.rotation.y,
+      phase: Math.random() * Math.PI * 2,
+      speed: 1.6 + Math.random() * 1.2,
+      cheerAt: 3 + Math.random() * 8, // seconds until next cheer bounce
+    });
 
     // Scene doc applies asynchronously and may re-show the authored mesh; keep
     // it hidden for a few seconds.
@@ -4629,6 +4664,10 @@ function bindControls() {
 
   document.addEventListener('keydown', e => {
     keys[e.code] = true;
+    if (gameActive && e.code==='Space') e.preventDefault();
+    if (gameActive && !infoOpen && !pauseOpen && !e.repeat && e.code==='Space' && grounded) {
+      verticalVel = JUMP_SPEED; grounded = false;
+    }
     if (gameActive && !pauseOpen && e.code==='KeyE') tryPickup();
     if (gameActive && !e.repeat && e.code==='KeyP') { pauseOpen ? closePause() : openPause(); }
     if (!e.repeat && e.code==='KeyB') LunaAnalytics.toggleOverlay();
@@ -5183,6 +5222,8 @@ function animate() {
 
 function updateGame(delta, t) {
 
+  animateSpectators(t);
+
   // Camera rotation
   camera.rotation.order='YXZ';
   camera.rotation.y=yaw;
@@ -5340,7 +5381,16 @@ function movePlayer(delta) {
     nextZ.z += mv.z;
     if (canPlayerOccupy(nextZ)) camera.position.z = nextZ.z;
   }
-  camera.position.y=playerHeight;
+  // Vertical: jump + gravity. Ground level is playerHeight.
+  verticalVel -= GRAVITY * delta;
+  camera.position.y += verticalVel * delta;
+  if (camera.position.y <= playerHeight) {
+    camera.position.y = playerHeight;
+    verticalVel = 0;
+    grounded = true;
+  } else {
+    grounded = false;
+  }
 }
 
 function gameMode() {
