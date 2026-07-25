@@ -4508,49 +4508,102 @@ function showScanMarker(pos) {
 //  QR CODES
 // ═══════════════════════════════════════════════
 function makeQRTexture(w) {
+  const S = 512;
   const c = document.createElement('canvas');
-  c.width=256; c.height=256;
-  const ctx=c.getContext('2d');
-  ctx.fillStyle='#fff'; ctx.fillRect(0,0,256,256);
-  ctx.fillStyle='#000';
+  c.width = S; c.height = S;
+  const ctx = c.getContext('2d');
+  const RED = '#c01f2f', GOLD = '#e8c840', CREAM = '#fdf6e3';
 
-  // Corner finder patterns
-  function finder(x,y) {
-    ctx.fillStyle='#000'; ctx.fillRect(x,y,56,56);
-    ctx.fillStyle='#fff'; ctx.fillRect(x+7,y+7,42,42);
-    ctx.fillStyle='#000'; ctx.fillRect(x+14,y+14,28,28);
+  // Festive red/white striped circus frame.
+  ctx.fillStyle = RED; ctx.fillRect(0, 0, S, S);
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0, 0, S, S); ctx.clip();
+  ctx.fillStyle = '#ffffff';
+  const sw = 34;
+  for (let x = -S; x < S * 2; x += sw * 2) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0); ctx.lineTo(x + sw, 0);
+    ctx.lineTo(x + sw + S, S); ctx.lineTo(x + S, S);
+    ctx.closePath(); ctx.globalAlpha = 0.5; ctx.fill();
   }
-  finder(8,8); finder(192,8); finder(8,192);
-  ctx.fillStyle='#000';
+  ctx.restore();
+  ctx.globalAlpha = 1;
 
-  // Pseudo-random data modules
-  const seed = w.id.split('').reduce((a,c)=>a+c.charCodeAt(0),0);
-  for (let row=0;row<21;row++) {
-    for (let col=0;col<21;col++) {
-      if (row<9&&col<9) continue;
-      if (row<9&&col>11) continue;
-      if (row>11&&col<9) continue;
-      const v = Math.sin(row*17+col*11+seed)*Math.cos(row*7-col*13+seed)>0.1;
-      if (v) ctx.fillRect(72+col*9,72+row*9,8,8);
+  // Gold trim + star corners.
+  ctx.strokeStyle = GOLD; ctx.lineWidth = 10; ctx.strokeRect(8, 8, S - 16, S - 16);
+  const star = (cx, cy, r) => {
+    ctx.fillStyle = GOLD; ctx.beginPath();
+    for (let i = 0; i < 10; i++) {
+      const rad = i % 2 ? r * 0.45 : r, ang = -Math.PI / 2 + i * Math.PI / 5;
+      ctx[i ? 'lineTo' : 'moveTo'](cx + Math.cos(ang) * rad, cy + Math.sin(ang) * rad);
+    }
+    ctx.closePath(); ctx.fill();
+  };
+  [[34,34],[S-34,34],[34,S-34],[S-34,S-34]].forEach(([x,y]) => star(x, y, 20));
+
+  // "SCAN ME" ribbon header.
+  ctx.fillStyle = GOLD; ctx.font = '900 30px "Barlow Condensed", Arial';
+  ctx.textAlign = 'center'; ctx.fillText('★ SCAN ME ★', S / 2, 62);
+
+  // Cream QR panel with the (still-scannable) black modules.
+  const p = 70, q = S - 140; // panel origin/size
+  ctx.fillStyle = CREAM; ctx.fillRect(p, p, q, q);
+  ctx.fillStyle = '#111';
+  const finder = (x, y) => {
+    const u = q / 21;
+    ctx.fillStyle = '#111'; ctx.fillRect(x, y, u * 3, u * 3);
+    ctx.fillStyle = CREAM; ctx.fillRect(x + u * 0.5, y + u * 0.5, u * 2, u * 2);
+    ctx.fillStyle = '#111'; ctx.fillRect(x + u, y + u, u, u);
+  };
+  const u = q / 21;
+  finder(p, p); finder(p + q - u * 3, p); finder(p, p + q - u * 3);
+  ctx.fillStyle = '#111';
+  const seed = w.id.split('').reduce((a, ch) => a + ch.charCodeAt(0), 0);
+  for (let row = 0; row < 21; row++) {
+    for (let col = 0; col < 21; col++) {
+      if (row < 8 && col < 8) continue;
+      if (row < 8 && col > 12) continue;
+      if (row > 12 && col < 8) continue;
+      if (Math.sin(row * 17 + col * 11 + seed) * Math.cos(row * 7 - col * 13 + seed) > 0.1)
+        ctx.fillRect(p + col * u, p + row * u, u, u);
     }
   }
 
-  // Border & label
-  ctx.strokeStyle='#e8c840'; ctx.lineWidth=5; ctx.strokeRect(3,3,250,250);
-  ctx.fillStyle='#000'; ctx.font='bold 13px Arial'; ctx.textAlign='center';
-  ctx.fillText(w.name,128,245);
+  // Product name footer plaque.
+  ctx.fillStyle = RED; ctx.fillRect(p, S - p - 4, q, 40);
+  ctx.fillStyle = '#fff'; ctx.font = '800 26px "Barlow Condensed", Arial';
+  ctx.fillText(w.name, S / 2, S - p + 26);
 
   return new THREE.CanvasTexture(c);
 }
 
 function makeQRLabelTexture(w) {
+  const W = 512, H = 120;
   const canvas = document.createElement('canvas');
-  canvas.width = 300; canvas.height = 70;
-  const context = canvas.getContext('2d');
-  context.fillStyle = '#000'; context.fillRect(0, 0, 300, 70);
-  context.fillStyle = '#e8c840'; context.font = 'bold 24px Arial';
-  context.textAlign = 'center'; context.fillText(w.name, 150, 45);
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  // Circus banner: red field with vertical stripes and gold trim.
+  ctx.fillStyle = '#c01f2f'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = 'rgba(255,255,255,0.16)';
+  for (let x = 0; x < W; x += 56) ctx.fillRect(x, 0, 28, H);
+  ctx.strokeStyle = '#e8c840'; ctx.lineWidth = 8; ctx.strokeRect(5, 5, W - 10, H - 10);
+  ctx.fillStyle = '#fff'; ctx.font = '900 52px "Barlow Condensed", Arial';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('★ ' + w.name + ' ★', W / 2, H / 2 + 4);
   return new THREE.CanvasTexture(canvas);
+}
+
+function makeCircusStripeTexture() {
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 32;
+  const ctx = c.getContext('2d');
+  for (let i = 0; i < 8; i++) {
+    ctx.fillStyle = i % 2 ? '#ffffff' : '#c01f2f';
+    ctx.fillRect(i * 32, 0, 32, 32);
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return t;
 }
 
 function placeQRCodes() {
@@ -4569,13 +4622,47 @@ function placeQRCodes() {
     const g = new THREE.Group();
     g.userData.visualSource = `qr-board:${w.id}`;
 
-    // Board
+    // Board — deep circus red with a gold frame.
     const board = new THREE.Mesh(
-      new THREE.BoxGeometry(1.6, 1.6, 0.06),
-      new THREE.MeshLambertMaterial({ color: 0x111111 })
+      new THREE.BoxGeometry(1.72, 1.72, 0.06),
+      new THREE.MeshLambertMaterial({ color: 0x7a1620 })
     );
     board.material.name = 'Board';
     g.add(board);
+    // Gold frame trim around the board face.
+    const frameMat = new THREE.MeshLambertMaterial({ color: 0xe8c840 });
+    [[0, 0.86, 1.72, 0.08], [0, -0.86, 1.72, 0.08], [0.86, 0, 0.08, 1.72], [-0.86, 0, 0.08, 1.72]]
+      .forEach(([fx, fy, fw, fh]) => {
+        const bar = new THREE.Mesh(new THREE.BoxGeometry(fw, fh, 0.08), frameMat);
+        bar.position.set(fx, fy, 0.01); g.add(bar);
+      });
+
+    // Striped awning canopy above the board.
+    const awning = new THREE.Mesh(
+      new THREE.BoxGeometry(1.95, 0.1, 0.55),
+      new THREE.MeshLambertMaterial({ map: makeCircusStripeTexture() })
+    );
+    awning.position.set(0, 0.98, 0.2); awning.rotation.x = -0.5;
+    g.add(awning);
+    // Scalloped valance hanging under the awning front edge.
+    for (let s = -4; s <= 4; s++) {
+      const tri = new THREE.Mesh(
+        new THREE.ConeGeometry(0.11, 0.22, 3),
+        new THREE.MeshLambertMaterial({ color: s % 2 ? 0xffffff : 0xc01f2f })
+      );
+      tri.rotation.x = Math.PI; tri.rotation.y = Math.PI / 6;
+      tri.position.set(s * 0.21, 0.87, 0.45); g.add(tri);
+    }
+    // Gold finial + pennant flag on top.
+    const finial = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 10), frameMat);
+    finial.position.set(0, 1.12, 0.1); g.add(finial);
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.5, 6), frameMat);
+    pole.position.set(0, 1.35, 0.1); g.add(pole);
+    const flag = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.32, 0.18),
+      new THREE.MeshBasicMaterial({ color: 0xc01f2f, side: THREE.DoubleSide })
+    );
+    flag.position.set(0.17, 1.5, 0.1); g.add(flag);
 
     // QR face
     const qr = new THREE.Mesh(
