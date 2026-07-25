@@ -703,6 +703,8 @@ const PLAYER_H = 1.7;
 const WIN_SCORE = 200;
 
 let balloons = [], weaponObjs = [], qrObjs = [], particles = [], projectiles = [], ringWaves = [], scanMarkers = [];
+let comboCount = 0, comboExpireAt = 0;   // pop-chain combo
+const circusSpotlights = [];             // sweeping colored lights
 let heldMesh = null;
 let promptTimer = null;
 let clock;
@@ -3228,6 +3230,8 @@ function restartGame() {
   score = 0; currentWeapon = -1; collected.clear();
   balloons = []; weaponObjs = []; qrObjs = []; particles = []; projectiles = []; ringWaves = []; scanMarkers = [];
   heldMesh = null; mouseDown = false; infoOpen = false; milestoneShown = false;
+  rfidUnlocked = false; rfidCooldownUntil = 0; comboCount = 0;
+  { const r = document.getElementById('__rfid'); if (r) r.style.display = 'none'; }
   document.getElementById('milestone-popup').style.display = 'none';
   document.getElementById('score-value').textContent = '0';
   document.getElementById('progress-fill').style.width = '0%';
@@ -3436,6 +3440,20 @@ function buildScene() {
   upgradeBleachers();
   upgradeSeatedAudience();
   addCircusProps();
+  addCircusSpotlights();
+}
+
+// Colored circus spotlights that sweep the arena floor for atmosphere.
+function addCircusSpotlights() {
+  circusSpotlights.length = 0;
+  const cols = [0xff2d55, 0x2ec4ff, 0xffd200, 0x38d66b];
+  cols.forEach((col, i) => {
+    const sp = new THREE.SpotLight(col, 20, 55, Math.PI * 0.06, 0.4, 1.2);
+    sp.position.set(Math.cos(i / cols.length * Math.PI * 2) * 6, 20, Math.sin(i / cols.length * Math.PI * 2) * 6);
+    sp.castShadow = false;
+    scene.add(sp); scene.add(sp.target);
+    circusSpotlights.push({ light: sp, phase: i * 1.7, speed: 0.35 + i * 0.05, radius: 8 + i });
+  });
 }
 
 // Decorative Meshy-generated circus props placed around the arena edge.
@@ -3524,6 +3542,50 @@ function upgradeBleachers() {
 // Replace the 40 authored seated audience members with Meshy-generated seated
 // spectators, reusing each authored member's footprint so they sit exactly in
 // the old bleacher positions. Plain game mode only (Studio parity preserved).
+// Celebratory confetti burst (colorful pieces with gravity, reuses particles).
+const CONFETTI_COLORS = [0xff3b3b, 0xffd200, 0x2ec4ff, 0x38d66b, 0xff8ad1, 0xff6a00, 0xffffff];
+function spawnConfetti(pos, count = 22, spread = 0.22) {
+  for (let i = 0; i < count; i++) {
+    const col = CONFETTI_COLORS[(Math.random() * CONFETTI_COLORS.length) | 0];
+    const pm = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.09, 0.14),
+      new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 1, side: THREE.DoubleSide })
+    );
+    pm.position.copy(pos);
+    pm.rotation.set(Math.random() * 6, Math.random() * 6, Math.random() * 6);
+    const vel = new THREE.Vector3((Math.random() - 0.5) * spread, Math.random() * 0.18 + 0.06, (Math.random() - 0.5) * spread);
+    scene.add(pm);
+    particles.push({ mesh: pm, mat: pm.material, vel, life: 1.3, alive: true });
+  }
+}
+
+// Make the whole crowd cheer (trigger their hop) — call it on scoring moments.
+function cheerCrowd(delay = 0) {
+  const now = simulationTime + delay;
+  for (const s of seatedSpectators) s.cheerAt = now + Math.random() * 0.3;
+}
+
+// On-screen combo popup.
+function showComboText(n, bonus) {
+  let el = document.getElementById('__combo');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = '__combo';
+    el.style.cssText = 'position:fixed;top:22%;left:50%;transform:translateX(-50%);z-index:950;'
+      + 'pointer-events:none;font-family:"Barlow Condensed",sans-serif;font-weight:800;'
+      + 'color:#ffd200;text-shadow:0 2px 12px rgba(255,106,0,0.8);letter-spacing:2px;text-align:center;';
+    document.body.appendChild(el);
+  }
+  el.innerHTML = `COMBO ×${n}<div style="font-size:0.45em;color:#fff">+${bonus} BONUS</div>`;
+  el.style.fontSize = Math.min(64, 30 + n * 4) + 'px';
+  el.style.opacity = '1';
+  el.style.transition = 'none';
+  requestAnimationFrame(() => {
+    el.style.transition = 'opacity 0.8s ease-out';
+    el.style.opacity = '0';
+  });
+}
+
 // Procedural idle animation for the static Meshy spectators: a gentle seated
 // bob + side sway, with an occasional bigger "cheer" bounce so the crowd feels
 // alive. Called every frame from updateGame.
@@ -4470,6 +4532,18 @@ function popBalloon(bo, weapon) {
   // Floating score text (DOM)
   showFloatingScore(weapon.pts);
 
+  // Celebration: confetti + crowd cheer + pop-chain combo bonus.
+  spawnConfetti(pos, 20);
+  cheerCrowd();
+  const nowMs = performance.now();
+  comboCount = (nowMs < comboExpireAt) ? comboCount + 1 : 1;
+  comboExpireAt = nowMs + 2500;
+  if (comboCount >= 2) {
+    const bonus = Math.min(comboCount, 10) * 5;
+    addScore(bonus);
+    showComboText(comboCount, bonus);
+  }
+
   // In multiplayer the room owns the shared balloon pool and its respawns.
   setTimeout(() => { if(gameActive && !(MP.enabled && MP.connected())) respawnBalloon(bo); }, 3500+Math.random()*2000);
 }
@@ -4755,6 +4829,7 @@ function bindControls() {
     if (gameActive && !infoOpen && !pauseOpen && !e.repeat && e.code==='Space' && grounded) {
       verticalVel = JUMP_SPEED; grounded = false;
     }
+    if (gameActive && !e.repeat && e.code==='KeyR') rfidBulkRead();
     if (gameActive && !pauseOpen && e.code==='KeyE') tryPickup();
     if (gameActive && !e.repeat && e.code==='KeyP') { pauseOpen ? closePause() : openPause(); }
     if (!e.repeat && e.code==='KeyB') LunaAnalytics.toggleOverlay();
@@ -5132,7 +5207,58 @@ function scanQR(qObj) {
     addScore(50);
     if (MP.enabled) MP.noteLocalBonus(50); // QR bonus is personal, not part of the shared plaza score
     addKillFeed('QR SCANNED: '+w.name+' +50pts!');
+    LunaAnalytics.track('product_scanned', { product: w.name });
+    maybeUnlockRfid();
   }
+}
+
+// Zebra specialty: scanning ALL four product QR boards unlocks an RFID Bulk
+// Read — a nod to Zebra's RFID tech that reads every tag in range at once.
+let rfidUnlocked = false, rfidCooldownUntil = 0;
+function maybeUnlockRfid() {
+  if (rfidUnlocked) return;
+  if (qrObjs.length && qrObjs.every(o => o.scanned)) {
+    rfidUnlocked = true;
+    showPrompt('ALL ZEBRA PRODUCTS SCANNED — RFID BULK READ UNLOCKED! Press R', 5000);
+    addKillFeed('★ RFID BULK READ UNLOCKED — press R');
+    updateRfidHud();
+    LunaAnalytics.track('rfid_unlocked', {});
+  }
+}
+function updateRfidHud() {
+  let el = document.getElementById('__rfid');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = '__rfid';
+    el.style.cssText = 'position:fixed;bottom:14px;right:16px;z-index:940;pointer-events:none;'
+      + 'font-family:"Barlow Condensed",sans-serif;font-weight:800;letter-spacing:1px;font-size:15px;'
+      + 'padding:7px 14px;border:1px solid #00a651;color:#fff;background:rgba(5,5,15,0.85);';
+    document.body.appendChild(el);
+  }
+  if (!rfidUnlocked) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  const ready = performance.now() >= rfidCooldownUntil;
+  el.innerHTML = ready
+    ? '📡 RFID BULK READ <span style="color:#38d66b">READY</span> — R'
+    : '📡 RFID <span style="color:#ff6a00">CHARGING…</span>';
+}
+function rfidBulkRead() {
+  const now = performance.now();
+  if (!rfidUnlocked || now < rfidCooldownUntil || !gameActive || infoOpen || pauseOpen) return;
+  rfidCooldownUntil = now + 12000;
+  updateRfidHud();
+  // Expanding RFID scan ring from the player.
+  flashScreen(0x00a651, 0.25);
+  cheerCrowd();
+  // Read (pop) every live balloon, staggered outward for a sweep feel.
+  const alive = balloons.filter(b => b.alive);
+  const cam = camera.position.clone();
+  alive.sort((a, b) => a.mesh.position.distanceTo(cam) - b.mesh.position.distanceTo(cam));
+  const w = currentWeapon >= 0 ? WEAPONS[currentWeapon] : WEAPONS[0];
+  alive.forEach((b, i) => setTimeout(() => {
+    if (b.alive) { spawnConfetti(b.mesh.position.clone(), 10); popBalloon(b, w); }
+  }, i * 60));
+  addKillFeed('📡 RFID BULK READ — ' + alive.length + ' tags read!');
 }
 
 function closeInfo({ resumeGame = false } = {}) {
@@ -5253,6 +5379,12 @@ function addScore(pts) {
 }
 
 function showMilestone() {
+  // Big celebration: confetti rain over the arena + the whole crowd cheers.
+  cheerCrowd();
+  for (let k = 0; k < 6; k++) {
+    const p = new THREE.Vector3((Math.random() - 0.5) * 16, 6 + Math.random() * 4, (Math.random() - 0.5) * 16);
+    spawnConfetti(p, 30, 0.3);
+  }
   if(document.pointerLockElement) document.exitPointerLock();
   document.getElementById('milestone-popup').style.display = 'block';
 }
@@ -5310,6 +5442,12 @@ function animate() {
 function updateGame(delta, t) {
 
   animateSpectators(t);
+  if (rfidUnlocked) updateRfidHud();
+  for (const s of circusSpotlights) {
+    const a = t * s.speed + s.phase;
+    s.light.target.position.set(Math.cos(a) * s.radius, 0, Math.sin(a) * s.radius);
+    s.light.target.updateMatrixWorld();
+  }
 
   // Camera rotation
   camera.rotation.order='YXZ';
