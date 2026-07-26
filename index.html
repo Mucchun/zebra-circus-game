@@ -694,6 +694,14 @@ body { background: #000; overflow: hidden; font-family: 'Source Sans 3', 'Barlow
       <div class="sc-cost">🔥</div>
       <button class="shop-btn" id="start-level2-btn" type="button" disabled>LOCKED</button>
     </div>
+    <div class="shop-card" id="level3-card">
+      <div>
+        <div class="sc-name">👑 LEVEL 3 — BIG TOP BOSS</div>
+        <div class="sc-sub" id="level3-sub">Clear Level 2 to unlock a giant balloon boss battle.</div>
+      </div>
+      <div class="sc-cost">💥</div>
+      <button class="shop-btn" id="start-level3-btn" type="button" disabled>LOCKED</button>
+    </div>
     <div id="wallet-codes"></div>
     <button id="resume-btn" type="button">RESUME</button>
   </div>
@@ -840,6 +848,10 @@ let level2EndAt = 0;                      // performance.now() deadline
 let level2Score = 0;
 const LEVEL2_SECONDS = 90;
 const LEVEL2_TARGET = 60;                 // balloons to pop in the time limit
+// ── Level 3: "Big Top Boss" — a giant balloon boss with a health bar ──
+let level3Unlocked = false, level3Active = false;
+let boss = null;                          // { mesh, hp, maxHp, vel, spawnAt }
+const BOSS_HP = 45;
 let heldMesh = null;
 let promptTimer = null;
 let clock;
@@ -3414,7 +3426,8 @@ function restartGame() {
   balloons = []; weaponObjs = []; qrObjs = []; particles = []; projectiles = []; ringWaves = []; scanMarkers = [];
   heldMesh = null; mouseDown = false; infoOpen = false; milestoneShown = false;
   rfidUnlocked = false; rfidCooldownUntil = 0; comboCount = 0; plushieTrophy = null; holdingPlushie = false;
-  currentLevel = 1; level2Active = false; level2Score = 0;
+  currentLevel = 1; level2Active = false; level2Score = 0; level3Active = false;
+  if (boss && boss.mesh) { scene.remove(boss.mesh); } boss = null; updateBossHud();
   balloons.forEach(b => { b.vel = null; if (b.mesh) b.mesh.scale.setScalar(1); });
   { const r = document.getElementById('__rfid'); if (r) r.style.display = 'none'; }
   document.getElementById('milestone-popup').style.display = 'none';
@@ -3808,6 +3821,10 @@ function updateLevelHud() {
     el.style.borderColor = '#ff2d55';
     el.innerHTML = `⚡ LEVEL 2 · BALLOON FRENZY &nbsp; <span style="color:#ffd200">${mm}:${ss}</span> &nbsp; ${level2Score}/${LEVEL2_TARGET}`;
     el.style.display = 'block';
+  } else if (level3Active) {
+    el.style.borderColor = '#ff2d55';
+    el.innerHTML = '👑 LEVEL 3 · BIG TOP BOSS';
+    el.style.display = 'block';
   } else if (currentLevel === 1) {
     el.style.borderColor = '#ff6a00';
     el.innerHTML = 'LEVEL 1 · CIRCUS BLASTER' + (level2Unlocked ? ' &nbsp;<span style="color:#38d66b">— L2 unlocked! Pause → Level 2</span>' : '');
@@ -3853,10 +3870,102 @@ function endLevel2() {
   // Restore balloons to normal size + drift.
   balloons.forEach(b => { b.vel = null; b.mesh.scale.setScalar(1); });
   LunaAnalytics.track('level2_end', { popped: level2Score, won });
-  if (won) { for (let k=0;k<6;k++) spawnConfetti(new THREE.Vector3((Math.random()-0.5)*14,5+Math.random()*4,(Math.random()-0.5)*14),28,0.3); cheerCrowd(); }
+  if (won) { for (let k=0;k<6;k++) spawnConfetti(new THREE.Vector3((Math.random()-0.5)*14,5+Math.random()*4,(Math.random()-0.5)*14),28,0.3); cheerCrowd(); if (!level3Unlocked) { level3Unlocked = true; addKillFeed('👑 Level 3 unlocked — Big Top Boss!'); } }
   showBigMessage(won ? '⚡ FRENZY CLEARED!' : '⏱ TIME! ' + level2Score + ' POPPED',
-    won ? 'You popped ' + level2Score + ' balloons! Champion of the circus.' : 'You popped ' + level2Score + ' of ' + LEVEL2_TARGET + '. Try again from Pause → Level 2.',
+    won ? 'You popped ' + level2Score + ' balloons! 👑 LEVEL 3 unlocked — face the Big Top Boss from the Pause menu.' : 'You popped ' + level2Score + ' of ' + LEVEL2_TARGET + '. Try again from Pause → Level 2.',
+    () => { currentLevel = 1; updateLevelHud(); refreshWalletUi(); });
+}
+
+// ── Level 3: Big Top Boss battle ──────────────────────────────────────────
+function startLevel3() {
+  currentLevel = 3; level3Active = true;
+  // Giant boss balloon in the middle of the arena.
+  const g = new THREE.Group();
+  const mat = new THREE.MeshPhongMaterial({ color: 0xff2d55, shininess: 160, specular: 0xffffff, emissive: 0x400010, emissiveIntensity: 0.4 });
+  const body = new THREE.Mesh(new THREE.SphereGeometry(1.7, 24, 24), mat);
+  body.scale.y = 1.2; g.add(body);
+  // Big scannable tag so it reads as a Zebra boss.
+  const tag = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.4), new THREE.MeshBasicMaterial({ map: makeBarcodeTexture('QR', 0xb0550000) }));
+  tag.position.set(0, 0.1, 1.75); g.add(tag);
+  g.userData.tag = tag; g.userData.bossBody = body;
+  g.position.set(0, 7.5, 0);
+  scene.add(g);
+  boss = { mesh: g, body, mat, hp: BOSS_HP, maxHp: BOSS_HP,
+    vel: new THREE.Vector3((Math.random()-0.5)*0.1, 0, (Math.random()-0.5)*0.1), spawnAt: performance.now() + 3000 };
+  closePause();
+  flashScreen(0xff2d55, 0.35);
+  showPrompt('👑 THE BIG TOP BOSS APPEARS! Shoot it — ' + BOSS_HP + ' hits to pop it!', 3500);
+  updateLevelHud(); updateBossHud();
+  LunaAnalytics.track('level3_start', {});
+}
+
+function damageBoss(w) {
+  if (!boss) return;
+  const dmg = (w && w.effect === 'rapid') ? 1 : 2; // heavy weapons hit harder
+  boss.hp = Math.max(0, boss.hp - dmg);
+  // Feedback: flash, shrink-punch, confetti at the boss.
+  boss.mat.emissiveIntensity = 1.0;
+  setTimeout(() => { if (boss) boss.mat.emissiveIntensity = 0.4; }, 80);
+  boss.mesh.scale.setScalar(0.94); setTimeout(() => { if (boss) boss.mesh.scale.setScalar(1); }, 70);
+  spawnConfetti(boss.mesh.position.clone(), 6, 0.2);
+  addScore((w && w.pts) || 10);
+  // Phase colors as it weakens: red → orange → gold.
+  const frac = boss.hp / boss.maxHp;
+  boss.mat.color.setHex(frac > 0.6 ? 0xff2d55 : frac > 0.3 ? 0xff8a00 : 0xffcf3f);
+  updateBossHud();
+  if (boss.hp <= 0) defeatBoss();
+}
+
+function defeatBoss() {
+  if (!boss) return;
+  const pos = boss.mesh.position.clone();
+  scene.remove(boss.mesh);
+  boss = null; level3Active = false;
+  // Big pop: confetti storm + crowd cheer.
+  for (let k = 0; k < 10; k++) spawnConfetti(pos.clone().add(new THREE.Vector3((Math.random()-0.5)*4, (Math.random()-0.5)*4, (Math.random()-0.5)*4)), 26, 0.35);
+  cheerCrowd(); flashScreen(0xffd200, 0.4);
+  addScore(500);
+  LunaAnalytics.track('level3_win', {});
+  updateBossHud();
+  showBigMessage('👑 BOSS DEFEATED!', 'You popped the Big Top Boss and won +500! You are the Zebra Circus champion. 🎉',
     () => { currentLevel = 1; updateLevelHud(); });
+}
+
+function tickLevel3() {
+  if (!level3Active || !boss) return;
+  const t = performance.now();
+  const frac = boss.hp / boss.maxHp;
+  const spd = 1 + (1 - frac) * 2.2; // angrier = faster as HP drops
+  const p = boss.mesh.position;
+  p.x += boss.vel.x * spd; p.z += boss.vel.z * spd;
+  p.y = 7.5 + Math.sin(t * 0.002) * 1.6;
+  const r = Math.sqrt(p.x*p.x + p.z*p.z);
+  if (r > 14) { const nx = p.x/r, nz = p.z/r, dot = boss.vel.x*nx + boss.vel.z*nz; boss.vel.x -= 2*dot*nx; boss.vel.z -= 2*dot*nz; }
+  // Keep the barcode tag facing the player.
+  const tag = boss.mesh.userData.tag;
+  if (tag) { const d = new THREE.Vector3().subVectors(camera.position, p).normalize(); tag.position.set(d.x*1.75, 0.1 + d.y*1.75, d.z*1.75); tag.lookAt(camera.position); }
+  // Periodically spawn a few fast "minion" balloons for extra chaos.
+  if (t >= boss.spawnAt) {
+    boss.spawnAt = t + 5000;
+    balloons.filter(b => !b.alive).slice(0, 4).forEach(b => { respawnBalloon(b); b.vel = new THREE.Vector3((Math.random()-0.5)*0.12,(Math.random()-0.5)*0.06,(Math.random()-0.5)*0.12); b.mesh.scale.setScalar(0.7); });
+  }
+  updateBossHud();
+}
+
+function updateBossHud() {
+  let el = document.getElementById('__boss');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = '__boss';
+    el.style.cssText = 'position:fixed;top:44px;left:50%;transform:translateX(-50%);z-index:929;'
+      + 'pointer-events:none;width:340px;max-width:70vw;text-align:center;font-family:"Barlow Condensed",sans-serif;';
+    el.innerHTML = '<div style="font-weight:800;letter-spacing:2px;color:#ff2d55;font-size:14px;margin-bottom:3px">👑 BIG TOP BOSS</div>'
+      + '<div style="height:14px;background:rgba(5,5,15,0.8);border:1px solid #ff2d55"><div id="__bosshp" style="height:100%;width:100%;background:linear-gradient(90deg,#ff2d55,#ffcf3f)"></div></div>';
+    document.body.appendChild(el);
+  }
+  if (!level3Active || !boss) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  document.getElementById('__bosshp').style.width = Math.max(0, (boss.hp / boss.maxHp) * 100) + '%';
 }
 
 // Generic centered result banner with a single button.
@@ -5485,6 +5594,12 @@ function explodeCryo(pos, w) {
 function rayHit(origin, dir, w) {
   const ray = new THREE.Raycaster(origin, dir, 0, 50);
 
+  // Boss hit (Level 3) — takes priority; shooting the boss damages it.
+  if (level3Active && boss && boss.mesh) {
+    const bossHits = ray.intersectObject(boss.mesh, true);
+    if (bossHits.length > 0) { damageBoss(w); return; }
+  }
+
   // Balloon hits
   const bMeshes = balloons.filter(b=>b.alive).map(b=>b.mesh);
   const bHits = ray.intersectObjects(bMeshes, true);
@@ -5765,6 +5880,14 @@ function refreshWalletUi() {
     else if (level2Unlocked) { l2.disabled = false; l2.textContent = '▶ START'; if (l2sub) l2sub.textContent = 'Pop ' + LEVEL2_TARGET + ' fast-moving balloons in ' + LEVEL2_SECONDS + 's!'; }
     else { l2.disabled = true; l2.textContent = 'LOCKED'; if (l2sub) l2sub.textContent = 'Reach 200 points to unlock a fast, timed balloon challenge.'; }
   }
+  // Level 3 unlock button.
+  const l3 = document.getElementById('start-level3-btn');
+  const l3sub = document.getElementById('level3-sub');
+  if (l3) {
+    if (level3Active) { l3.disabled = true; l3.textContent = 'FIGHTING'; if (l3sub) l3sub.textContent = 'Big Top Boss battle in progress!'; }
+    else if (level3Unlocked) { l3.disabled = false; l3.textContent = '▶ START'; if (l3sub) l3sub.textContent = 'Shoot the giant boss ' + BOSS_HP + ' times to defeat it!'; }
+    else { l3.disabled = true; l3.textContent = 'LOCKED'; if (l3sub) l3sub.textContent = 'Clear Level 2 to unlock a giant balloon boss battle.'; }
+  }
 }
 function armThenRedeem(key) {
   const item = SHOP_ITEMS[key];
@@ -5807,6 +5930,7 @@ document.getElementById('pause-btn').addEventListener('click', openPause);
 document.getElementById('pause-btn').addEventListener('mousedown', (event) => { event.stopPropagation(); });
 document.getElementById('resume-btn').addEventListener('click', closePause);
 document.getElementById('start-level2-btn').addEventListener('click', () => { if (level2Unlocked && !level2Active) startLevel2(); });
+document.getElementById('start-level3-btn').addEventListener('click', () => { if (level3Unlocked && !level3Active) startLevel3(); });
 // ── Prize claim machine (ZD421) ──────────────────────────────────────────
 let activePrizeKey = 'plush';
 function openPrizeMachine(key) {
@@ -6028,6 +6152,7 @@ function updateGame(delta, t) {
 
   animateSpectators(t);
   tickLevel2();
+  tickLevel3();
   if (rfidUnlocked) updateRfidHud();
   for (const s of circusSpotlights) {
     const a = t * s.speed + s.phase;
@@ -6063,8 +6188,8 @@ function updateGame(delta, t) {
 
   if (gameActive) balloons.forEach(b=>{
     if(!b.alive) return;
-    if (level2Active && b.vel) {
-      // Frenzy: balloons zip around and bounce off the arena walls/floor/roof.
+    if ((level2Active || level3Active) && b.vel) {
+      // Frenzy/minions: balloons zip around and bounce off the arena walls/floor/roof.
       const p = b.mesh.position;
       p.x += b.vel.x; p.y += b.vel.y; p.z += b.vel.z;
       const r = Math.sqrt(p.x*p.x + p.z*p.z);
