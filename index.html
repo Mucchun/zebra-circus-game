@@ -294,6 +294,30 @@ body { background: #000; overflow: hidden; font-family: 'Source Sans 3', 'Barlow
 }
 #start-screen > * { position: relative; z-index: 1; }
 
+/* Registration panel */
+#register-screen { background:#05050d; display:flex; align-items:center; justify-content:center; }
+.reg-card {
+  width: 380px; max-width: 92vw; background:#0b0b16;
+  border:1px solid #00a651; border-top:4px solid #00a651;
+  padding: 26px 28px; box-shadow:0 0 60px rgba(0,166,81,0.25);
+}
+.reg-title { font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:26px; letter-spacing:3px; color:#fff; }
+.reg-sub { font-family:'Source Sans 3',sans-serif; font-size:13px; color:#8090b0; margin:6px 0 18px; line-height:1.5; }
+#reg-form { display:flex; flex-direction:column; gap:11px; }
+.reg-row { display:flex; gap:11px; }
+.reg-row input { flex:1; min-width:0; }
+#reg-form input[type=text], #reg-form input[type=email], #reg-form input[type=tel] {
+  background:#05050d; border:1px solid #2a2a44; color:#fff; padding:11px 12px;
+  font-family:'Source Sans 3',sans-serif; font-size:14px; outline:none; width:100%;
+}
+#reg-form input:focus { border-color:#00a651; }
+.reg-consent { display:flex; align-items:flex-start; gap:9px; font-family:'Source Sans 3',sans-serif;
+  font-size:12px; color:#b9c0d8; line-height:1.45; cursor:pointer; margin-top:3px; }
+.reg-consent input { margin-top:2px; accent-color:#00a651; flex-shrink:0; }
+.reg-error { color:#ff6a5a; font-family:'Source Sans 3',sans-serif; font-size:12px; min-height:14px; }
+#reg-submit { margin-top:4px; }
+.reg-fine { font-family:'Source Sans 3',sans-serif; font-size:10.5px; color:#4a5070; text-align:center; margin-top:8px; letter-spacing:0.3px; }
+
 /* Corner brackets */
 .ss-corner {
   position: absolute; width: 68px; height: 68px;
@@ -465,6 +489,28 @@ body { background: #000; overflow: hidden; font-family: 'Source Sans 3', 'Barlow
     SCAN THE QR CODES &nbsp;·&nbsp; LEARN MORE ABOUT THE PRODUCTS
   </div>
   <button class="btn btn-lg" id="play-btn">PLAY NOW</button>
+</div>
+
+<div id="register-screen" class="screen" style="display:none;">
+  <div class="reg-card">
+    <div class="reg-title">PLAYER SIGN-IN</div>
+    <div class="reg-sub">Enter your details to start — and to claim your Zebra reward.</div>
+    <form id="reg-form" autocomplete="on" novalidate>
+      <div class="reg-row">
+        <input id="reg-first" name="firstName" type="text" placeholder="First name" required maxlength="60">
+        <input id="reg-last" name="lastName" type="text" placeholder="Surname" required maxlength="60">
+      </div>
+      <input id="reg-email" name="email" type="email" placeholder="Email address" required maxlength="120">
+      <input id="reg-phone" name="phone" type="tel" placeholder="Phone number" required maxlength="40">
+      <label class="reg-consent">
+        <input id="reg-consent" type="checkbox" required>
+        <span>I agree to be contacted about Zebra products and to the storage of my details.</span>
+      </label>
+      <div class="reg-error" id="reg-error"></div>
+      <button class="btn btn-lg" id="reg-submit" type="submit">START PLAYING →</button>
+      <div class="reg-fine">Your details are stored securely. You can request removal at any time.</div>
+    </form>
+  </div>
 </div>
 
 <div id="tutorial-overlay" style="display:none;">
@@ -1572,7 +1618,53 @@ function loadDeviceModels() {
   });
 }
 
-document.getElementById('play-btn').addEventListener('click', startGame);
+// PLAY → show the player sign-in panel; the form submit starts the game.
+document.getElementById('play-btn').addEventListener('click', () => {
+  // If this browser already registered, skip straight to the game.
+  if (localStorage.getItem('zebraPlayerRegistered') === '1') { startGame(); return; }
+  document.getElementById('start-screen').style.display = 'none';
+  document.getElementById('register-screen').style.display = 'flex';
+  setTimeout(() => document.getElementById('reg-first').focus(), 60);
+});
+
+document.getElementById('reg-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const firstName = document.getElementById('reg-first').value.trim();
+  const lastName  = document.getElementById('reg-last').value.trim();
+  const email     = document.getElementById('reg-email').value.trim();
+  const phone     = document.getElementById('reg-phone').value.trim();
+  const consent   = document.getElementById('reg-consent').checked;
+  const err = document.getElementById('reg-error');
+  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const phoneOk = /[0-9]{6,}/.test(phone.replace(/[^0-9]/g, ''));
+  if (!firstName || !lastName) { err.textContent = 'Please enter your first name and surname.'; return; }
+  if (!emailOk) { err.textContent = 'Please enter a valid email address.'; return; }
+  if (!phoneOk) { err.textContent = 'Please enter a valid phone number.'; return; }
+  if (!consent) { err.textContent = 'Please tick the consent box to continue.'; return; }
+  err.textContent = '';
+
+  const player = { firstName, lastName, email, phone, consent: true, at: new Date().toISOString() };
+  try { localStorage.setItem('zebraPlayer', JSON.stringify(player)); } catch (_) {}
+  window.__zebraPlayer = player;
+
+  const btn = document.getElementById('reg-submit');
+  btn.disabled = true; btn.textContent = 'STARTING…';
+
+  // Persist to the leads database (best-effort; never blocks play).
+  try {
+    const res = await fetch('/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(player),
+    });
+    if (res.ok) localStorage.setItem('zebraPlayerRegistered', '1');
+  } catch (_) { /* offline / no backend: continue anyway */ }
+
+  if (typeof LunaAnalytics !== 'undefined') LunaAnalytics.track('player_registered', {});
+  document.getElementById('register-screen').style.display = 'none';
+  btn.disabled = false; btn.textContent = 'START PLAYING →';
+  startGame();
+});
 document.getElementById('restart-btn').addEventListener('click', restartGame);
 document.getElementById('tut-go-btn').addEventListener('click', dismissTutorial);
 document.getElementById('ip-close').addEventListener('click', () => closeInfo({ resumeGame: true }));
