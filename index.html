@@ -686,6 +686,14 @@ body { background: #000; overflow: hidden; font-family: 'Source Sans 3', 'Barlow
       <div class="sc-cost">500 🎈</div>
       <button class="shop-btn claim-prize-btn" data-prize="terminal" type="button" disabled>LOCKED</button>
     </div>
+    <div class="shop-card" id="level2-card">
+      <div>
+        <div class="sc-name">⚡ LEVEL 2 — BALLOON FRENZY</div>
+        <div class="sc-sub" id="level2-sub">Reach 200 points to unlock a fast, timed balloon challenge.</div>
+      </div>
+      <div class="sc-cost">🔥</div>
+      <button class="shop-btn" id="start-level2-btn" type="button" disabled>LOCKED</button>
+    </div>
     <div id="wallet-codes"></div>
     <button id="resume-btn" type="button">RESUME</button>
   </div>
@@ -824,6 +832,14 @@ let comboCount = 0, comboExpireAt = 0;   // pop-chain combo
 const circusSpotlights = [];             // sweeping colored lights
 let plushieGltf = null, plushieTrophy = null; // Zebra plushie reward model
 let holdingPlushie = false;              // player is holding the plushie item
+// ── Levels: L1 = classic, L2 = "Balloon Frenzy" (moving/faster, timed) ──
+let currentLevel = 1;
+let level2Unlocked = false;
+let level2Active = false;
+let level2EndAt = 0;                      // performance.now() deadline
+let level2Score = 0;
+const LEVEL2_SECONDS = 90;
+const LEVEL2_TARGET = 60;                 // balloons to pop in the time limit
 let heldMesh = null;
 let promptTimer = null;
 let clock;
@@ -3389,6 +3405,7 @@ function dismissTutorial() {
   gameActive = true;
   LunaAnalytics.startSession();
   if (wallet.plushAwarded) markPlushieSlot(); // restore owned plushie in inventory
+  updateLevelHud();
 }
 
 function restartGame() {
@@ -3397,6 +3414,8 @@ function restartGame() {
   balloons = []; weaponObjs = []; qrObjs = []; particles = []; projectiles = []; ringWaves = []; scanMarkers = [];
   heldMesh = null; mouseDown = false; infoOpen = false; milestoneShown = false;
   rfidUnlocked = false; rfidCooldownUntil = 0; comboCount = 0; plushieTrophy = null; holdingPlushie = false;
+  currentLevel = 1; level2Active = false; level2Score = 0;
+  balloons.forEach(b => { b.vel = null; if (b.mesh) b.mesh.scale.setScalar(1); });
   { const r = document.getElementById('__rfid'); if (r) r.style.display = 'none'; }
   document.getElementById('milestone-popup').style.display = 'none';
   document.getElementById('score-value').textContent = '0';
@@ -3770,6 +3789,95 @@ function showComboText(n, bonus) {
     el.style.transition = 'opacity 0.8s ease-out';
     el.style.opacity = '0';
   });
+}
+
+// ── Level system ──────────────────────────────────────────────────────────
+function updateLevelHud() {
+  let el = document.getElementById('__level');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = '__level';
+    el.style.cssText = 'position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:930;'
+      + 'pointer-events:none;font-family:"Barlow Condensed",sans-serif;font-weight:800;letter-spacing:2px;'
+      + 'padding:6px 16px;background:rgba(5,5,15,0.85);border:1px solid #ff6a00;color:#fff;font-size:15px;';
+    document.body.appendChild(el);
+  }
+  if (level2Active) {
+    const left = Math.max(0, Math.ceil((level2EndAt - performance.now()) / 1000));
+    const mm = Math.floor(left / 60), ss = String(left % 60).padStart(2, '0');
+    el.style.borderColor = '#ff2d55';
+    el.innerHTML = `⚡ LEVEL 2 · BALLOON FRENZY &nbsp; <span style="color:#ffd200">${mm}:${ss}</span> &nbsp; ${level2Score}/${LEVEL2_TARGET}`;
+    el.style.display = 'block';
+  } else if (currentLevel === 1) {
+    el.style.borderColor = '#ff6a00';
+    el.innerHTML = 'LEVEL 1 · CIRCUS BLASTER' + (level2Unlocked ? ' &nbsp;<span style="color:#38d66b">— L2 unlocked! Pause → Level 2</span>' : '');
+    el.style.display = 'block';
+  } else { el.style.display = 'none'; }
+}
+
+function unlockLevel2() {
+  if (level2Unlocked) return;
+  level2Unlocked = true;
+  showPrompt('⚡ LEVEL 2 UNLOCKED — BALLOON FRENZY! Open Pause (P) → START LEVEL 2', 6000);
+  addKillFeed('⚡ Level 2 unlocked — Balloon Frenzy!');
+  refreshWalletUi();
+  updateLevelHud();
+}
+
+function startLevel2() {
+  currentLevel = 2; level2Active = true; level2Score = 0;
+  level2EndAt = performance.now() + LEVEL2_SECONDS * 1000;
+  // Give every balloon a fast random velocity + shrink it (harder target).
+  balloons.forEach(b => {
+    b.vel = new THREE.Vector3((Math.random()-0.5)*0.14, (Math.random()-0.5)*0.08, (Math.random()-0.5)*0.14);
+    b.mesh.scale.setScalar(0.7);
+    if (!b.alive) respawnBalloon(b);
+  });
+  closePause();
+  flashScreen(0xff2d55, 0.3);
+  showPrompt('⚡ GO! Pop ' + LEVEL2_TARGET + ' balloons in ' + LEVEL2_SECONDS + 's!', 3000);
+  updateLevelHud();
+  LunaAnalytics.track('level2_start', {});
+}
+
+function tickLevel2() {
+  if (!level2Active) return;
+  updateLevelHud();
+  if (performance.now() >= level2EndAt) endLevel2();
+}
+
+function endLevel2() {
+  if (!level2Active) return;
+  level2Active = false;
+  const won = level2Score >= LEVEL2_TARGET;
+  // Restore balloons to normal size + drift.
+  balloons.forEach(b => { b.vel = null; b.mesh.scale.setScalar(1); });
+  LunaAnalytics.track('level2_end', { popped: level2Score, won });
+  if (won) { for (let k=0;k<6;k++) spawnConfetti(new THREE.Vector3((Math.random()-0.5)*14,5+Math.random()*4,(Math.random()-0.5)*14),28,0.3); cheerCrowd(); }
+  showBigMessage(won ? '⚡ FRENZY CLEARED!' : '⏱ TIME! ' + level2Score + ' POPPED',
+    won ? 'You popped ' + level2Score + ' balloons! Champion of the circus.' : 'You popped ' + level2Score + ' of ' + LEVEL2_TARGET + '. Try again from Pause → Level 2.',
+    () => { currentLevel = 1; updateLevelHud(); });
+}
+
+// Generic centered result banner with a single button.
+function showBigMessage(title, sub, onClose) {
+  let el = document.getElementById('__bigmsg');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = '__bigmsg';
+    el.style.cssText = 'position:fixed;inset:0;z-index:1250;display:flex;align-items:center;justify-content:center;'
+      + 'background:rgba(5,5,15,0.85);font-family:"Barlow Condensed",sans-serif;';
+    document.body.appendChild(el);
+  }
+  if (document.pointerLockElement) document.exitPointerLock();
+  el.innerHTML = '<div style="background:#0b0b16;border:2px solid #ffd200;border-top:6px solid #ffd200;max-width:440px;'
+    + 'padding:28px 30px;text-align:center;color:#fff">'
+    + '<div style="font-size:30px;font-weight:800;letter-spacing:2px;color:#ffd200">' + title + '</div>'
+    + '<div style="font-family:\'Source Sans 3\',sans-serif;font-size:14px;color:#cdd3ea;margin:10px 0 18px;line-height:1.5">' + sub + '</div>'
+    + '<button id="__bigmsg-btn" style="width:100%;background:#ff6a00;color:#fff;border:none;padding:12px;'
+    + 'font-family:\'Barlow Condensed\',sans-serif;font-weight:800;font-size:16px;letter-spacing:2px;cursor:pointer">CONTINUE</button></div>';
+  el.style.display = 'flex';
+  document.getElementById('__bigmsg-btn').onclick = () => { el.style.display = 'none'; if (onClose) onClose(); };
 }
 
 // Procedural idle animation for the static Meshy spectators: a gentle seated
@@ -4672,10 +4780,14 @@ function makeBarcodeTexture(type, seed) {
 function makeBalloon(index) {
   // Match the editor asset cycle so a balloon keeps the same authored colour
   // in runtime, Studio, reloads, and deterministic visual tests.
-  const color = BAL_COLORS[index % BAL_COLORS.length];
+  const golden = Math.random() < 0.12; // rare bonus balloon worth 5x
+  const color = golden ? 0xffcf3f : BAL_COLORS[index % BAL_COLORS.length];
   const g = new THREE.Group();
+  g.userData.golden = golden;
   g.userData.visualSource = `balloon:${index}:${BARCODE_TYPES[index % BARCODE_TYPES.length]}`;
-  const bMat = new THREE.MeshPhongMaterial({ color, shininess:120, specular:0xffffff });
+  const bMat = golden
+    ? new THREE.MeshPhongMaterial({ color, shininess:200, specular:0xffffff, emissive:0x6b4e00, emissiveIntensity:0.5 })
+    : new THREE.MeshPhongMaterial({ color, shininess:120, specular:0xffffff });
   const balloon = new THREE.Mesh(new THREE.SphereGeometry(0.38,16,16), bMat);
   balloon.scale.y = 1.28; g.add(balloon);
   const knot = new THREE.Mesh(new THREE.SphereGeometry(0.055,6,6), new THREE.MeshPhongMaterial({color}));
@@ -4760,8 +4872,24 @@ function popBalloon(bo, weapon) {
     showComboText(comboCount, bonus);
   }
 
+  // Golden balloon bonus: 5x points + extra sparkle.
+  if (bo.mesh.userData.golden) {
+    const gb = weapon.pts * 4;
+    addScore(gb);
+    spawnConfetti(pos, 22, 0.28);
+    showFloatingScore(gb);
+    addKillFeed('★ GOLDEN BALLOON +' + gb + '!');
+  }
+
+  // Level 2 "Balloon Frenzy" scoring + fast respawn.
+  if (level2Active) {
+    level2Score += 1;
+    updateLevelHud();
+  }
+
   // In multiplayer the room owns the shared balloon pool and its respawns.
-  setTimeout(() => { if(gameActive && !(MP.enabled && MP.connected())) respawnBalloon(bo); }, 3500+Math.random()*2000);
+  const respawnMs = level2Active ? (700 + Math.random() * 700) : (3500 + Math.random() * 2000);
+  setTimeout(() => { if(gameActive && !(MP.enabled && MP.connected())) respawnBalloon(bo); }, respawnMs);
 }
 
 // Green "+" targeting reticle with corner brackets — like a barcode scanner locking on.
@@ -5629,6 +5757,14 @@ function refreshWalletUi() {
     else if (rec.won) { btn.disabled = false; btn.textContent = '🎁 CLAIM'; if (sub) sub.textContent = 'You won! Voucher ' + (rec.coupon || '') + ' — click to enter your address.'; }
     else { btn.disabled = true; btn.textContent = `${Math.min(wallet.earned, p.goal)}/${p.goal}`; if (sub) sub.textContent = 'Win a real ' + p.label.toLowerCase() + ' at ' + p.goal + ' balloons.'; }
   }
+  // Level 2 unlock button.
+  const l2 = document.getElementById('start-level2-btn');
+  const l2sub = document.getElementById('level2-sub');
+  if (l2) {
+    if (level2Active) { l2.disabled = true; l2.textContent = 'PLAYING'; if (l2sub) l2sub.textContent = 'Balloon Frenzy in progress!'; }
+    else if (level2Unlocked) { l2.disabled = false; l2.textContent = '▶ START'; if (l2sub) l2sub.textContent = 'Pop ' + LEVEL2_TARGET + ' fast-moving balloons in ' + LEVEL2_SECONDS + 's!'; }
+    else { l2.disabled = true; l2.textContent = 'LOCKED'; if (l2sub) l2sub.textContent = 'Reach 200 points to unlock a fast, timed balloon challenge.'; }
+  }
 }
 function armThenRedeem(key) {
   const item = SHOP_ITEMS[key];
@@ -5670,6 +5806,7 @@ function closePause() {
 document.getElementById('pause-btn').addEventListener('click', openPause);
 document.getElementById('pause-btn').addEventListener('mousedown', (event) => { event.stopPropagation(); });
 document.getElementById('resume-btn').addEventListener('click', closePause);
+document.getElementById('start-level2-btn').addEventListener('click', () => { if (level2Unlocked && !level2Active) startLevel2(); });
 // ── Prize claim machine (ZD421) ──────────────────────────────────────────
 let activePrizeKey = 'plush';
 function openPrizeMachine(key) {
@@ -5823,6 +5960,7 @@ function addScore(pts) {
   document.getElementById('score-value').textContent = score;
   document.getElementById('progress-fill').style.width = Math.min(100,score/WIN_SCORE*100)+'%';
   if(score>=WIN_SCORE && !milestoneShown) { milestoneShown=true; setTimeout(showMilestone,600); }
+  if(score>=WIN_SCORE && !level2Unlocked) unlockLevel2(); // clear L1 → unlock L2
 }
 
 function showMilestone() {
@@ -5889,6 +6027,7 @@ function animate() {
 function updateGame(delta, t) {
 
   animateSpectators(t);
+  tickLevel2();
   if (rfidUnlocked) updateRfidHud();
   for (const s of circusSpotlights) {
     const a = t * s.speed + s.phase;
@@ -5924,9 +6063,23 @@ function updateGame(delta, t) {
 
   if (gameActive) balloons.forEach(b=>{
     if(!b.alive) return;
-    b.mesh.position.y += Math.sin(t*b.spd+b.bob)*0.003;
-    b.mesh.position.x += Math.cos(t*0.18+b.da)*0.003;
-    b.mesh.position.z += Math.sin(t*0.18+b.da)*0.003;
+    if (level2Active && b.vel) {
+      // Frenzy: balloons zip around and bounce off the arena walls/floor/roof.
+      const p = b.mesh.position;
+      p.x += b.vel.x; p.y += b.vel.y; p.z += b.vel.z;
+      const r = Math.sqrt(p.x*p.x + p.z*p.z);
+      if (r > 20) { // reflect off the outer wall
+        const nx = p.x / r, nz = p.z / r;
+        const dot = b.vel.x*nx + b.vel.z*nz;
+        b.vel.x -= 2*dot*nx; b.vel.z -= 2*dot*nz;
+      }
+      if (p.y < 1.4) { p.y = 1.4; b.vel.y = Math.abs(b.vel.y); }
+      if (p.y > 12) { p.y = 12; b.vel.y = -Math.abs(b.vel.y); }
+    } else {
+      b.mesh.position.y += Math.sin(t*b.spd+b.bob)*0.003;
+      b.mesh.position.x += Math.cos(t*0.18+b.da)*0.003;
+      b.mesh.position.z += Math.sin(t*0.18+b.da)*0.003;
+    }
     const d=Math.sqrt(b.mesh.position.x**2+b.mesh.position.z**2);
     if(d>21){b.mesh.position.x*=0.99;b.mesh.position.z*=0.99;}
     // Keep the barcode tag on the camera-facing side, turned toward the player
