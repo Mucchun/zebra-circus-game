@@ -681,17 +681,17 @@ body { background: #000; overflow: hidden; font-family: 'Source Sans 3', 'Barlow
     <div class="shop-card" id="prize-card-plush">
       <div>
         <div class="sc-name">🦓 ZEBRA PLUSHIE</div>
-        <div class="sc-sub" id="prize-sub-plush">Win a real plushie at 200 balloons.</div>
+        <div class="sc-sub" id="prize-sub-plush">Win a real plushie at 5000 balloons.</div>
       </div>
-      <div class="sc-cost">200 🎈</div>
+      <div class="sc-cost">5000 🎈</div>
       <button class="shop-btn claim-prize-btn" data-prize="plush" type="button" disabled>LOCKED</button>
     </div>
     <div class="shop-card" id="prize-card-terminal">
       <div>
         <div class="sc-name">📟 ZEBRA HAND TERMINAL</div>
-        <div class="sc-sub" id="prize-sub-terminal">Win a real hand terminal at 500 balloons.</div>
+        <div class="sc-sub" id="prize-sub-terminal">Win a real hand terminal at 10000 balloons.</div>
       </div>
-      <div class="sc-cost">500 🎈</div>
+      <div class="sc-cost">10000 🎈</div>
       <button class="shop-btn claim-prize-btn" data-prize="terminal" type="button" disabled>LOCKED</button>
     </div>
     <div class="shop-card" id="level2-card">
@@ -5768,8 +5768,8 @@ const PLUSH_GOAL = 200;
 // Two real prizes, each won at a balloon goal, each claimed via the ZD421
 // machine (its own voucher + shipping address).
 const PRIZES = {
-  plush:    { key: 'plush',    goal: 200, label: 'Zebra Plushie',       emoji: '🦓' },
-  terminal: { key: 'terminal', goal: 500, label: 'Zebra Hand Terminal', emoji: '📟' },
+  plush:    { key: 'plush',    goal: 5000,  label: 'Zebra Plushie',       emoji: '🦓' },
+  terminal: { key: 'terminal', goal: 10000, label: 'Zebra Hand Terminal', emoji: '📟' },
 };
 const ZEBRA_PLUSH_URL = 'https://www.zebra.com';
 const wallet = { earned: 0, spent: 0, codes: [], prizes: {}, plushAwarded: false, coupon: null, claimed: false };
