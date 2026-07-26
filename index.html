@@ -4161,14 +4161,19 @@ function makeZebraSign(parent) {
     ctx.strokeRect(14, 14, W - 28, H - 28);
     // "ZEBRA" wordmark on top.
     ctx.fillStyle = ZBLACK;
-    ctx.font = '900 150px Arial, sans-serif';
+    ctx.font = '900 140px Arial, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('ZEBRA', W / 2, 130);
+    ctx.fillText('ZEBRA', W / 2, 118);
+    // "TECHNOLOGIES" underneath, letter-spaced like the real wordmark.
+    ctx.font = '700 44px Arial, sans-serif';
+    try { ctx.letterSpacing = '14px'; } catch (_) {}
+    ctx.fillText('TECHNOLOGIES', W / 2 + 7, 190);
+    try { ctx.letterSpacing = '0px'; } catch (_) {}
     // Logo below the wordmark (recolored: green tile -> black, keep white head).
     if (logoImg) {
-      const s = 250;
-      ctx.drawImage(logoImg, (W - s) / 2, 210, s, s);
+      const s = 230;
+      ctx.drawImage(logoImg, (W - s) / 2, 245, s, s);
     }
     t.needsUpdate = true;
   }
@@ -4205,6 +4210,31 @@ function makeZebraSign(parent) {
   );
   mesh.position.set(0, 6, -17);
   parent.add(mesh);
+
+  makeLunaSign(parent);
+}
+
+// LUNA GROUP sponsor banner mounted just below/in front of the Zebra sign.
+function makeLunaSign(parent) {
+  const loader = new THREE.TextureLoader();
+  loader.load('images/luna-group.png', (tex) => {
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const aspect = (tex.image && tex.image.width && tex.image.height) ? tex.image.width / tex.image.height : 2.75;
+    const w = 6.0, h = w / aspect;
+    // White plaque backing so the logo reads against the dark tent wall.
+    const plaque = new THREE.Mesh(
+      new THREE.PlaneGeometry(w + 0.5, h + 0.5),
+      new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide })
+    );
+    plaque.position.set(0, 11.6, -16.6); // higher up, above the Zebra banner
+    parent.add(plaque);
+    const logo = new THREE.Mesh(
+      new THREE.PlaneGeometry(w, h),
+      new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide })
+    );
+    logo.position.set(0, 11.6, -16.58); // slightly in front of the plaque
+    parent.add(logo);
+  }, undefined, () => { /* logo missing: skip */ });
 }
 
 function buildBleachers() {
