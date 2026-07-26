@@ -176,6 +176,7 @@ jobs:
           EXPECTED_HEAD: ${{ steps.claim.outputs.expected_head }}
           OUTPUT_SCENE: ${{ runner.temp }}/zebra-sync/validated.scene.json
           UPLOAD_DIR: ${{ runner.temp }}/zebra-sync/uploads
+          ZEBRA_REVIEW_BRANCH: scene-sync
         shell: bash
         run: |
           set -euo pipefail

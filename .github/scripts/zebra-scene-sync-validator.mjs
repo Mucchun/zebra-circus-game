@@ -3359,7 +3359,9 @@ function assertClaimEnvelope(claim2) {
     if (ids.has(descriptor.id)) throw new Error("The hosted claim repeats an uploaded asset.");
     ids.add(descriptor.id);
   }
-  if (claim2.repository !== "Sparkah/zebra-circus-game" || claim2.branch !== "agent/game-port-studio-integration" || claim2.path !== "zebra-circus.scene.json") {
-    throw new Error("The hosted claim targets a repository location outside the Zebra review branch.");
+  const expectedRepository = process.env.ZEBRA_REVIEW_REPOSITORY || process.env.GITHUB_REPOSITORY || "Sparkah/zebra-circus-game";
+  const expectedBranch = process.env.ZEBRA_REVIEW_BRANCH || "agent/game-port-studio-integration";
+  if (claim2.repository !== expectedRepository || claim2.branch !== expectedBranch || claim2.path !== "zebra-circus.scene.json") {
+    throw new Error(`The hosted claim targets a repository location outside the Zebra review branch (expected ${expectedRepository}@${expectedBranch}, got ${claim2.repository}@${claim2.branch}).`);
   }
 }
