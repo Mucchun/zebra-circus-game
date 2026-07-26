@@ -669,7 +669,15 @@ body { background: #000; overflow: hidden; font-family: 'Source Sans 3', 'Barlow
 <div id="pause-overlay">
   <div id="pause-panel">
     <div class="pp-title">PAUSED</div>
-    <div class="pp-balance">BALLOON BANK: <b id="wallet-balance">0</b> 🎈 <span style="font-size:12px">(pop balloons to earn)</span></div>
+    <div class="pp-balance">SCORE: <b id="pause-score">0</b> pts &nbsp;·&nbsp; BALLOON BANK: <b id="wallet-balance">0</b> 🎈</div>
+    <div class="shop-card" id="buy-balloons-card">
+      <div>
+        <div class="sc-name">🎈 BUY +50 BALLOONS</div>
+        <div class="sc-sub" id="buy-balloons-sub">Convert 1000 points into 50 balloons for the bank.</div>
+      </div>
+      <div class="sc-cost">1000 pts</div>
+      <button class="shop-btn" id="buy-balloons-btn" type="button" disabled>NEED 1000</button>
+    </div>
     <div class="shop-card" id="prize-card-plush">
       <div>
         <div class="sc-name">🦓 ZEBRA PLUSHIE</div>
@@ -5863,6 +5871,13 @@ function refreshWalletUi() {
   const balance = walletBalance();
   document.getElementById('wallet-hud').textContent = balance;
   document.getElementById('wallet-balance').textContent = balance;
+  const ps = document.getElementById('pause-score'); if (ps) ps.textContent = score;
+  const bb = document.getElementById('buy-balloons-btn');
+  const bbs = document.getElementById('buy-balloons-sub');
+  if (bb) {
+    if (score >= 1000) { bb.disabled = false; bb.textContent = 'BUY ▸ +50 🎈'; if (bbs) bbs.textContent = 'Spend 1000 points → +50 balloons in the bank.'; }
+    else { bb.disabled = true; bb.textContent = `NEED ${1000 - score}`; if (bbs) bbs.textContent = 'Reach 1000 points to convert into balloons.'; }
+  }
   for (const p of Object.values(PRIZES)) {
     const rec = wallet.prizes[p.key];
     const btn = document.querySelector('.claim-prize-btn[data-prize="' + p.key + '"]');
@@ -5931,6 +5946,17 @@ document.getElementById('pause-btn').addEventListener('mousedown', (event) => { 
 document.getElementById('resume-btn').addEventListener('click', closePause);
 document.getElementById('start-level2-btn').addEventListener('click', () => { if (level2Unlocked && !level2Active) startLevel2(); });
 document.getElementById('start-level3-btn').addEventListener('click', () => { if (level3Unlocked && !level3Active) startLevel3(); });
+
+// Buy +50 balloons for 1000 points — convert score into balloon-bank progress.
+const BUY_COST = 1000, BUY_AMOUNT = 50;
+function buyBalloons() {
+  if (score < BUY_COST) return;
+  addScore(-BUY_COST);                 // spend points (updates score box)
+  for (let i = 0; i < BUY_AMOUNT; i++) earnBalloon(); // +50 balloons, with prize checks
+  addKillFeed('🎈 Bought +' + BUY_AMOUNT + ' balloons for ' + BUY_COST + ' pts!');
+  refreshWalletUi();
+}
+document.getElementById('buy-balloons-btn').addEventListener('click', buyBalloons);
 // ── Prize claim machine (ZD421) ──────────────────────────────────────────
 let activePrizeKey = 'plush';
 function openPrizeMachine(key) {
