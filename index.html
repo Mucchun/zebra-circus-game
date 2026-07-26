@@ -318,6 +318,38 @@ body { background: #000; overflow: hidden; font-family: 'Source Sans 3', 'Barlow
 #reg-submit { margin-top:4px; }
 .reg-fine { font-family:'Source Sans 3',sans-serif; font-size:10.5px; color:#4a5070; text-align:center; margin-top:8px; letter-spacing:0.3px; }
 
+/* Prize claim machine */
+#prize-overlay { position:fixed; inset:0; z-index:1300; background:rgba(5,5,15,0.9);
+  display:flex; align-items:center; justify-content:center; pointer-events:auto; }
+#prize-machine { position:relative; width:460px; max-width:94vw; max-height:92vh; overflow:auto;
+  background:#0b0b16; border:1px solid #ffd200; border-top:5px solid #ffd200;
+  padding:22px 24px; box-shadow:0 0 70px rgba(255,210,0,0.22); font-family:'Source Sans 3',sans-serif; }
+#prize-close { position:absolute; top:10px; right:12px; background:transparent; color:#8090b0;
+  border:1px solid #333; width:26px; height:26px; cursor:pointer; font-size:14px; }
+#pm-printer3d { width:100%; height:220px; background:radial-gradient(ellipse at 50% 40%, #14142a 0%, #05050d 75%);
+  border:1px solid #2a2a44; margin-bottom:14px; }
+#pm-printer3d canvas { display:block; margin:0 auto; }
+.pm-headtext { text-align:center; margin-bottom:14px; }
+.pm-headtext .pm-coupon { margin-top:6px; }
+.pm-title { font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:20px; color:#ffd200; letter-spacing:1px; line-height:1.1; }
+.pm-sub { font-size:12px; color:#8090b0; margin:5px 0 8px; line-height:1.45; }
+.pm-coupon { font-family:'Space Mono',monospace; font-size:13px; color:#00c060; }
+.pm-coupon b { color:#fff; letter-spacing:1px; }
+#prize-form { display:flex; flex-direction:column; gap:10px; }
+.pm-row { display:flex; gap:10px; }
+.pm-row input { flex:1; min-width:0; }
+.pm-row label { flex:1; font-size:12px; color:#8090b0; display:flex; flex-direction:column; gap:5px; }
+#prize-form input, #prize-form select {
+  background:#05050d; border:1px solid #2a2a44; color:#fff; padding:11px 12px;
+  font-family:'Source Sans 3',sans-serif; font-size:14px; outline:none; width:100%; }
+#prize-form input:focus, #prize-form select:focus { border-color:#ffd200; }
+.pm-error { color:#ff6a5a; font-size:12px; min-height:14px; }
+.pm-fine { font-size:10.5px; color:#4a5070; text-align:center; margin-top:6px; }
+#pm-done { text-align:center; padding:16px 4px; }
+.pm-done-icon { font-size:52px; }
+.pm-done-title { font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:24px; color:#00c060; letter-spacing:2px; margin:6px 0; }
+.pm-done-sub { font-size:13px; color:#cdd3ea; line-height:1.5; margin-bottom:16px; }
+
 /* Corner brackets */
 .ss-corner {
   position: absolute; width: 68px; height: 68px;
@@ -638,24 +670,62 @@ body { background: #000; overflow: hidden; font-family: 'Source Sans 3', 'Barlow
   <div id="pause-panel">
     <div class="pp-title">PAUSED</div>
     <div class="pp-balance">BALLOON BANK: <b id="wallet-balance">0</b> 🎈 <span style="font-size:12px">(pop balloons to earn)</span></div>
-    <div class="shop-card">
+    <div class="shop-card" id="prize-card-plush">
       <div>
-        <div class="sc-name">ZEBRA PLUSH TOY 🦓</div>
-        <div class="sc-sub">Auto-unlocked at 200 balloons — claim online, no code</div>
+        <div class="sc-name">🦓 ZEBRA PLUSHIE</div>
+        <div class="sc-sub" id="prize-sub-plush">Win a real plushie at 200 balloons.</div>
       </div>
       <div class="sc-cost">200 🎈</div>
-      <button class="shop-btn" id="shop-buy-plush" type="button" disabled>AUTO</button>
+      <button class="shop-btn claim-prize-btn" data-prize="plush" type="button" disabled>LOCKED</button>
     </div>
-    <div class="shop-card">
+    <div class="shop-card" id="prize-card-terminal">
       <div>
-        <div class="sc-name">ZEBRA TERMINAL</div>
-        <div class="sc-sub">The real device. Yes, really.</div>
+        <div class="sc-name">📟 ZEBRA HAND TERMINAL</div>
+        <div class="sc-sub" id="prize-sub-terminal">Win a real hand terminal at 500 balloons.</div>
       </div>
-      <div class="sc-cost">10,000 🎈</div>
-      <button class="shop-btn" id="shop-buy-terminal" type="button">REDEEM</button>
+      <div class="sc-cost">500 🎈</div>
+      <button class="shop-btn claim-prize-btn" data-prize="terminal" type="button" disabled>LOCKED</button>
     </div>
     <div id="wallet-codes"></div>
     <button id="resume-btn" type="button">RESUME</button>
+  </div>
+</div>
+
+<div id="prize-overlay" style="display:none;">
+  <div id="prize-machine">
+    <button id="prize-close" type="button">✕</button>
+    <div id="pm-printer3d" title="Zebra ZD421 — printing your voucher"></div>
+    <div class="pm-headtext">
+      <div class="pm-title">🎉 CONGRATULATIONS — YOU WON!</div>
+      <div class="pm-sub">The Zebra ZD421 just printed your voucher. Enter your address and we'll ship your prize.</div>
+      <div class="pm-coupon">VOUCHER: <b id="pm-coupon">—</b></div>
+    </div>
+    <form id="prize-form" autocomplete="on" novalidate>
+      <div class="pm-row">
+        <label>Prize
+          <select id="pm-prize" name="prize">
+            <option value="Zebra Plushie">🦓 Zebra Plushie</option>
+            <option value="Zebra Hand Terminal">📟 Zebra Hand Terminal</option>
+          </select>
+        </label>
+      </div>
+      <input id="pm-name" name="fullName" type="text" placeholder="Full name" required maxlength="80">
+      <input id="pm-addr" name="address" type="text" placeholder="Home address (street, number)" required maxlength="160">
+      <div class="pm-row">
+        <input id="pm-city" name="city" type="text" placeholder="City" required maxlength="80">
+        <input id="pm-post" name="postcode" type="text" placeholder="Postal code" required maxlength="20">
+      </div>
+      <input id="pm-country" name="country" type="text" placeholder="Country" required maxlength="60">
+      <div class="pm-error" id="pm-error"></div>
+      <button class="btn btn-lg" id="pm-submit" type="submit">SHIP MY PRIZE →</button>
+      <div class="pm-fine">Ships to the address above. Your voucher verifies the win.</div>
+    </form>
+    <div id="pm-done" style="display:none;">
+      <div class="pm-done-icon">📦</div>
+      <div class="pm-done-title">YOUR PRIZE IS ON ITS WAY!</div>
+      <div class="pm-done-sub" id="pm-done-sub"></div>
+      <button class="btn btn-lg" id="pm-done-close" type="button">BACK TO GAME</button>
+    </div>
   </div>
 </div>
 <script src="vendor/three.min.js"></script>
@@ -3564,6 +3634,8 @@ function addCircusProps() {
     { file: 'models/props/carousel.glb', angle: Math.PI * 0.0, radius: 11.0, height: 3.8, spin: 0.25 },
     { file: 'models/props/elephant.glb', angle: Math.PI * 0.5, radius: 10.6, height: 2.4 },
     { file: 'models/props/clown.glb', angle: Math.PI * 1.5, radius: 10.4, height: 2.2 },
+    // ZD421 "prize machine" — sits on a small stand near the arena edge.
+    { file: 'models/props/zd421-printer.glb', angle: Math.PI * 1.0, radius: 7.0, height: 1.0, standH: 1.0 },
   ];
   const loader = new THREE.GLTFLoader();
   // Preload the plushie reward model so it's ready for the 200-balloon trophy.
@@ -3581,6 +3653,18 @@ function addCircusProps() {
       model.position.x -= c.x;
       model.position.z -= c.z;
       model.position.y -= box.min.y; // rest on the ground
+      // Optional pedestal/stand under a prop (e.g. the ZD421 prize machine).
+      if (p.standH) {
+        const b2 = new THREE.Box3().setFromObject(model);
+        const w = Math.max(b2.max.x - b2.min.x, b2.max.z - b2.min.z) * 1.25;
+        const stand = new THREE.Mesh(
+          new THREE.CylinderGeometry(w * 0.5, w * 0.58, p.standH, 20),
+          new THREE.MeshStandardMaterial({ color: 0x1a1a22, roughness: 0.7 })
+        );
+        stand.position.y = p.standH / 2;
+        grp.add(stand);
+        model.position.y += p.standH; // sit the prop on top of the stand
+      }
       grp.position.set(Math.cos(p.angle) * p.radius, 0, Math.sin(p.angle) * p.radius);
       grp.rotation.y = Math.atan2(-Math.cos(p.angle), -Math.sin(p.angle)); // face center
       grp.userData.circusProp = true;
@@ -5400,17 +5484,35 @@ const SHOP_ITEMS = {
   terminal: { cost: 10000, label: 'ZEBRA TERMINAL (REAL DEVICE)', prefix: 'ZC-TERM' },
 };
 const PLUSH_GOAL = 200;
-// Where players go to claim their real Zebra plushie. TODO: point this at the
-// real Zebra store / plush-claim page when available.
+// Two real prizes, each won at a balloon goal, each claimed via the ZD421
+// machine (its own voucher + shipping address).
+const PRIZES = {
+  plush:    { key: 'plush',    goal: 200, label: 'Zebra Plushie',       emoji: '🦓' },
+  terminal: { key: 'terminal', goal: 500, label: 'Zebra Hand Terminal', emoji: '📟' },
+};
 const ZEBRA_PLUSH_URL = 'https://www.zebra.com';
-const wallet = { earned: 0, spent: 0, codes: [], plushAwarded: false };
+const wallet = { earned: 0, spent: 0, codes: [], prizes: {}, plushAwarded: false, coupon: null, claimed: false };
+for (const k of Object.keys(PRIZES)) wallet.prizes[k] = { won: false, coupon: null, claimed: false };
 try {
   const stored = JSON.parse(localStorage.getItem('zebraBalloonWallet') || '{}');
   if (Number.isFinite(stored.earned)) wallet.earned = Math.max(0, Math.floor(stored.earned));
   if (Number.isFinite(stored.spent)) wallet.spent = Math.max(0, Math.floor(stored.spent));
   if (Array.isArray(stored.codes)) wallet.codes = stored.codes.slice(0, 40);
-  wallet.plushAwarded = !!stored.plushAwarded;
+  if (stored.prizes) for (const k of Object.keys(PRIZES)) if (stored.prizes[k]) wallet.prizes[k] = stored.prizes[k];
+  // Back-compat with the earlier single-plush fields.
+  if (stored.plushAwarded && !wallet.prizes.plush.won) { wallet.prizes.plush.won = true; wallet.prizes.plush.coupon = stored.coupon || null; wallet.prizes.plush.claimed = !!stored.claimed; }
+  wallet.plushAwarded = wallet.prizes.plush.won;
+  wallet.coupon = wallet.prizes.plush.coupon;
 } catch (err) {}
+
+// A winning voucher code that verifies the physical-prize claim.
+function makeCoupon() {
+  const abc = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  const b = new Uint8Array(8);
+  (crypto.getRandomValues ? crypto.getRandomValues(b) : b.map(() => Math.floor(Math.random() * 255)));
+  let s = ''; b.forEach((v) => { s += abc[v % abc.length]; });
+  return 'ZC-WIN-' + s.slice(0, 4) + '-' + s.slice(4);
+}
 
 function walletBalance() { return Math.max(0, wallet.earned - wallet.spent); }
 function saveWallet() {
@@ -5418,25 +5520,31 @@ function saveWallet() {
 }
 function earnBalloon() {
   wallet.earned += 1;
-  // Auto-award the Zebra plushie the moment 200 balloons are reached — no
-  // points exchange, no redemption code.
-  if (wallet.earned >= PLUSH_GOAL && !wallet.plushAwarded) {
-    wallet.plushAwarded = true;
-    awardZebraPlushie();
+  for (const p of Object.values(PRIZES)) {
+    if (wallet.earned >= p.goal && !wallet.prizes[p.key].won) awardPrize(p.key);
   }
   saveWallet();
   refreshWalletUi();
 }
 
-function awardZebraPlushie() {
-  LunaAnalytics.track('plushie_awarded', {});
+// Award a prize: generate its voucher, celebrate, and (for the plush) drop the
+// inventory item. The player then claims it in Pause → the ZD421 machine.
+function awardPrize(key) {
+  const p = PRIZES[key];
+  const rec = wallet.prizes[key];
+  if (rec.won) return;
+  rec.won = true;
+  if (!rec.coupon) rec.coupon = makeCoupon();
+  if (key === 'plush') { wallet.plushAwarded = true; wallet.coupon = rec.coupon; markPlushieSlot(); }
+  LunaAnalytics.track('prize_won', { prize: p.label });
   cheerCrowd();
-  // Small celebratory confetti near the player (no big overlay/trophy).
   spawnConfetti(camera.position.clone().add(new THREE.Vector3(0, 0.5, -2)), 24, 0.25);
-  markPlushieSlot();
-  showPrompt('🦓 ZEBRA PLUSHIE added to your inventory! Press 5 to hold · Claim online in Pause (P)', 5000);
-  addKillFeed('🦓 Zebra Plushie earned — added to inventory!');
+  showPrompt('🎉 YOU WON A ' + p.emoji + ' ' + p.label.toUpperCase() + '! Voucher ' + rec.coupon + ' — Pause (P) → CLAIM', 6500);
+  addKillFeed('🎉 ' + p.label + ' won! Voucher ' + rec.coupon);
+  saveWallet();
 }
+// Back-compat alias.
+function awardZebraPlushie() { awardPrize('plush'); }
 
 // Show the plushie inventory slot as owned.
 function markPlushieSlot() {
@@ -5482,24 +5590,15 @@ function refreshWalletUi() {
   const balance = walletBalance();
   document.getElementById('wallet-hud').textContent = balance;
   document.getElementById('wallet-balance').textContent = balance;
-  // Plush = auto-awarded: show progress or a claim link, never a manual redeem.
-  const plushBtn = document.getElementById('shop-buy-plush');
-  if (plushBtn) {
-    plushBtn.disabled = !wallet.plushAwarded;
-    plushBtn.textContent = wallet.plushAwarded ? 'CLAIM →' : `${Math.min(wallet.earned, PLUSH_GOAL)}/${PLUSH_GOAL}`;
+  for (const p of Object.values(PRIZES)) {
+    const rec = wallet.prizes[p.key];
+    const btn = document.querySelector('.claim-prize-btn[data-prize="' + p.key + '"]');
+    const sub = document.getElementById('prize-sub-' + p.key);
+    if (!btn) continue;
+    if (rec.claimed) { btn.disabled = true; btn.textContent = 'CLAIMED ✓'; if (sub) sub.textContent = 'On its way! Voucher ' + (rec.coupon || ''); }
+    else if (rec.won) { btn.disabled = false; btn.textContent = '🎁 CLAIM'; if (sub) sub.textContent = 'You won! Voucher ' + (rec.coupon || '') + ' — click to enter your address.'; }
+    else { btn.disabled = true; btn.textContent = `${Math.min(wallet.earned, p.goal)}/${p.goal}`; if (sub) sub.textContent = 'Win a real ' + p.label.toLowerCase() + ' at ' + p.goal + ' balloons.'; }
   }
-  for (const [key, item] of Object.entries(SHOP_ITEMS)) {
-    const button = document.getElementById('shop-buy-' + key);
-    if (!button.classList.contains('arm')) {
-      button.disabled = balance < item.cost;
-      button.textContent = balance >= item.cost ? 'REDEEM' : `NEED ${item.cost - balance} MORE`;
-    }
-  }
-  const codes = document.getElementById('wallet-codes');
-  codes.innerHTML = wallet.codes.length
-    ? wallet.codes.map((entry) => `<div class="code-row">${entry.label}: <b>${entry.code}</b></div>`).join('')
-      + '<div class="code-hint">Save or screenshot your codes — show them to the Zebra Circus team to claim your reward.</div>'
-    : '';
 }
 function armThenRedeem(key) {
   const item = SHOP_ITEMS[key];
@@ -5541,11 +5640,148 @@ function closePause() {
 document.getElementById('pause-btn').addEventListener('click', openPause);
 document.getElementById('pause-btn').addEventListener('mousedown', (event) => { event.stopPropagation(); });
 document.getElementById('resume-btn').addEventListener('click', closePause);
-// Plush is auto-awarded at 200 balloons; its button just opens the claim link.
-document.getElementById('shop-buy-plush').addEventListener('click', () => {
-  if (wallet.plushAwarded) window.open(ZEBRA_PLUSH_URL, '_blank', 'noopener,noreferrer');
+// ── Prize claim machine (ZD421) ──────────────────────────────────────────
+let activePrizeKey = 'plush';
+function openPrizeMachine(key) {
+  const rec = wallet.prizes[key];
+  if (!rec || !rec.won || rec.claimed) return;
+  activePrizeKey = key;
+  const p = PRIZES[key];
+  if (!rec.coupon) rec.coupon = makeCoupon();
+  document.getElementById('pm-coupon').textContent = rec.coupon;
+  const sel = document.getElementById('pm-prize');
+  sel.value = p.label; sel.disabled = true; // prize is fixed to the one you won
+  document.getElementById('prize-form').style.display = 'flex';
+  document.getElementById('pm-done').style.display = 'none';
+  const pl = window.__zebraPlayer;
+  if (pl && !document.getElementById('pm-name').value) {
+    document.getElementById('pm-name').value = ((pl.firstName || '') + ' ' + (pl.lastName || '')).trim();
+  }
+  document.getElementById('prize-overlay').style.display = 'flex';
+  startPrinterScene(rec.coupon); // 3D ZD421 prints the voucher
+  LunaAnalytics.track('prize_machine_opened', { prize: p.label });
+}
+function closePrizeMachine() {
+  document.getElementById('prize-overlay').style.display = 'none';
+  stopPrinterScene();
+}
+
+document.querySelectorAll('.claim-prize-btn').forEach((b) =>
+  b.addEventListener('click', () => openPrizeMachine(b.getAttribute('data-prize'))));
+document.getElementById('prize-close').addEventListener('click', closePrizeMachine);
+document.getElementById('pm-done-close').addEventListener('click', closePrizeMachine);
+document.getElementById('prize-overlay').addEventListener('mousedown', (e) => { e.stopPropagation(); });
+
+document.getElementById('prize-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const g = (id) => document.getElementById(id).value.trim();
+  const rec = wallet.prizes[activePrizeKey];
+  const claim = {
+    coupon: rec.coupon,
+    prize: PRIZES[activePrizeKey].label,
+    fullName: g('pm-name'), address: g('pm-addr'), city: g('pm-city'),
+    postcode: g('pm-post'), country: g('pm-country'),
+    email: (window.__zebraPlayer && window.__zebraPlayer.email) || '',
+  };
+  const err = document.getElementById('pm-error');
+  if (!claim.fullName || !claim.address || !claim.city || !claim.postcode || !claim.country) {
+    err.textContent = 'Please fill in all address fields.'; return;
+  }
+  err.textContent = '';
+  const btn = document.getElementById('pm-submit');
+  btn.disabled = true; btn.textContent = 'SHIPPING…';
+  try {
+    await fetch('/api/claim', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(claim) });
+  } catch (_) { /* best-effort */ }
+  rec.claimed = true; saveWallet(); refreshWalletUi();
+  LunaAnalytics.track('prize_claimed', { prize: claim.prize });
+  btn.disabled = false; btn.textContent = 'SHIP MY PRIZE →';
+  document.getElementById('prize-form').style.display = 'none';
+  document.getElementById('pm-done-sub').innerHTML =
+    'Your <b>' + claim.prize + '</b> will ship to:<br>' + claim.address + ', ' + claim.city + ' ' + claim.postcode + ', ' + claim.country
+    + '<br><br>Voucher <b>' + claim.coupon + '</b>';
+  document.getElementById('pm-done').style.display = 'block';
 });
-document.getElementById('shop-buy-terminal').addEventListener('click', () => armThenRedeem('terminal'));
+
+// ── 3D ZD421 printer that prints the voucher inside the modal ─────────────
+let printerAnim = null;
+function startPrinterScene(coupon) {
+  stopPrinterScene();
+  const host = document.getElementById('pm-printer3d');
+  if (!host || typeof THREE === 'undefined') return;
+  host.innerHTML = '';
+  const W = host.clientWidth || 400, H = host.clientHeight || 220;
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setSize(W, H); renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+  host.appendChild(renderer.domElement);
+  const scene = new THREE.Scene();
+  const cam = new THREE.PerspectiveCamera(34, W / H, 0.01, 100);
+  cam.position.set(0.34, 0.30, 1.05);
+  cam.lookAt(0, -0.05, 0);
+  scene.add(new THREE.AmbientLight(0xffffff, 1.1));
+  const dl = new THREE.DirectionalLight(0xffffff, 1.0); dl.position.set(1, 2, 2); scene.add(dl);
+  const dl2 = new THREE.DirectionalLight(0xffd200, 0.4); dl2.position.set(-1, 0.5, 1); scene.add(dl2);
+
+  // Voucher slip (coupon on paper) that scrolls out of the front slot.
+  const vc = document.createElement('canvas'); vc.width = 320; vc.height = 150;
+  const x = vc.getContext('2d');
+  x.fillStyle = '#fff'; x.fillRect(0, 0, 320, 150);
+  x.strokeStyle = '#111'; x.lineWidth = 5; x.strokeRect(5, 5, 310, 140);
+  x.fillStyle = '#111'; x.font = 'bold 24px Arial'; x.textAlign = 'center';
+  x.fillText('ZEBRA WINNER', 160, 42);
+  x.font = 'bold 26px monospace'; x.fillText(coupon, 160, 88);
+  x.font = '15px Arial'; x.fillText('★ Prize Voucher ★', 160, 122);
+  const voucherTex = new THREE.CanvasTexture(vc);
+  const voucher = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.42, 0.2),
+    new THREE.MeshBasicMaterial({ map: voucherTex, side: THREE.DoubleSide, transparent: true })
+  );
+  voucher.visible = false; scene.add(voucher);
+  let slotY = -0.1, slotZ = 0.3; // updated once the printer loads
+
+  const holder = new THREE.Group(); scene.add(holder);
+  new THREE.GLTFLoader().load('models/props/zd421-printer.glb', (g) => {
+    const m = g.scene;
+    const box = new THREE.Box3().setFromObject(m);
+    const size = box.getSize(new THREE.Vector3());
+    const md = Math.max(size.x, size.y, size.z) || 1;
+    m.scale.setScalar(0.55 / md);
+    const b2 = new THREE.Box3().setFromObject(m);
+    m.position.sub(b2.getCenter(new THREE.Vector3()));
+    holder.add(m);
+    const front = new THREE.Box3().setFromObject(holder);
+    slotY = front.min.y + 0.06; slotZ = front.max.z + 0.03;
+    voucher.position.set(0, slotY, slotZ);
+  }, undefined, () => {});
+
+  const state = { raf: 0, renderer, host, running: true };
+  const t0 = performance.now();
+  function frame() {
+    if (!state.running) return;
+    const t = (performance.now() - t0) / 1000;
+    holder.rotation.y = 0.45 + Math.sin(t * 0.4) * 0.18;
+    // Print: after 0.8s the voucher scrolls out and down over ~1.6s.
+    if (t > 0.8) {
+      voucher.visible = true;
+      const k = Math.min(1, (t - 0.8) / 1.6);
+      voucher.position.set(0, slotY - k * 0.22, slotZ + k * 0.05);
+      voucher.scale.set(1, 0.15 + 0.85 * k, 1);
+    }
+    renderer.render(scene, cam);
+    state.raf = requestAnimationFrame(frame);
+  }
+  state.raf = requestAnimationFrame(frame);
+  printerAnim = state;
+}
+function stopPrinterScene() {
+  if (!printerAnim) return;
+  printerAnim.running = false;
+  try { cancelAnimationFrame(printerAnim.raf); } catch (_) {}
+  try { printerAnim.renderer.dispose(); } catch (_) {}
+  try { if (printerAnim.host) printerAnim.host.innerHTML = ''; } catch (_) {}
+  printerAnim = null;
+}
+
 document.getElementById('pause-overlay').addEventListener('mousedown', (event) => { event.stopPropagation(); });
 refreshWalletUi();
 
