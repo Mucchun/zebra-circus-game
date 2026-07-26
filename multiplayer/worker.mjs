@@ -100,6 +100,24 @@ export default {
     if (url.pathname === "/health") {
       return Response.json({ ok: true, service: "zebra-circus-mp" }, { headers: cors });
     }
+    if (url.pathname === "/analytics" && request.method === "POST") {
+      // Luna engagement events (sendBeacon). Logged to worker observability;
+      // origin-gated like the game endpoints, capped, and always 204 so the
+      // game never notices collector hiccups.
+      if (!originAllowed(request, env)) return new Response(null, { status: 204 });
+      try {
+        const raw = await request.text();
+        if (raw.length > 0 && raw.length <= 4096) {
+          const event = JSON.parse(raw);
+          if (event && typeof event.type === "string" && event.type.length <= 64) {
+            console.log("luna", JSON.stringify({ t: event.type, d: event.data, ts: event.ts, s: event.session }).slice(0, 1024));
+          }
+        }
+      } catch {
+        // Malformed beacons are dropped silently.
+      }
+      return new Response(null, { status: 204, headers: cors });
+    }
     if (!originAllowed(request, env)) {
       return Response.json({ error: "origin_not_allowed" }, { status: 403 });
     }

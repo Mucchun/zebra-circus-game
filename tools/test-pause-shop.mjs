@@ -36,20 +36,26 @@ await page.keyboard.up("w");
 const posDuring = await playerPos();
 check("movement frozen while paused", Math.hypot(posDuring.x - posBefore.x, posDuring.z - posBefore.z) < 0.05);
 
-// 2. Seeded balance renders; plush affordable, terminal not.
+// 2. Seeded 250 earned but never awarded (threshold fires on a fresh earn):
+// plush shows capped progress and stays disabled; terminal locked.
 check("balance shows seeded 250", (await page.textContent("#wallet-balance")) === "250");
-check("plush redeem enabled", await page.evaluate(() => !document.getElementById("shop-buy-plush").disabled));
+const plushState = await page.evaluate(() => { const b = document.getElementById("shop-buy-plush"); return { disabled: b.disabled, text: b.textContent.trim() }; });
+check("plush shows capped progress pre-award", plushState.disabled && plushState.text === "200/200", JSON.stringify(plushState));
 const terminalState = await page.evaluate(() => { const b = document.getElementById("shop-buy-terminal"); return { disabled: b.disabled, text: b.textContent }; });
 check("terminal locked with progress hint", terminalState.disabled && /NEED 9,?750 MORE/.test(terminalState.text), JSON.stringify(terminalState));
 
-// 3. Two-step redeem: arm then confirm; balance drops, code appears.
-await page.click("#shop-buy-plush");
-check("first click arms confirmation", (await page.textContent("#shop-buy-plush")) === "CONFIRM?");
-await page.click("#shop-buy-plush");
-await page.waitForTimeout(200);
-check("plush redeemed: balance 50", (await page.textContent("#wallet-balance")) === "50");
-const code = await page.evaluate(() => document.querySelector("#wallet-codes .code-row")?.textContent ?? "");
-check("redemption code issued", /ZC-PLUSH-[A-Z2-9]{4}-[A-Z2-9]{4}/.test(code), code);
+// 3. Owned state (seeded as already awarded) renders an enabled CLAIM link.
+const owned = await context.newPage();
+await owned.addInitScript(() => localStorage.setItem("zebraBalloonWallet", JSON.stringify({ earned: 250, spent: 0, codes: [], plushAwarded: true })));
+await owned.goto("http://127.0.0.1:8765/", { waitUntil: "domcontentloaded" });
+await owned.click("#play-btn");
+await owned.waitForSelector("#tut-go-btn", { state: "visible" });
+await owned.click("#tut-go-btn");
+await owned.waitForTimeout(400);
+await owned.keyboard.press("p");
+const ownedPlush = await owned.evaluate(() => { const b = document.getElementById("shop-buy-plush"); return { disabled: b.disabled, text: b.textContent.trim() }; });
+check("owned plush shows enabled CLAIM link", !ownedPlush.disabled && /CLAIM/i.test(ownedPlush.text), JSON.stringify(ownedPlush));
+await owned.close();
 
 // 4. Resume restores play; wallet HUD chip matches.
 await page.click("#resume-btn");
@@ -60,7 +66,7 @@ await page.waitForTimeout(500);
 await page.keyboard.up("w");
 const posMoved = await playerPos();
 check("movement works after resume", Math.hypot(posMoved.x - posResume.x, posMoved.z - posResume.z) > 0.4);
-check("HUD chip shows 50", (await page.textContent("#wallet-hud")) === "50");
+check("HUD chip shows 250", (await page.textContent("#wallet-hud")) === "250");
 
 // 5. Persistence across reload.
 await page.reload({ waitUntil: "domcontentloaded" });
@@ -69,9 +75,8 @@ await page.waitForSelector("#tut-go-btn", { state: "visible" });
 await page.click("#tut-go-btn");
 await page.waitForTimeout(300);
 await page.click("#pause-btn");
-check("balance persists after reload", (await page.textContent("#wallet-balance")) === "50");
-const persistedCode = await page.evaluate(() => document.querySelector("#wallet-codes .code-row")?.textContent ?? "");
-check("code persists after reload", /ZC-PLUSH-/.test(persistedCode));
+check("balance persists after reload", (await page.textContent("#wallet-balance")) === "250");
+check("wallet earned persists after reload", await page.evaluate(() => JSON.parse(localStorage.getItem("zebraBalloonWallet")).earned === 250));
 check("pause button opens overlay", await page.evaluate(() => document.getElementById("pause-overlay").style.display === "flex"));
 check("no page errors", errors.length === 0, errors.join(" | "));
 

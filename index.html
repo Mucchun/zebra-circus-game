@@ -3102,7 +3102,7 @@ if (STUDIO_AUTHORING_MODE) {
       visualManifest: runtimeVisualManifest(),
       meshVisuals: fixedMeshVisualState(),
       dynamicObjectIds: [...dynamicEditableObjectIds].sort(),
-      qrTextureHashes: qrObjs.map((entry) => ({ id: entry.editorId, hash: textureVisualSignature(entry.g.children.find((child) => child.material?.map)?.material?.map) })),
+      qrTextureHashes: qrObjs.map((entry) => ({ id: entry.editorId, hash: textureVisualSignature((entry.g.children.find((child) => child.material?.name === 'QrFace' && child.material?.map) ?? entry.g.children.find((child) => child.material?.map))?.material?.map) })),
       crowd: {
         seated: PROCEDURAL_CROWD_IDS.map((id) => runtimeObjectVisualFingerprint(id, editableObjects.get(id))).filter(Boolean),
         imported: GLTF_CROWD_IDS.map((id) => runtimeObjectVisualFingerprint(id, editableObjects.get(id))).filter(Boolean),
@@ -3126,6 +3126,10 @@ if (STUDIO_AUTHORING_MODE) {
 //    window.LUNA_ANALYTICS_ENDPOINT = 'https://your-api/collect';
 //  Read a live summary any time: window.lunaAnalytics.summary()
 // ═══════════════════════════════════════════════
+// Live collector: the multiplayer relay logs events to worker observability
+// (read with: wrangler tail zebra-circus-mp). Override via ?lunaUrl=.
+window.LUNA_ANALYTICS_ENDPOINT = new URLSearchParams(location.search).get('lunaUrl')
+  || 'https://zebra-circus-mp.timofeymarkin98.workers.dev/analytics';
 const LunaAnalytics = (() => {
   const KEY = 'luna_analytics_v1';
   let store;
@@ -3438,8 +3442,11 @@ function buildScene() {
   buildTent();
   buildBleachers();
   addDecorations();
-  // Spectators live only on the bleachers (upgradeSeatedAudience). The old
-  // floor-ring crowd near the center is intentionally not spawned.
+  // The 28 crowd-gltf objects are part of the editor's fixed 222-object
+  // contract and must always register. To retire the floor-ring crowd
+  // visually, hide those objects IN THE EDITOR so the change lives in the
+  // authored scene - never by skipping the spawn here.
+  loadAndPlaceCrowd();
   upgradePropVisuals();
   upgradeBleachers();
   upgradeSeatedAudience();
@@ -3775,9 +3782,10 @@ function upgradePropVisuals() {
 
 function loadAndPlaceCrowd() {
   const gltfLoader = new THREE.GLTFLoader();
-  // Seated spectators generated with Meshy AI (self-contained GLBs);
-  // the loader normalizes each and rests its feet on the ground.
-  const crowdFiles = ['seated-a','seated-b','seated-c','seated-d'];
+  // CONTRACT (Tim 2026-07-22): the imported crowd is the six ORIGINAL models
+  // across 28 instances - the parity gate enforces exactly these sources.
+  // Meshy seated/spectator models belong to the separate bleacher audience.
+  const crowdFiles = ['char1','char2','char4','char6','man','worker'];
   const promises = crowdFiles.map(id =>
     new Promise(resolve => {
       gltfLoader.load(`models/crowd/${id}.glb`, gltf => {
@@ -4626,7 +4634,7 @@ function makeQRTexture(w) {
   [[34,34],[S-34,34],[34,S-34],[S-34,S-34]].forEach(([x,y]) => star(x, y, 20));
 
   // "SCAN ME" ribbon header.
-  ctx.fillStyle = GOLD; ctx.font = '900 30px "Barlow Condensed", Arial';
+  ctx.fillStyle = GOLD; ctx.font = '900 30px Arial, sans-serif';
   ctx.textAlign = 'center'; ctx.fillText('★ SCAN ME ★', S / 2, 62);
 
   // Cream QR panel with the (still-scannable) black modules.
@@ -4655,7 +4663,7 @@ function makeQRTexture(w) {
 
   // Product name footer plaque.
   ctx.fillStyle = RED; ctx.fillRect(p, S - p - 4, q, 40);
-  ctx.fillStyle = '#fff'; ctx.font = '800 26px "Barlow Condensed", Arial';
+  ctx.fillStyle = '#fff'; ctx.font = '800 26px Arial, sans-serif';
   ctx.fillText(w.name, S / 2, S - p + 26);
 
   return new THREE.CanvasTexture(c);
@@ -4671,7 +4679,7 @@ function makeQRLabelTexture(w) {
   ctx.fillStyle = 'rgba(255,255,255,0.16)';
   for (let x = 0; x < W; x += 56) ctx.fillRect(x, 0, 28, H);
   ctx.strokeStyle = '#e8c840'; ctx.lineWidth = 8; ctx.strokeRect(5, 5, W - 10, H - 10);
-  ctx.fillStyle = '#fff'; ctx.font = '900 52px "Barlow Condensed", Arial';
+  ctx.fillStyle = '#fff'; ctx.font = '900 52px Arial, sans-serif';
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText('★ ' + w.name + ' ★', W / 2, H / 2 + 4);
   return new THREE.CanvasTexture(canvas);
@@ -5530,13 +5538,17 @@ function animate() {
 
 function updateGame(delta, t) {
 
-  animateSpectators(t);
-  if (rfidUnlocked) updateRfidHud();
-  for (const s of circusSpotlights) {
-    const a = t * s.speed + s.phase;
-    s.light.target.position.set(Math.cos(a) * s.radius, 0, Math.sin(a) * s.radius);
-    s.light.target.updateMatrixWorld();
+  // Ambient motion stays frozen until gameplay begins so the Studio's
+  // same-camera Edit/Play parity holds (matches the weapon-bob gating below).
+  if (gameActive) {
+    animateSpectators(t);
+    for (const s of circusSpotlights) {
+      const a = t * s.speed + s.phase;
+      s.light.target.position.set(Math.cos(a) * s.radius, 0, Math.sin(a) * s.radius);
+      s.light.target.updateMatrixWorld();
+    }
   }
+  if (rfidUnlocked) updateRfidHud();
 
   // Camera rotation
   camera.rotation.order='YXZ';
