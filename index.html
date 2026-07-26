@@ -577,6 +577,7 @@ body { background: #000; overflow: hidden; font-family: 'Source Sans 3', 'Barlow
     <div class="wslot empty" id="slot-1" data-num="2"><div class="ico">MC3400</div></div>
     <div class="wslot empty" id="slot-2" data-num="3"><div class="ico">PS30</div></div>
     <div class="wslot empty" id="slot-3" data-num="4"><div class="ico">TC8300</div></div>
+    <div class="wslot empty" id="slot-4" data-num="5"><div class="ico">🦓 PLUSH</div></div>
   </div>
 
   <div id="progress-wrap">
@@ -593,11 +594,11 @@ body { background: #000; overflow: hidden; font-family: 'Source Sans 3', 'Barlow
     <div class="pp-balance">BALLOON BANK: <b id="wallet-balance">0</b> 🎈 <span style="font-size:12px">(pop balloons to earn)</span></div>
     <div class="shop-card">
       <div>
-        <div class="sc-name">ZEBRA PLUSH TOY</div>
-        <div class="sc-sub">Claim online — redemption code on purchase</div>
+        <div class="sc-name">ZEBRA PLUSH TOY 🦓</div>
+        <div class="sc-sub">Auto-unlocked at 200 balloons — claim online, no code</div>
       </div>
       <div class="sc-cost">200 🎈</div>
-      <button class="shop-btn" id="shop-buy-plush" type="button">REDEEM</button>
+      <button class="shop-btn" id="shop-buy-plush" type="button" disabled>AUTO</button>
     </div>
     <div class="shop-card">
       <div>
@@ -703,11 +704,20 @@ const PLAYER_H = 1.7;
 const WIN_SCORE = 200;
 
 let balloons = [], weaponObjs = [], qrObjs = [], particles = [], projectiles = [], ringWaves = [], scanMarkers = [];
+let comboCount = 0, comboExpireAt = 0;   // pop-chain combo
+const circusSpotlights = [];             // sweeping colored lights
+let plushieGltf = null, plushieTrophy = null; // Zebra plushie reward model
+let holdingPlushie = false;              // player is holding the plushie item
 let heldMesh = null;
 let promptTimer = null;
 let clock;
 let simulationTime = 0;
+const seatedSpectators = []; // { group, baseY, baseRotY, phase, speed, cheerAt }
 let playerHeight = PLAYER_H;
+let verticalVel = 0;      // jump/gravity vertical velocity
+let grounded = true;
+const JUMP_SPEED = 7.5;   // initial jump impulse
+const GRAVITY = 22;       // downward accel
 let runtimeSceneSource = 'embedded';
 let runtimeSceneDocument = null;
 let liveEditorSceneApplied = false;
@@ -3108,6 +3118,94 @@ if (STUDIO_AUTHORING_MODE) {
   });
 }
 
+// ═══════════════════════════════════════════════
+//  LUNA ANALYTICS — playtime + brand-engagement tracking (monetization)
+//  Captures the metrics a sponsoring brand pays for: engaged playtime,
+//  which products players interact with, and click-throughs to the brand.
+//  Persists locally and (if configured) POSTs each event to your dashboard:
+//    window.LUNA_ANALYTICS_ENDPOINT = 'https://your-api/collect';
+//  Read a live summary any time: window.lunaAnalytics.summary()
+// ═══════════════════════════════════════════════
+const LunaAnalytics = (() => {
+  const KEY = 'luna_analytics_v1';
+  let store;
+  try { store = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (_) { store = {}; }
+  store.sessions = store.sessions || 0;
+  store.totalPlaytimeMs = store.totalPlaytimeMs || 0;
+  store.events = store.events || {};
+  store.products = store.products || {};
+  let lastTick = 0, sessionMs = 0, playing = false;
+
+  const persist = () => { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (_) {} };
+  const prod = (name) => (store.products[name] = store.products[name] || { pickups: 0, views: 0, visits: 0 });
+  const send = (type, data) => {
+    const ep = window.LUNA_ANALYTICS_ENDPOINT;
+    if (!ep) return;
+    try { navigator.sendBeacon(ep, JSON.stringify({ type, data, ts: Date.now(), session: store.sessions })); } catch (_) {}
+  };
+
+  function track(type, data = {}) {
+    store.events[type] = (store.events[type] || 0) + 1;
+    if (data.product) {
+      const p = prod(data.product);
+      if (type === 'device_pickup') p.pickups++;
+      else if (type === 'product_view') p.views++;
+      else if (type === 'product_visit') p.visits++;
+    }
+    persist();
+    send(type, data);
+  }
+  function startSession() {
+    if (playing) return;
+    playing = true; store.sessions++; sessionMs = 0; lastTick = Date.now();
+    persist(); send('session_start', {});
+  }
+  function tick() {
+    if (!playing) return;
+    const now = Date.now();
+    if (document.hasFocus()) { const dt = now - lastTick; sessionMs += dt; store.totalPlaytimeMs += dt; }
+    lastTick = now; persist();
+  }
+  function summary() {
+    return {
+      sessions: store.sessions,
+      totalPlaytimeMin: +(store.totalPlaytimeMs / 60000).toFixed(2),
+      thisSessionMin: +(sessionMs / 60000).toFixed(2),
+      events: { ...store.events },
+      products: JSON.parse(JSON.stringify(store.products)),
+    };
+  }
+  // Optional on-screen dashboard (press B) so playtime + engagement is visible.
+  let overlay = null, overlayTimer = null;
+  function renderOverlay() {
+    if (!overlay) return;
+    const s = summary();
+    const rows = Object.entries(s.products).map(([n, p]) =>
+      `<tr><td>${n}</td><td>${p.pickups}</td><td>${p.views}</td><td style="color:#ffd200">${p.visits}</td></tr>`).join('');
+    overlay.innerHTML =
+      `<div style="font:700 13px Barlow Condensed,sans-serif;letter-spacing:2px;color:#00c060;margin-bottom:6px">LUNA · ENGAGEMENT</div>` +
+      `<div style="font:12px monospace;line-height:1.6">` +
+      `session&nbsp;<b>${s.thisSessionMin.toFixed(1)} min</b> &nbsp;·&nbsp; total&nbsp;<b>${s.totalPlaytimeMin.toFixed(1)} min</b> &nbsp;·&nbsp; plays&nbsp;<b>${s.sessions}</b></div>` +
+      `<table style="font:11px monospace;margin-top:8px;border-collapse:collapse;width:100%">` +
+      `<tr style="color:#8090b0"><td>product</td><td>pick</td><td>view</td><td>visit</td></tr>${rows}</table>`;
+  }
+  function toggleOverlay() {
+    if (overlay) { clearInterval(overlayTimer); overlay.remove(); overlay = null; return; }
+    overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:70px;left:14px;z-index:99998;background:rgba(5,5,15,0.92);' +
+      'border:1px solid #00a651;border-top:3px solid #00a651;padding:12px 16px;min-width:240px;color:#d8ddf0;pointer-events:none;';
+    document.body.appendChild(overlay);
+    renderOverlay();
+    overlayTimer = setInterval(renderOverlay, 1000);
+  }
+
+  setInterval(tick, 2000);
+  window.addEventListener('beforeunload', tick);
+  document.addEventListener('visibilitychange', tick);
+  return { track, startSession, summary, toggleOverlay };
+})();
+window.lunaAnalytics = LunaAnalytics;
+
 async function startGame() {
   document.getElementById('start-screen').style.display = 'none';
   document.getElementById('tutorial-overlay').style.display = 'flex';
@@ -3127,6 +3225,8 @@ function dismissTutorial() {
   document.getElementById('tutorial-overlay').style.display = 'none';
   document.getElementById('hud').style.display = 'block';
   gameActive = true;
+  LunaAnalytics.startSession();
+  if (wallet.plushAwarded) markPlushieSlot(); // restore owned plushie in inventory
 }
 
 function restartGame() {
@@ -3134,6 +3234,8 @@ function restartGame() {
   score = 0; currentWeapon = -1; collected.clear();
   balloons = []; weaponObjs = []; qrObjs = []; particles = []; projectiles = []; ringWaves = []; scanMarkers = [];
   heldMesh = null; mouseDown = false; infoOpen = false; milestoneShown = false;
+  rfidUnlocked = false; rfidCooldownUntil = 0; comboCount = 0; plushieTrophy = null; holdingPlushie = false;
+  { const r = document.getElementById('__rfid'); if (r) r.style.display = 'none'; }
   document.getElementById('milestone-popup').style.display = 'none';
   document.getElementById('score-value').textContent = '0';
   document.getElementById('progress-fill').style.width = '0%';
@@ -3336,8 +3438,273 @@ function buildScene() {
   buildTent();
   buildBleachers();
   addDecorations();
-  loadAndPlaceCrowd();
+  // Spectators live only on the bleachers (upgradeSeatedAudience). The old
+  // floor-ring crowd near the center is intentionally not spawned.
   upgradePropVisuals();
+  upgradeBleachers();
+  upgradeSeatedAudience();
+  addCircusProps();
+  addCircusSpotlights();
+}
+
+// Colored circus spotlights that sweep the arena floor for atmosphere.
+function addCircusSpotlights() {
+  circusSpotlights.length = 0;
+  const cols = [0xff2d55, 0x2ec4ff, 0xffd200, 0x38d66b];
+  cols.forEach((col, i) => {
+    const sp = new THREE.SpotLight(col, 20, 55, Math.PI * 0.06, 0.4, 1.2);
+    sp.position.set(Math.cos(i / cols.length * Math.PI * 2) * 6, 20, Math.sin(i / cols.length * Math.PI * 2) * 6);
+    sp.castShadow = false;
+    scene.add(sp); scene.add(sp.target);
+    circusSpotlights.push({ light: sp, phase: i * 1.7, speed: 0.35 + i * 0.05, radius: 8 + i });
+  });
+}
+
+// Decorative Meshy-generated circus props placed around the arena edge.
+// Plain game mode only (Studio authoring keeps the canonical scene).
+function addCircusProps() {
+  if (typeof STUDIO_AUTHORING_MODE !== 'undefined' && STUDIO_AUTHORING_MODE) return;
+  const props = [
+    { file: 'models/props/popcorn-cart.glb', angle: Math.PI * 0.25, radius: 9.5, height: 1.9 },
+    { file: 'models/props/circus-cannon.glb', angle: Math.PI * 0.75, radius: 9.2, height: 1.7 },
+    { file: 'models/props/ticket-booth.glb', angle: Math.PI * 1.25, radius: 9.6, height: 2.9 },
+    { file: 'models/props/high-striker.glb', angle: Math.PI * 1.75, radius: 9.6, height: 3.6 },
+    { file: 'models/props/carousel.glb', angle: Math.PI * 0.0, radius: 11.0, height: 3.8, spin: 0.25 },
+    { file: 'models/props/elephant.glb', angle: Math.PI * 0.5, radius: 10.6, height: 2.4 },
+    { file: 'models/props/clown.glb', angle: Math.PI * 1.5, radius: 10.4, height: 2.2 },
+  ];
+  const loader = new THREE.GLTFLoader();
+  // Preload the plushie reward model so it's ready for the 200-balloon trophy.
+  loader.load('models/props/zebra-plushie.glb', (g) => { plushieGltf = g; }, undefined, () => {});
+  props.forEach((p) => {
+    loader.load(p.file, (gltf) => {
+      const model = gltf.scene;
+      let box = new THREE.Box3().setFromObject(model);
+      const h = box.getSize(new THREE.Vector3()).y;
+      if (h > 0) model.scale.setScalar(p.height / h);
+      box = new THREE.Box3().setFromObject(model);
+      const c = box.getCenter(new THREE.Vector3());
+      const grp = new THREE.Group();
+      grp.add(model);
+      model.position.x -= c.x;
+      model.position.z -= c.z;
+      model.position.y -= box.min.y; // rest on the ground
+      grp.position.set(Math.cos(p.angle) * p.radius, 0, Math.sin(p.angle) * p.radius);
+      grp.rotation.y = Math.atan2(-Math.cos(p.angle), -Math.sin(p.angle)); // face center
+      grp.userData.circusProp = true;
+      scene.add(grp);
+    }, undefined, () => { /* prop model missing: skip */ });
+  });
+}
+
+// Replace the procedural ring bleachers with a Meshy-generated wooden
+// grandstand section, tiled around the arena. Plain game mode only.
+function upgradeBleachers() {
+  if (typeof STUDIO_AUTHORING_MODE !== 'undefined' && STUDIO_AUTHORING_MODE) return;
+  const oldIds = [...BLEACHER_SEAT_IDS, ...BLEACHER_RISER_IDS, ...BLEACHER_STRUT_IDS];
+  const hideOld = () => oldIds.forEach((id) => {
+    const t = editableObjects.get(id);
+    if (t) t.traverse((o) => { if (o.isMesh) o.visible = false; });
+  });
+  const loader = new THREE.GLTFLoader();
+  loader.load('models/props/bleacher-wood.glb', (gltf) => {
+    // The scene document applies asynchronously and re-shows authored meshes;
+    // hide the old procedural rings now and re-assert a few times.
+    hideOld();
+    [400, 1200, 3000, 6000].forEach((d) => setTimeout(hideOld, d));
+
+    const N = 22;                 // segments around the ring
+    const R_MID = 16.6;           // radial center of the stand
+    const TARGET_H = 3.2;         // full height of the stand
+    const TARGET_DEPTH = 6.2;     // radial depth (front bench -> back wall)
+
+    const base = gltf.scene;
+    const box0 = new THREE.Box3().setFromObject(base);
+    const size0 = box0.getSize(new THREE.Vector3());
+    // Model axes: X = width (tiling), Y = height, Z = depth (radial).
+    const arcWidth = (2 * Math.PI * R_MID) / N * 1.06; // slight overlap, no gaps
+    const sx = arcWidth / size0.x;
+    const sy = TARGET_H / size0.y;
+    const sz = TARGET_DEPTH / size0.z;
+
+    for (let i = 0; i < N; i++) {
+      const ang = (i / N) * Math.PI * 2;
+      const seg = base.clone(true);
+      seg.scale.set(sx, sy, sz);
+      // Rest on the ground and center its depth on R_MID.
+      const b = new THREE.Box3().setFromObject(seg);
+      const c = b.getCenter(new THREE.Vector3());
+      const grp = new THREE.Group();
+      grp.add(seg);
+      seg.position.x -= c.x;
+      seg.position.z -= c.z;
+      seg.position.y -= b.min.y;
+      grp.position.set(Math.cos(ang) * R_MID, 0, Math.sin(ang) * R_MID);
+      // Face the arena center (low front bench inward, back wall outward).
+      grp.lookAt(0, 0, 0);
+      grp.userData.bleacherUpgrade = true;
+      scene.add(grp);
+    }
+  }, undefined, () => { /* keep procedural bleachers if the model is missing */ });
+}
+
+// Replace the 40 authored seated audience members with Meshy-generated seated
+// spectators, reusing each authored member's footprint so they sit exactly in
+// the old bleacher positions. Plain game mode only (Studio parity preserved).
+// Celebratory confetti burst (colorful pieces with gravity, reuses particles).
+const CONFETTI_COLORS = [0xff3b3b, 0xffd200, 0x2ec4ff, 0x38d66b, 0xff8ad1, 0xff6a00, 0xffffff];
+const CONFETTI_GEO = new THREE.PlaneGeometry(0.09, 0.14); // shared, not per-piece
+function spawnConfetti(pos, count = 16, spread = 0.22) {
+  for (let i = 0; i < count; i++) {
+    const col = CONFETTI_COLORS[(Math.random() * CONFETTI_COLORS.length) | 0];
+    const pm = new THREE.Mesh(
+      CONFETTI_GEO,
+      new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 1, side: THREE.DoubleSide })
+    );
+    pm.position.copy(pos);
+    pm.rotation.set(Math.random() * 6, Math.random() * 6, Math.random() * 6);
+    const vel = new THREE.Vector3((Math.random() - 0.5) * spread, Math.random() * 0.18 + 0.06, (Math.random() - 0.5) * spread);
+    scene.add(pm);
+    particles.push({ mesh: pm, mat: pm.material, vel, life: 1.3, alive: true });
+  }
+}
+
+// Make the whole crowd cheer (trigger their hop) — call it on scoring moments.
+function cheerCrowd(delay = 0) {
+  const now = simulationTime + delay;
+  for (const s of seatedSpectators) s.cheerAt = now + Math.random() * 0.3;
+}
+
+// On-screen combo popup.
+function showComboText(n, bonus) {
+  let el = document.getElementById('__combo');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = '__combo';
+    el.style.cssText = 'position:fixed;top:22%;left:50%;transform:translateX(-50%);z-index:950;'
+      + 'pointer-events:none;font-family:"Barlow Condensed",sans-serif;font-weight:800;'
+      + 'color:#ffd200;text-shadow:0 2px 12px rgba(255,106,0,0.8);letter-spacing:2px;text-align:center;';
+    document.body.appendChild(el);
+  }
+  el.innerHTML = `COMBO ×${n}<div style="font-size:0.45em;color:#fff">+${bonus} BONUS</div>`;
+  el.style.fontSize = Math.min(64, 30 + n * 4) + 'px';
+  el.style.opacity = '1';
+  el.style.transition = 'none';
+  requestAnimationFrame(() => {
+    el.style.transition = 'opacity 0.8s ease-out';
+    el.style.opacity = '0';
+  });
+}
+
+// Procedural idle animation for the static Meshy spectators: a gentle seated
+// bob + side sway, with an occasional bigger "cheer" bounce so the crowd feels
+// alive. Called every frame from updateGame.
+function animateSpectators(t) {
+  for (const s of seatedSpectators) {
+    const bob = Math.sin(t * s.speed + s.phase) * 0.18;       // visible up/down
+    const sway = Math.sin(t * s.speed * 0.5 + s.phase) * 0.12; // lean side to side
+    let cheer = 0;
+    if (t >= s.cheerAt) {
+      const into = t - s.cheerAt;
+      if (into < 0.8) {
+        cheer = Math.sin((into / 0.8) * Math.PI) * 0.6;        // a clear hop
+      } else {
+        s.cheerAt = t + 3 + Math.random() * 7;                 // schedule next
+      }
+    }
+    s.group.position.y = s.baseY + bob + cheer;
+    s.group.rotation.z = sway;
+    s.group.rotation.y = s.baseRotY + Math.sin(t * s.speed * 0.7 + s.phase) * 0.1;
+  }
+}
+
+function upgradeSeatedAudience() {
+  if (typeof STUDIO_AUTHORING_MODE !== 'undefined' && STUDIO_AUTHORING_MODE) return;
+  seatedSpectators.length = 0; // reset animation registry on scene (re)build
+  const files = ['models/crowd/seated-a.glb', 'models/crowd/seated-b.glb', 'models/crowd/seated-c.glb', 'models/crowd/seated-d.glb'];
+  const loader = new THREE.GLTFLoader();
+  const gltfs = [];
+  let done = 0;
+  files.forEach((f, i) => loader.load(
+    f,
+    (g) => { gltfs[i] = g; if (++done === files.length) applyAll(); },
+    undefined,
+    () => { if (++done === files.length) applyAll(); }
+  ));
+
+  function applyAll() {
+    const models = gltfs.filter(Boolean);
+    if (!models.length) return;
+    for (let i = 0; i < 40; i++) {
+      const id = `crowd-proc-${String(i).padStart(2, '0')}`;
+      attemptSeatSwap(id, models[i % models.length], 0);
+    }
+  }
+
+  // Seated spectator world height (a seated person is a bit shorter than
+  // standing). Matches the foreground ring crowd's visual scale.
+  const SEAT_TARGET_H = 1.5;
+  const placed = new Set();
+
+  function attemptSeatSwap(id, gltf, attempt) {
+    if (placed.has(id)) return;
+    const target = editableObjects.get(id);
+    const originalBox = target ? new THREE.Box3().setFromObject(target) : null;
+    if (!target || originalBox.isEmpty()) {
+      if (attempt < 40) setTimeout(() => attemptSeatSwap(id, gltf, attempt + 1), 400);
+      return;
+    }
+    // Read the authored seat's world transform, then hide its abstract mesh.
+    const seatCenter = originalBox.getCenter(new THREE.Vector3());
+    const worldQuat = target.getWorldQuaternion(new THREE.Quaternion());
+    hideSeatMeshes(target);
+
+    // Compute the actual bleacher seat-surface height at this radius so the
+    // character rests on the bench instead of sinking under it. Bleacher tiers
+    // (buildBleachers): r = 14 + tier*1.4, y = tier*0.55 + 0.28, seat tube r 0.22.
+    const radius = Math.hypot(seatCenter.x, seatCenter.z);
+    const tier = Math.max(0, Math.min(4, Math.round((radius - 14) / 1.4)));
+    const seatBaseY = tier * 0.55 + 0.28 + 0.2; // sit on top of the seat tube
+
+    // Build the Meshy model at a fixed seated height, feet at its own origin.
+    const model = gltf.scene.clone(true);
+    let box = new THREE.Box3().setFromObject(model);
+    const h = box.getSize(new THREE.Vector3()).y;
+    if (h <= 0) return;
+    model.scale.setScalar(SEAT_TARGET_H / h);
+    box = new THREE.Box3().setFromObject(model);
+    model.position.y -= box.min.y; // rest bottom on the group's origin
+
+    // Snap onto the actual seat ring (authored figures used a random Y, which
+    // left them under/through the benches) and face the arena center.
+    const ang = Math.atan2(seatCenter.z, seatCenter.x);
+    const ringR = 14 + tier * 1.4;
+    const group = new THREE.Group();
+    group.add(model);
+    group.position.set(Math.cos(ang) * ringR, seatBaseY, Math.sin(ang) * ringR);
+    // Face inward toward the arena center (models' default forward is +Z).
+    group.rotation.y = Math.atan2(-Math.cos(ang), -Math.sin(ang));
+    group.userData.seatedUpgrade = true;
+    scene.add(group);
+    placed.add(id);
+    // Register for procedural idle animation (bob, sway, periodic cheer).
+    seatedSpectators.push({
+      group, baseY: seatBaseY, baseRotY: group.rotation.y,
+      phase: Math.random() * Math.PI * 2,
+      speed: 1.6 + Math.random() * 1.2,
+      cheerAt: 3 + Math.random() * 8, // seconds until next cheer bounce
+    });
+
+    // Scene doc applies asynchronously and may re-show the authored mesh; keep
+    // it hidden for a few seconds.
+    [800, 2000, 4000, 7000].forEach((delay) => setTimeout(() => hideSeatMeshes(target), delay));
+  }
+
+  function hideSeatMeshes(target) {
+    target.traverse((obj) => {
+      if (obj.isMesh || obj.isSprite) obj.visible = false;
+    });
+  }
 }
 
 // Swap selected authored props for richer Meshy-generated models in plain
@@ -3408,9 +3775,9 @@ function upgradePropVisuals() {
 
 function loadAndPlaceCrowd() {
   const gltfLoader = new THREE.GLTFLoader();
-  // These GLBs contain their textures. The old person-a..f files reference
-  // absent external PNGs and produced a 404 for every crowd member.
-  const crowdFiles = ['char1','char2','char4','char6','man','worker'];
+  // Seated spectators generated with Meshy AI (self-contained GLBs);
+  // the loader normalizes each and rests its feet on the ground.
+  const crowdFiles = ['seated-a','seated-b','seated-c','seated-d'];
   const promises = crowdFiles.map(id =>
     new Promise(resolve => {
       gltfLoader.load(`models/crowd/${id}.glb`, gltf => {
@@ -3443,6 +3810,10 @@ function loadAndPlaceCrowd() {
       const box = new THREE.Box3().setFromObject(model);
       const h = box.getSize(new THREE.Vector3()).y;
       if (h > 0) model.scale.setScalar(1.2 / h);
+      // Sit the model's lowest point on the ground (Meshy pivots are centered,
+      // which otherwise sinks half the body below y=0).
+      const feet = new THREE.Box3().setFromObject(model);
+      model.position.y -= feet.min.y;
       root.add(model);
 
       root.position.set(
@@ -3598,24 +3969,65 @@ function buildTentPoles(parent) {
 }
 
 function makeZebraSign(parent) {
+  // Zebra-brand banner: "ZEBRA" wordmark on top + the real Zebra logo below.
+  const W = 900, H = 520;
   const c = document.createElement('canvas');
-  c.width = 600; c.height = 150;
+  c.width = W; c.height = H;
   const ctx = c.getContext('2d');
-  ctx.fillStyle = '#000'; ctx.fillRect(0,0,600,150);
-  ctx.strokeStyle = '#e8c840'; ctx.lineWidth = 5;
-  ctx.strokeRect(4,4,592,142);
-  // Stripes
-  ctx.globalAlpha = 0.06;
-  for (let i = 0; i < 30; i++) {
-    ctx.fillStyle = '#fff'; ctx.fillRect(i*20,0,10,150);
+  const ZBLACK = '#111111';
+
+  function draw(logoImg) {
+    // White banner face with black frame.
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = ZBLACK; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(14, 14, W - 28, H - 28);
+    ctx.strokeStyle = ZBLACK; ctx.lineWidth = 8;
+    ctx.strokeRect(14, 14, W - 28, H - 28);
+    // "ZEBRA" wordmark on top.
+    ctx.fillStyle = ZBLACK;
+    ctx.font = '900 150px Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('ZEBRA', W / 2, 130);
+    // Logo below the wordmark (recolored: green tile -> black, keep white head).
+    if (logoImg) {
+      const s = 250;
+      ctx.drawImage(logoImg, (W - s) / 2, 210, s, s);
+    }
+    t.needsUpdate = true;
   }
-  ctx.globalAlpha = 1;
-  ctx.fillStyle = '#e8c840'; ctx.font = 'bold 80px Arial'; ctx.textAlign = 'center';
-  ctx.fillText('ZEBRA', 300, 108);
+
+  // Recolor the green Zebra logo tile to black while keeping the white head.
+  function blacken(img) {
+    const oc = document.createElement('canvas');
+    oc.width = img.width; oc.height = img.height;
+    const octx = oc.getContext('2d');
+    octx.drawImage(img, 0, 0);
+    try {
+      const data = octx.getImageData(0, 0, oc.width, oc.height);
+      const p = data.data;
+      for (let i = 0; i < p.length; i += 4) {
+        if (p[i + 3] < 20) continue;                 // keep transparency
+        const r = p[i], g = p[i + 1], b = p[i + 2];
+        const nearWhite = r > 190 && g > 190 && b > 190;
+        if (!nearWhite) { p[i] = 17; p[i + 1] = 17; p[i + 2] = 17; } // green -> black
+      }
+      octx.putImageData(data, 0, 0);
+    } catch (_) { /* if tainted, fall back to original tile */ }
+    return oc;
+  }
 
   const t = new THREE.CanvasTexture(c);
-  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(7,1.75), new THREE.MeshBasicMaterial({ map: t, side: THREE.DoubleSide }));
-  mesh.position.set(0, 5.5, -17);
+  draw(null);
+  const logo = new Image();
+  logo.onload = () => draw(blacken(logo));
+  logo.src = 'icons/icon-512.png';
+
+  const mesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(6.5, 3.75),
+    new THREE.MeshBasicMaterial({ map: t, side: THREE.DoubleSide, transparent: true })
+  );
+  mesh.position.set(0, 6, -17);
   parent.add(mesh);
 }
 
@@ -4130,6 +4542,18 @@ function popBalloon(bo, weapon) {
   // Floating score text (DOM)
   showFloatingScore(weapon.pts);
 
+  // Celebration: confetti + crowd cheer + pop-chain combo bonus.
+  spawnConfetti(pos, 12);
+  cheerCrowd();
+  const nowMs = performance.now();
+  comboCount = (nowMs < comboExpireAt) ? comboCount + 1 : 1;
+  comboExpireAt = nowMs + 2500;
+  if (comboCount >= 2) {
+    const bonus = Math.min(comboCount, 10) * 5;
+    addScore(bonus);
+    showComboText(comboCount, bonus);
+  }
+
   // In multiplayer the room owns the shared balloon pool and its respawns.
   setTimeout(() => { if(gameActive && !(MP.enabled && MP.connected())) respawnBalloon(bo); }, 3500+Math.random()*2000);
 }
@@ -4168,49 +4592,102 @@ function showScanMarker(pos) {
 //  QR CODES
 // ═══════════════════════════════════════════════
 function makeQRTexture(w) {
+  const S = 512;
   const c = document.createElement('canvas');
-  c.width=256; c.height=256;
-  const ctx=c.getContext('2d');
-  ctx.fillStyle='#fff'; ctx.fillRect(0,0,256,256);
-  ctx.fillStyle='#000';
+  c.width = S; c.height = S;
+  const ctx = c.getContext('2d');
+  const RED = '#c01f2f', GOLD = '#e8c840', CREAM = '#fdf6e3';
 
-  // Corner finder patterns
-  function finder(x,y) {
-    ctx.fillStyle='#000'; ctx.fillRect(x,y,56,56);
-    ctx.fillStyle='#fff'; ctx.fillRect(x+7,y+7,42,42);
-    ctx.fillStyle='#000'; ctx.fillRect(x+14,y+14,28,28);
+  // Festive red/white striped circus frame.
+  ctx.fillStyle = RED; ctx.fillRect(0, 0, S, S);
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0, 0, S, S); ctx.clip();
+  ctx.fillStyle = '#ffffff';
+  const sw = 34;
+  for (let x = -S; x < S * 2; x += sw * 2) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0); ctx.lineTo(x + sw, 0);
+    ctx.lineTo(x + sw + S, S); ctx.lineTo(x + S, S);
+    ctx.closePath(); ctx.globalAlpha = 0.5; ctx.fill();
   }
-  finder(8,8); finder(192,8); finder(8,192);
-  ctx.fillStyle='#000';
+  ctx.restore();
+  ctx.globalAlpha = 1;
 
-  // Pseudo-random data modules
-  const seed = w.id.split('').reduce((a,c)=>a+c.charCodeAt(0),0);
-  for (let row=0;row<21;row++) {
-    for (let col=0;col<21;col++) {
-      if (row<9&&col<9) continue;
-      if (row<9&&col>11) continue;
-      if (row>11&&col<9) continue;
-      const v = Math.sin(row*17+col*11+seed)*Math.cos(row*7-col*13+seed)>0.1;
-      if (v) ctx.fillRect(72+col*9,72+row*9,8,8);
+  // Gold trim + star corners.
+  ctx.strokeStyle = GOLD; ctx.lineWidth = 10; ctx.strokeRect(8, 8, S - 16, S - 16);
+  const star = (cx, cy, r) => {
+    ctx.fillStyle = GOLD; ctx.beginPath();
+    for (let i = 0; i < 10; i++) {
+      const rad = i % 2 ? r * 0.45 : r, ang = -Math.PI / 2 + i * Math.PI / 5;
+      ctx[i ? 'lineTo' : 'moveTo'](cx + Math.cos(ang) * rad, cy + Math.sin(ang) * rad);
+    }
+    ctx.closePath(); ctx.fill();
+  };
+  [[34,34],[S-34,34],[34,S-34],[S-34,S-34]].forEach(([x,y]) => star(x, y, 20));
+
+  // "SCAN ME" ribbon header.
+  ctx.fillStyle = GOLD; ctx.font = '900 30px "Barlow Condensed", Arial';
+  ctx.textAlign = 'center'; ctx.fillText('★ SCAN ME ★', S / 2, 62);
+
+  // Cream QR panel with the (still-scannable) black modules.
+  const p = 70, q = S - 140; // panel origin/size
+  ctx.fillStyle = CREAM; ctx.fillRect(p, p, q, q);
+  ctx.fillStyle = '#111';
+  const finder = (x, y) => {
+    const u = q / 21;
+    ctx.fillStyle = '#111'; ctx.fillRect(x, y, u * 3, u * 3);
+    ctx.fillStyle = CREAM; ctx.fillRect(x + u * 0.5, y + u * 0.5, u * 2, u * 2);
+    ctx.fillStyle = '#111'; ctx.fillRect(x + u, y + u, u, u);
+  };
+  const u = q / 21;
+  finder(p, p); finder(p + q - u * 3, p); finder(p, p + q - u * 3);
+  ctx.fillStyle = '#111';
+  const seed = w.id.split('').reduce((a, ch) => a + ch.charCodeAt(0), 0);
+  for (let row = 0; row < 21; row++) {
+    for (let col = 0; col < 21; col++) {
+      if (row < 8 && col < 8) continue;
+      if (row < 8 && col > 12) continue;
+      if (row > 12 && col < 8) continue;
+      if (Math.sin(row * 17 + col * 11 + seed) * Math.cos(row * 7 - col * 13 + seed) > 0.1)
+        ctx.fillRect(p + col * u, p + row * u, u, u);
     }
   }
 
-  // Border & label
-  ctx.strokeStyle='#e8c840'; ctx.lineWidth=5; ctx.strokeRect(3,3,250,250);
-  ctx.fillStyle='#000'; ctx.font='bold 13px Arial'; ctx.textAlign='center';
-  ctx.fillText(w.name,128,245);
+  // Product name footer plaque.
+  ctx.fillStyle = RED; ctx.fillRect(p, S - p - 4, q, 40);
+  ctx.fillStyle = '#fff'; ctx.font = '800 26px "Barlow Condensed", Arial';
+  ctx.fillText(w.name, S / 2, S - p + 26);
 
   return new THREE.CanvasTexture(c);
 }
 
 function makeQRLabelTexture(w) {
+  const W = 512, H = 120;
   const canvas = document.createElement('canvas');
-  canvas.width = 300; canvas.height = 70;
-  const context = canvas.getContext('2d');
-  context.fillStyle = '#000'; context.fillRect(0, 0, 300, 70);
-  context.fillStyle = '#e8c840'; context.font = 'bold 24px Arial';
-  context.textAlign = 'center'; context.fillText(w.name, 150, 45);
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  // Circus banner: red field with vertical stripes and gold trim.
+  ctx.fillStyle = '#c01f2f'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = 'rgba(255,255,255,0.16)';
+  for (let x = 0; x < W; x += 56) ctx.fillRect(x, 0, 28, H);
+  ctx.strokeStyle = '#e8c840'; ctx.lineWidth = 8; ctx.strokeRect(5, 5, W - 10, H - 10);
+  ctx.fillStyle = '#fff'; ctx.font = '900 52px "Barlow Condensed", Arial';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('★ ' + w.name + ' ★', W / 2, H / 2 + 4);
   return new THREE.CanvasTexture(canvas);
+}
+
+function makeCircusStripeTexture() {
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 32;
+  const ctx = c.getContext('2d');
+  for (let i = 0; i < 8; i++) {
+    ctx.fillStyle = i % 2 ? '#ffffff' : '#c01f2f';
+    ctx.fillRect(i * 32, 0, 32, 32);
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return t;
 }
 
 function placeQRCodes() {
@@ -4229,13 +4706,47 @@ function placeQRCodes() {
     const g = new THREE.Group();
     g.userData.visualSource = `qr-board:${w.id}`;
 
-    // Board
+    // Board — deep circus red with a gold frame.
     const board = new THREE.Mesh(
-      new THREE.BoxGeometry(1.6, 1.6, 0.06),
-      new THREE.MeshLambertMaterial({ color: 0x111111 })
+      new THREE.BoxGeometry(1.72, 1.72, 0.06),
+      new THREE.MeshLambertMaterial({ color: 0x7a1620 })
     );
     board.material.name = 'Board';
     g.add(board);
+    // Gold frame trim around the board face.
+    const frameMat = new THREE.MeshLambertMaterial({ color: 0xe8c840 });
+    [[0, 0.86, 1.72, 0.08], [0, -0.86, 1.72, 0.08], [0.86, 0, 0.08, 1.72], [-0.86, 0, 0.08, 1.72]]
+      .forEach(([fx, fy, fw, fh]) => {
+        const bar = new THREE.Mesh(new THREE.BoxGeometry(fw, fh, 0.08), frameMat);
+        bar.position.set(fx, fy, 0.01); g.add(bar);
+      });
+
+    // Striped awning canopy above the board.
+    const awning = new THREE.Mesh(
+      new THREE.BoxGeometry(1.95, 0.1, 0.55),
+      new THREE.MeshLambertMaterial({ map: makeCircusStripeTexture() })
+    );
+    awning.position.set(0, 0.98, 0.2); awning.rotation.x = -0.5;
+    g.add(awning);
+    // Scalloped valance hanging under the awning front edge.
+    for (let s = -4; s <= 4; s++) {
+      const tri = new THREE.Mesh(
+        new THREE.ConeGeometry(0.11, 0.22, 3),
+        new THREE.MeshLambertMaterial({ color: s % 2 ? 0xffffff : 0xc01f2f })
+      );
+      tri.rotation.x = Math.PI; tri.rotation.y = Math.PI / 6;
+      tri.position.set(s * 0.21, 0.87, 0.45); g.add(tri);
+    }
+    // Gold finial + pennant flag on top.
+    const finial = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 10), frameMat);
+    finial.position.set(0, 1.12, 0.1); g.add(finial);
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.5, 6), frameMat);
+    pole.position.set(0, 1.35, 0.1); g.add(pole);
+    const flag = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.32, 0.18),
+      new THREE.MeshBasicMaterial({ color: 0xc01f2f, side: THREE.DoubleSide })
+    );
+    flag.position.set(0.17, 1.5, 0.1); g.add(flag);
 
     // QR face
     const qr = new THREE.Mesh(
@@ -4324,14 +4835,20 @@ function bindControls() {
 
   document.addEventListener('keydown', e => {
     keys[e.code] = true;
+    if (gameActive && e.code==='Space') e.preventDefault();
+    if (gameActive && !infoOpen && !pauseOpen && !e.repeat && e.code==='Space' && grounded) {
+      verticalVel = JUMP_SPEED; grounded = false;
+    }
+    if (gameActive && !e.repeat && e.code==='KeyR') rfidBulkRead();
     if (gameActive && !pauseOpen && e.code==='KeyE') tryPickup();
     if (gameActive && !e.repeat && e.code==='KeyP') { pauseOpen ? closePause() : openPause(); }
+    if (!e.repeat && e.code==='KeyB') LunaAnalytics.toggleOverlay();
     if (gameActive && !infoOpen && !pauseOpen && !e.repeat && e.code==='KeyQ') dropWeapon();
     if (gameActive && !pauseOpen && e.code==='Digit1') trySwitch(0);
     if (gameActive && !pauseOpen && e.code==='Digit2') trySwitch(1);
     if (gameActive && !pauseOpen && e.code==='Digit3') trySwitch(2);
     if (gameActive && !pauseOpen && e.code==='Digit4') trySwitch(3);
-    if (gameActive && !pauseOpen && e.code==='Digit5') trySwitch(4);
+    if (gameActive && !pauseOpen && e.code==='Digit5') equipPlushie(); // plushie inventory item
     if (gameActive && e.code==='Digit6') trySwitch(5);
     if (e.code==='Escape') closeInfo();
   });
@@ -4352,6 +4869,7 @@ function pickupWeapon(obj) {
   obj.collected = true;
   const idx = WEAPONS.indexOf(obj.w);
   collected.add(idx);
+  LunaAnalytics.track('device_pickup', { product: obj.w.name });
   obj.pl.intensity = 0;
 
   // Pickup anim - a generation token aborts stale animations even when the
@@ -4435,6 +4953,11 @@ function dropWeapon() {
 
 function trySwitch(idx) {
   if (!collected.has(idx)) return;
+  if (holdingPlushie) {
+    holdingPlushie = false;
+    const ps = document.getElementById('slot-4');
+    if (ps) { ps.classList.remove('active'); ps.classList.add('has-it'); }
+  }
   currentWeapon = idx;
   for (let i=0;i<6;i++) {
     const s=document.getElementById('slot-'+i);
@@ -4458,7 +4981,9 @@ function rebuildHeldMesh() {
   if (currentWeapon<0) return;
   heldMesh = makeWeaponMesh(WEAPONS[currentWeapon]);
   heldMesh.position.set(0.18, -0.34, -0.90);
-  heldMesh.rotation.set(-0.10, -1.2 + Math.PI + 75*Math.PI/180, 0.04);
+  // Meshy image-to-3D models face +Z (screen toward viewer), grip down. Orient
+  // for a first-person aim: screen toward player, tilted forward like scanning.
+  heldMesh.rotation.set(-0.45, 0.15, 0.0);
   heldMesh.scale.setScalar(0.9);
   camera.add(heldMesh);
 }
@@ -4682,9 +5207,13 @@ function scanQR(qObj) {
   specEl.innerHTML = '';
   w.specs.forEach(s => { const li = document.createElement('li'); li.textContent = s; specEl.appendChild(li); });
   document.getElementById('prod-effect').textContent = w.effectDesc;
-  document.getElementById('prod-visit-btn').onclick = () => window.open(w.url, '_blank', 'noopener,noreferrer');
+  document.getElementById('prod-visit-btn').onclick = () => {
+    LunaAnalytics.track('product_visit', { product: w.name, url: w.url });
+    window.open(w.url, '_blank', 'noopener,noreferrer');
+  };
 
   document.getElementById('info-panel').style.display = 'block';
+  LunaAnalytics.track('product_view', { product: w.name });
   infoOpen = true;
   if(document.pointerLockElement) document.exitPointerLock();
 
@@ -4693,7 +5222,70 @@ function scanQR(qObj) {
     addScore(50);
     if (MP.enabled) MP.noteLocalBonus(50); // QR bonus is personal, not part of the shared plaza score
     addKillFeed('QR SCANNED: '+w.name+' +50pts!');
+    LunaAnalytics.track('product_scanned', { product: w.name });
+    maybeUnlockRfid();
   }
+}
+
+// Zebra specialty: scanning ALL four product QR boards unlocks an RFID Bulk
+// Read — a nod to Zebra's RFID tech that reads every tag in range at once.
+let rfidUnlocked = false, rfidCooldownUntil = 0;
+function maybeUnlockRfid() {
+  if (rfidUnlocked) return;
+  if (qrObjs.length && qrObjs.every(o => o.scanned)) {
+    rfidUnlocked = true;
+    showPrompt('ALL ZEBRA PRODUCTS SCANNED — RFID BULK READ UNLOCKED! Press R', 5000);
+    addKillFeed('★ RFID BULK READ UNLOCKED — press R');
+    updateRfidHud();
+    LunaAnalytics.track('rfid_unlocked', {});
+  }
+}
+function updateRfidHud() {
+  let el = document.getElementById('__rfid');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = '__rfid';
+    el.style.cssText = 'position:fixed;bottom:14px;right:16px;z-index:940;pointer-events:none;'
+      + 'font-family:"Barlow Condensed",sans-serif;font-weight:800;letter-spacing:1px;font-size:15px;'
+      + 'padding:7px 14px;border:1px solid #00a651;color:#fff;background:rgba(5,5,15,0.85);';
+    document.body.appendChild(el);
+  }
+  if (!rfidUnlocked) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  const ready = performance.now() >= rfidCooldownUntil;
+  el.innerHTML = ready
+    ? '📡 RFID BULK READ <span style="color:#38d66b">READY</span> — R'
+    : '📡 RFID <span style="color:#ff6a00">CHARGING…</span>';
+}
+function rfidBulkRead() {
+  const now = performance.now();
+  if (!rfidUnlocked || now < rfidCooldownUntil || !gameActive || infoOpen || pauseOpen) return;
+  rfidCooldownUntil = now + 300000; // 5 minutes
+  updateRfidHud();
+  flashScreen(0x00a651, 0.25);
+  cheerCrowd();
+  // Lightweight bulk "read": hide every live balloon and batch the score — no
+  // per-balloon PointLight/particle storm (that was the lag), just a few
+  // confetti bursts total.
+  const w = currentWeapon >= 0 ? WEAPONS[currentWeapon] : WEAPONS[0];
+  const alive = balloons.filter(b => b.alive);
+  let scored = 0;
+  alive.forEach(b => {
+    if (!b.alive) return;
+    if (MP.enabled) MP.onLocalPop(b, w);
+    if (!(MP.enabled && MP.remotePopInProgress())) earnBalloon();
+    b.alive = false;
+    b.mesh.userData.runtimeStateVisible = false;
+    b.mesh.visible = false;
+    scored += w.pts;
+    setTimeout(() => { if (gameActive && !(MP.enabled && MP.connected())) respawnBalloon(b); }, 3500 + Math.random() * 2000);
+  });
+  if (scored) addScore(scored);
+  for (let k = 0; k < 5; k++) {
+    const p = new THREE.Vector3((Math.random() - 0.5) * 12, 4 + Math.random() * 3, (Math.random() - 0.5) * 12);
+    spawnConfetti(p, 16);
+  }
+  addKillFeed('📡 RFID BULK READ — ' + alive.length + ' tags read (+' + scored + ')');
 }
 
 function closeInfo({ resumeGame = false } = {}) {
@@ -4713,15 +5305,19 @@ function closeInfo({ resumeGame = false } = {}) {
 // ═══════════════════════════════════════════════
 let pauseOpen = false;
 const SHOP_ITEMS = {
-  plush: { cost: 200, label: 'ZEBRA PLUSH TOY', prefix: 'ZC-PLUSH' },
   terminal: { cost: 10000, label: 'ZEBRA TERMINAL (REAL DEVICE)', prefix: 'ZC-TERM' },
 };
-const wallet = { earned: 0, spent: 0, codes: [] };
+const PLUSH_GOAL = 200;
+// Where players go to claim their real Zebra plushie. TODO: point this at the
+// real Zebra store / plush-claim page when available.
+const ZEBRA_PLUSH_URL = 'https://www.zebra.com';
+const wallet = { earned: 0, spent: 0, codes: [], plushAwarded: false };
 try {
   const stored = JSON.parse(localStorage.getItem('zebraBalloonWallet') || '{}');
   if (Number.isFinite(stored.earned)) wallet.earned = Math.max(0, Math.floor(stored.earned));
   if (Number.isFinite(stored.spent)) wallet.spent = Math.max(0, Math.floor(stored.spent));
   if (Array.isArray(stored.codes)) wallet.codes = stored.codes.slice(0, 40);
+  wallet.plushAwarded = !!stored.plushAwarded;
 } catch (err) {}
 
 function walletBalance() { return Math.max(0, wallet.earned - wallet.spent); }
@@ -4730,8 +5326,57 @@ function saveWallet() {
 }
 function earnBalloon() {
   wallet.earned += 1;
+  // Auto-award the Zebra plushie the moment 200 balloons are reached — no
+  // points exchange, no redemption code.
+  if (wallet.earned >= PLUSH_GOAL && !wallet.plushAwarded) {
+    wallet.plushAwarded = true;
+    awardZebraPlushie();
+  }
   saveWallet();
   refreshWalletUi();
+}
+
+function awardZebraPlushie() {
+  LunaAnalytics.track('plushie_awarded', {});
+  cheerCrowd();
+  // Small celebratory confetti near the player (no big overlay/trophy).
+  spawnConfetti(camera.position.clone().add(new THREE.Vector3(0, 0.5, -2)), 24, 0.25);
+  markPlushieSlot();
+  showPrompt('🦓 ZEBRA PLUSHIE added to your inventory! Press 5 to hold · Claim online in Pause (P)', 5000);
+  addKillFeed('🦓 Zebra Plushie earned — added to inventory!');
+}
+
+// Show the plushie inventory slot as owned.
+function markPlushieSlot() {
+  const s = document.getElementById('slot-4');
+  if (s && !holdingPlushie) { s.classList.remove('empty'); s.classList.add('has-it'); }
+}
+
+// Hold the (small) plushie in first person — a pure inventory item, not a weapon.
+function equipPlushie() {
+  if (!wallet.plushAwarded || !plushieGltf) return;
+  if (heldMesh) { camera.remove(heldMesh); heldMesh = null; }
+  currentWeapon = -1;
+  holdingPlushie = true;
+  const g = new THREE.Group();
+  const m = plushieGltf.scene.clone(true);
+  const box = new THREE.Box3().setFromObject(m);
+  const h = box.getSize(new THREE.Vector3()).y || 1;
+  m.scale.setScalar(0.3 / h); // small — fits in the hand
+  const b2 = new THREE.Box3().setFromObject(m);
+  m.position.sub(b2.getCenter(new THREE.Vector3()));
+  g.add(m);
+  g.position.set(0.26, -0.32, -0.88); // held in front of the camera
+  heldMesh = g;
+  camera.add(g);
+  document.getElementById('weapon-info').style.display = 'none';
+  for (let i = 0; i < 6; i++) {
+    const s = document.getElementById('slot-' + i);
+    if (!s) continue;
+    if (i === 4) { s.classList.remove('empty', 'has-it'); s.classList.add('active'); }
+    else s.classList.toggle('active', false);
+  }
+  showPrompt('🦓 Holding your Zebra Plushie', 1400);
 }
 function redemptionCode(prefix) {
   const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -4745,6 +5390,12 @@ function refreshWalletUi() {
   const balance = walletBalance();
   document.getElementById('wallet-hud').textContent = balance;
   document.getElementById('wallet-balance').textContent = balance;
+  // Plush = auto-awarded: show progress or a claim link, never a manual redeem.
+  const plushBtn = document.getElementById('shop-buy-plush');
+  if (plushBtn) {
+    plushBtn.disabled = !wallet.plushAwarded;
+    plushBtn.textContent = wallet.plushAwarded ? 'CLAIM →' : `${Math.min(wallet.earned, PLUSH_GOAL)}/${PLUSH_GOAL}`;
+  }
   for (const [key, item] of Object.entries(SHOP_ITEMS)) {
     const button = document.getElementById('shop-buy-' + key);
     if (!button.classList.contains('arm')) {
@@ -4798,7 +5449,10 @@ function closePause() {
 document.getElementById('pause-btn').addEventListener('click', openPause);
 document.getElementById('pause-btn').addEventListener('mousedown', (event) => { event.stopPropagation(); });
 document.getElementById('resume-btn').addEventListener('click', closePause);
-document.getElementById('shop-buy-plush').addEventListener('click', () => armThenRedeem('plush'));
+// Plush is auto-awarded at 200 balloons; its button just opens the claim link.
+document.getElementById('shop-buy-plush').addEventListener('click', () => {
+  if (wallet.plushAwarded) window.open(ZEBRA_PLUSH_URL, '_blank', 'noopener,noreferrer');
+});
 document.getElementById('shop-buy-terminal').addEventListener('click', () => armThenRedeem('terminal'));
 document.getElementById('pause-overlay').addEventListener('mousedown', (event) => { event.stopPropagation(); });
 refreshWalletUi();
@@ -4814,6 +5468,12 @@ function addScore(pts) {
 }
 
 function showMilestone() {
+  // Big celebration: confetti rain over the arena + the whole crowd cheers.
+  cheerCrowd();
+  for (let k = 0; k < 6; k++) {
+    const p = new THREE.Vector3((Math.random() - 0.5) * 16, 6 + Math.random() * 4, (Math.random() - 0.5) * 16);
+    spawnConfetti(p, 30, 0.3);
+  }
   if(document.pointerLockElement) document.exitPointerLock();
   document.getElementById('milestone-popup').style.display = 'block';
 }
@@ -4869,6 +5529,14 @@ function animate() {
 }
 
 function updateGame(delta, t) {
+
+  animateSpectators(t);
+  if (rfidUnlocked) updateRfidHud();
+  for (const s of circusSpotlights) {
+    const a = t * s.speed + s.phase;
+    s.light.target.position.set(Math.cos(a) * s.radius, 0, Math.sin(a) * s.radius);
+    s.light.target.updateMatrixWorld();
+  }
 
   // Camera rotation
   camera.rotation.order='YXZ';
@@ -5027,7 +5695,16 @@ function movePlayer(delta) {
     nextZ.z += mv.z;
     if (canPlayerOccupy(nextZ)) camera.position.z = nextZ.z;
   }
-  camera.position.y=playerHeight;
+  // Vertical: jump + gravity. Ground level is playerHeight.
+  verticalVel -= GRAVITY * delta;
+  camera.position.y += verticalVel * delta;
+  if (camera.position.y <= playerHeight) {
+    camera.position.y = playerHeight;
+    verticalVel = 0;
+    grounded = true;
+  } else {
+    grounded = false;
+  }
 }
 
 function gameMode() {

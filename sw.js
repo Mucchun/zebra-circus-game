@@ -1,5 +1,5 @@
 // Zebra Circus Blaster — service worker (offline + installability)
-const CACHE = 'zcb-v5-multiplayer-plaza';
+const CACHE = 'zcb-v6-meshy-spectators';
 const CORE = [
   './',
   './index.html',
@@ -28,7 +28,8 @@ self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   const needsFreshAuthoredSource = e.request.mode === 'navigate'
     || url.pathname.endsWith('/index.html')
-    || url.pathname.endsWith('/zebra-circus.scene.json');
+    || url.pathname.endsWith('/zebra-circus.scene.json')
+    || url.pathname.endsWith('.glb'); // always load latest models, cache as offline fallback
   if (needsFreshAuthoredSource) {
     e.respondWith(
       fetch(e.request).then(resp => {
