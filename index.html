@@ -565,8 +565,8 @@ body { background: #000; overflow: hidden; font-family: 'Source Sans 3', 'Barlow
   <div class="tut-title">// HOW TO PLAY //</div>
   <div class="tut-cards">
     <div class="tut-card">
-      <div class="tut-head">Reach 200 Points</div>
-      <div class="tut-body">Hit <strong style="color:var(--c-accent)">200 points</strong> to unlock the full Zebra Technologies product catalogue!</div>
+      <div class="tut-head">Reach 1000 Points</div>
+      <div class="tut-body">Hit <strong style="color:var(--c-accent)">1000 points</strong> to unlock the full Zebra Technologies product catalogue!</div>
     </div>
     <div class="tut-card">
       <div class="tut-head">Scan QR Codes</div>
@@ -675,7 +675,7 @@ body { background: #000; overflow: hidden; font-family: 'Source Sans 3', 'Barlow
   </div>
 
   <div id="progress-wrap">
-    <div id="progress-lbl">REACH 200 PTS — EXPLORE ZEBRA PRODUCTS</div>
+    <div id="progress-lbl">REACH 1000 PTS — EXPLORE ZEBRA PRODUCTS</div>
     <div id="progress-track"><div id="progress-fill"></div></div>
   </div>
 
@@ -713,7 +713,7 @@ body { background: #000; overflow: hidden; font-family: 'Source Sans 3', 'Barlow
     <div class="shop-card" id="level2-card">
       <div>
         <div class="sc-name">⚡ LEVEL 2 — BALLOON FRENZY</div>
-        <div class="sc-sub" id="level2-sub">Reach 200 points to unlock a fast, timed balloon challenge.</div>
+        <div class="sc-sub" id="level2-sub">Reach 1000 points to unlock a fast, timed balloon challenge.</div>
       </div>
       <div class="sc-cost">🔥</div>
       <button class="shop-btn" id="start-level2-btn" type="button" disabled>LOCKED</button>
@@ -875,7 +875,7 @@ let yaw = 0, pitch = 0;
 let weaponFlipStart = 0;
 const keys = {};
 const PLAYER_H = 1.7;
-const WIN_SCORE = 200;
+const WIN_SCORE = 1000;
 
 let balloons = [], weaponObjs = [], qrObjs = [], particles = [], projectiles = [], ringWaves = [], scanMarkers = [];
 let comboCount = 0, comboExpireAt = 0;   // pop-chain combo
@@ -6089,7 +6089,7 @@ function refreshWalletUi() {
   if (l2) {
     if (level2Active) { l2.disabled = true; l2.textContent = 'PLAYING'; if (l2sub) l2sub.textContent = 'Balloon Frenzy in progress!'; }
     else if (level2Unlocked) { l2.disabled = false; l2.textContent = '▶ START'; if (l2sub) l2sub.textContent = 'Pop ' + LEVEL2_TARGET + ' fast-moving balloons in ' + LEVEL2_SECONDS + 's!'; }
-    else { l2.disabled = true; l2.textContent = 'LOCKED'; if (l2sub) l2sub.textContent = 'Reach 200 points to unlock a fast, timed balloon challenge.'; }
+    else { l2.disabled = true; l2.textContent = 'LOCKED'; if (l2sub) l2sub.textContent = 'Reach 1000 points to unlock a fast, timed balloon challenge.'; }
   }
   // Level 3 unlock button.
   const l3 = document.getElementById('start-level3-btn');
