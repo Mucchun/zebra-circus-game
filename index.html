@@ -350,6 +350,22 @@ body { background: #000; overflow: hidden; font-family: 'Source Sans 3', 'Barlow
 .pm-done-title { font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:24px; color:#00c060; letter-spacing:2px; margin:6px 0; }
 .pm-done-sub { font-size:13px; color:#cdd3ea; line-height:1.5; margin-bottom:16px; }
 
+/* Leaderboard */
+#leaderboard-overlay { position:fixed; inset:0; z-index:1300; background:rgba(5,5,15,0.9);
+  display:flex; align-items:center; justify-content:center; pointer-events:auto; }
+#leaderboard-panel { position:relative; width:420px; max-width:94vw; max-height:88vh; overflow:auto;
+  background:#0b0b16; border:1px solid #ff6a00; border-top:5px solid #ff6a00; padding:24px 26px;
+  font-family:'Source Sans 3',sans-serif; }
+#lb-close { position:absolute; top:10px; right:12px; background:transparent; color:#8090b0; border:1px solid #333; width:26px; height:26px; cursor:pointer; }
+.lb-title { font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:26px; letter-spacing:2px; color:#ffd200; }
+.lb-sub { font-size:12px; color:#8090b0; margin:4px 0 14px; }
+#lb-list table { width:100%; border-collapse:collapse; }
+#lb-list td { padding:9px 12px; border-bottom:1px solid #14142a; font-size:14px; }
+#lb-list td:first-child { color:#ffd200; font-weight:800; width:38px; }
+#lb-list tr.me td { background:rgba(255,106,0,0.12); color:#fff; }
+.lb-loading, .lb-empty { color:#4a5070; text-align:center; padding:24px; }
+#lb-back { margin-top:16px; }
+
 /* Corner brackets */
 .ss-corner {
   position: absolute; width: 68px; height: 68px;
@@ -710,8 +726,26 @@ body { background: #000; overflow: hidden; font-family: 'Source Sans 3', 'Barlow
       <div class="sc-cost">💥</div>
       <button class="shop-btn" id="start-level3-btn" type="button" disabled>LOCKED</button>
     </div>
+    <div class="shop-card" id="leaderboard-card">
+      <div>
+        <div class="sc-name">🏆 LEADERBOARD</div>
+        <div class="sc-sub">See the top players and where you rank.</div>
+      </div>
+      <div class="sc-cost">🏆</div>
+      <button class="shop-btn" id="open-leaderboard-btn" type="button">VIEW</button>
+    </div>
     <div id="wallet-codes"></div>
     <button id="resume-btn" type="button">RESUME</button>
+  </div>
+</div>
+
+<div id="leaderboard-overlay" style="display:none;">
+  <div id="leaderboard-panel">
+    <button id="lb-close" type="button">✕</button>
+    <div class="lb-title">🏆 LEADERBOARD</div>
+    <div class="lb-sub" id="lb-sub">Top players in the Zebra Circus</div>
+    <div id="lb-list"><div class="lb-loading">Loading…</div></div>
+    <button class="btn btn-lg" id="lb-back" type="button">BACK</button>
   </div>
 </div>
 
@@ -860,6 +894,15 @@ const LEVEL2_TARGET = 60;                 // balloons to pop in the time limit
 let level3Unlocked = false, level3Active = false;
 let boss = null;                          // { mesh, hp, maxHp, vel, spawnAt }
 const BOSS_HP = 45;
+// ── Power-ups (dropped by special balloons) ──
+let fireRapidUntil = 0, balloonSlowUntil = 0, goldenRushUntil = 0;
+const POWERUPS = {
+  slow:  { icon: '⏱', label: 'SLOW-MO',   color: 0x2ec4ff },
+  rapid: { icon: '🔥', label: 'RAPID FIRE', color: 0xff6a00 },
+  clear: { icon: '💥', label: 'BALLOON BOMB', color: 0xff2d55 },
+  bonus: { icon: '✨', label: 'BONUS +300', color: 0xffd200 },
+};
+const POWERUP_KEYS = Object.keys(POWERUPS);
 let heldMesh = null;
 let promptTimer = null;
 let clock;
@@ -3404,6 +3447,89 @@ const LunaAnalytics = (() => {
 })();
 window.lunaAnalytics = LunaAnalytics;
 
+// ═══════════════════════════════════════════════
+//  AUDIO — synthesized SFX + looping circus music (Web Audio, no files)
+// ═══════════════════════════════════════════════
+const Sound = (() => {
+  let ctx = null, master = null, musicGain = null, sfxGain = null;
+  let muted = false, musicTimer = null, step = 0;
+  try { muted = localStorage.getItem('zebraMuted') === '1'; } catch (_) {}
+
+  function ensure() {
+    if (ctx) return;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    ctx = new AC();
+    master = ctx.createGain(); master.gain.value = muted ? 0 : 0.9; master.connect(ctx.destination);
+    musicGain = ctx.createGain(); musicGain.gain.value = 0.18; musicGain.connect(master);
+    sfxGain = ctx.createGain(); sfxGain.gain.value = 0.9; sfxGain.connect(master);
+  }
+  function resume() { ensure(); if (ctx && ctx.state === 'suspended') ctx.resume(); }
+
+  // One synth blip.
+  function blip(freq, dur, type = 'square', dest = sfxGain, vol = 0.5, glideTo = null) {
+    if (!ctx || muted) return;
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, ctx.currentTime);
+    if (glideTo) o.frequency.exponentialRampToValueAtTime(glideTo, ctx.currentTime + dur);
+    g.gain.setValueAtTime(0.0001, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(vol, ctx.currentTime + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + dur);
+    o.connect(g); g.connect(dest); o.start(); o.stop(ctx.currentTime + dur + 0.02);
+  }
+
+  const sfx = {
+    shoot:  () => blip(220, 0.07, 'sawtooth', sfxGain, 0.25, 120),
+    pop:    () => { blip(680, 0.09, 'square', sfxGain, 0.4, 320); },
+    combo:  (n) => blip(400 + Math.min(n, 12) * 60, 0.12, 'square', sfxGain, 0.4, null),
+    golden: () => { [880, 1174, 1568].forEach((f, i) => setTimeout(() => blip(f, 0.12, 'triangle', sfxGain, 0.4), i * 60)); },
+    win:    () => { [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => blip(f, 0.22, 'triangle', sfxGain, 0.5), i * 120)); },
+    bosshit:() => blip(140, 0.08, 'sawtooth', sfxGain, 0.35, 90),
+    bossdie:() => { [200, 150, 100, 400, 800].forEach((f, i) => setTimeout(() => blip(f, 0.18, 'sawtooth', sfxGain, 0.5), i * 90)); },
+    click:  () => blip(520, 0.06, 'square', sfxGain, 0.3),
+    powerup:() => { [523, 784, 1046].forEach((f, i) => setTimeout(() => blip(f, 0.14, 'triangle', sfxGain, 0.45), i * 70)); },
+  };
+
+  // Simple looping circus melody ("Entry of the Gladiators" vibe, original notes).
+  const MELODY = [523,494,466,440,466,494,523,587,523,494,466,440,392,440,466,494,
+                  523,494,466,440,466,494,523,587,659,587,523,494,523,440,392,0];
+  function startMusic() {
+    if (!ctx || musicTimer) return;
+    step = 0;
+    const beat = 200;
+    musicTimer = setInterval(() => {
+      const n = MELODY[step % MELODY.length];
+      if (n) blip(n, 0.16, 'triangle', musicGain, 0.5);
+      if (step % 2 === 0) blip(n ? n / 2 : 130, 0.16, 'sine', musicGain, 0.4); // bassline
+      step++;
+    }, beat);
+  }
+  function stopMusic() { if (musicTimer) { clearInterval(musicTimer); musicTimer = null; } }
+  function toggleMute() {
+    muted = !muted;
+    if (master) master.gain.value = muted ? 0 : 0.9;
+    try { localStorage.setItem('zebraMuted', muted ? '1' : '0'); } catch (_) {}
+    updateMuteHud();
+    return muted;
+  }
+  function updateMuteHud() {
+    let el = document.getElementById('__mute');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = '__mute';
+      el.title = 'Toggle sound (M)';
+      el.style.cssText = 'position:fixed;bottom:14px;left:16px;z-index:940;cursor:pointer;pointer-events:auto;'
+        + 'font-size:20px;padding:4px 8px;background:rgba(5,5,15,0.7);border:1px solid #333;user-select:none;';
+      el.addEventListener('click', () => { resume(); toggleMute(); });
+      document.body.appendChild(el);
+    }
+    el.textContent = muted ? '🔇' : '🔊';
+  }
+  updateMuteHud();
+  return { resume, sfx, startMusic, stopMusic, toggleMute, updateMuteHud, isMuted: () => muted };
+})();
+window.addEventListener('keydown', (e) => { if (e.code === 'KeyM' && !e.repeat) Sound.toggleMute(); });
+
 async function startGame() {
   document.getElementById('start-screen').style.display = 'none';
   document.getElementById('tutorial-overlay').style.display = 'flex';
@@ -3426,6 +3552,7 @@ function dismissTutorial() {
   LunaAnalytics.startSession();
   if (wallet.plushAwarded) markPlushieSlot(); // restore owned plushie in inventory
   updateLevelHud();
+  Sound.resume(); Sound.startMusic();
 }
 
 function restartGame() {
@@ -3435,6 +3562,7 @@ function restartGame() {
   heldMesh = null; mouseDown = false; infoOpen = false; milestoneShown = false;
   rfidUnlocked = false; rfidCooldownUntil = 0; comboCount = 0; plushieTrophy = null; holdingPlushie = false;
   currentLevel = 1; level2Active = false; level2Score = 0; level3Active = false;
+  fireRapidUntil = 0; balloonSlowUntil = 0; goldenRushUntil = 0; updatePowerupHud();
   if (boss && boss.mesh) { scene.remove(boss.mesh); } boss = null; updateBossHud();
   balloons.forEach(b => { b.vel = null; if (b.mesh) b.mesh.scale.setScalar(1); });
   { const r = document.getElementById('__rfid'); if (r) r.style.display = 'none'; }
@@ -3812,6 +3940,42 @@ function showComboText(n, bonus) {
   });
 }
 
+// ── Power-ups ─────────────────────────────────────────────────────────────
+function activatePowerup(key, pos) {
+  const p = POWERUPS[key];
+  Sound.sfx.powerup();
+  spawnConfetti(pos, 20, 0.3);
+  flashScreen(p.color, 0.25);
+  const now = performance.now();
+  if (key === 'slow')  { balloonSlowUntil = now + 8000; }
+  else if (key === 'rapid') { fireRapidUntil = now + 8000; }
+  else if (key === 'bonus') { addScore(300); showFloatingScore(300); }
+  else if (key === 'clear') {
+    const w = currentWeapon >= 0 ? WEAPONS[currentWeapon] : WEAPONS[0];
+    balloons.filter(b => b.alive).forEach((b, i) => setTimeout(() => { if (b.alive) { popBalloon(b, w); addScore(w.pts); } }, i * 25));
+  }
+  showPrompt(p.icon + ' ' + p.label + '!', 2200);
+  addKillFeed(p.icon + ' POWER-UP: ' + p.label);
+  updatePowerupHud();
+}
+function updatePowerupHud() {
+  let el = document.getElementById('__power');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = '__power';
+    el.style.cssText = 'position:fixed;top:78px;right:16px;z-index:938;pointer-events:none;'
+      + 'font-family:"Barlow Condensed",sans-serif;font-weight:800;letter-spacing:1px;font-size:15px;text-align:right;';
+    document.body.appendChild(el);
+  }
+  const now = performance.now();
+  const active = [];
+  if (now < goldenRushUntil) active.push('✨ GOLDEN RUSH ' + Math.ceil((goldenRushUntil - now) / 1000) + 's');
+  if (now < balloonSlowUntil) active.push('⏱ SLOW-MO ' + Math.ceil((balloonSlowUntil - now) / 1000) + 's');
+  if (now < fireRapidUntil) active.push('🔥 RAPID ' + Math.ceil((fireRapidUntil - now) / 1000) + 's');
+  el.innerHTML = active.map(a => '<div style="background:rgba(5,5,15,0.8);border:1px solid #ff6a00;padding:3px 8px;margin-bottom:4px;color:#fff">' + a + '</div>').join('');
+  el.style.display = active.length ? 'block' : 'none';
+}
+
 // ── Level system ──────────────────────────────────────────────────────────
 function updateLevelHud() {
   let el = document.getElementById('__level');
@@ -3874,6 +4038,7 @@ function tickLevel2() {
 function endLevel2() {
   if (!level2Active) return;
   level2Active = false;
+  submitScore();
   const won = level2Score >= LEVEL2_TARGET;
   // Restore balloons to normal size + drift.
   balloons.forEach(b => { b.vel = null; b.mesh.scale.setScalar(1); });
@@ -3909,6 +4074,7 @@ function startLevel3() {
 
 function damageBoss(w) {
   if (!boss) return;
+  Sound.sfx.bosshit();
   const dmg = (w && w.effect === 'rapid') ? 1 : 2; // heavy weapons hit harder
   boss.hp = Math.max(0, boss.hp - dmg);
   // Feedback: flash, shrink-punch, confetti at the boss.
@@ -3926,6 +4092,8 @@ function damageBoss(w) {
 
 function defeatBoss() {
   if (!boss) return;
+  Sound.sfx.bossdie();
+  submitScore();
   const pos = boss.mesh.position.clone();
   scene.remove(boss.mesh);
   boss = null; level3Active = false;
@@ -4898,15 +5066,26 @@ function makeBalloon(index) {
   // Match the editor asset cycle so a balloon keeps the same authored colour
   // in runtime, Studio, reloads, and deterministic visual tests.
   const golden = Math.random() < 0.12; // rare bonus balloon worth 5x
-  const color = golden ? 0xffcf3f : BAL_COLORS[index % BAL_COLORS.length];
+  const powerKey = (!golden && Math.random() < 0.08) ? POWERUP_KEYS[(Math.random()*POWERUP_KEYS.length)|0] : null;
+  const color = powerKey ? POWERUPS[powerKey].color : (golden ? 0xffcf3f : BAL_COLORS[index % BAL_COLORS.length]);
   const g = new THREE.Group();
   g.userData.golden = golden;
+  g.userData.power = powerKey;
   g.userData.visualSource = `balloon:${index}:${BARCODE_TYPES[index % BARCODE_TYPES.length]}`;
-  const bMat = golden
-    ? new THREE.MeshPhongMaterial({ color, shininess:200, specular:0xffffff, emissive:0x6b4e00, emissiveIntensity:0.5 })
+  const bMat = (golden || powerKey)
+    ? new THREE.MeshPhongMaterial({ color, shininess:200, specular:0xffffff, emissive:color, emissiveIntensity:golden?0.5:0.6 })
     : new THREE.MeshPhongMaterial({ color, shininess:120, specular:0xffffff });
   const balloon = new THREE.Mesh(new THREE.SphereGeometry(0.38,16,16), bMat);
   balloon.scale.y = 1.28; g.add(balloon);
+  if (powerKey) {
+    // Emoji icon so the power-up balloon reads at a glance.
+    const ic = document.createElement('canvas'); ic.width = ic.height = 64;
+    const ix = ic.getContext('2d'); ix.font = '48px sans-serif'; ix.textAlign = 'center'; ix.textBaseline = 'middle';
+    ix.fillText(POWERUPS[powerKey].icon, 32, 36);
+    const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(ic), transparent: true }));
+    spr.scale.set(0.4, 0.4, 0.4); spr.position.set(0, 0.15, 0);
+    g.add(spr);
+  }
   const knot = new THREE.Mesh(new THREE.SphereGeometry(0.055,6,6), new THREE.MeshPhongMaterial({color}));
   knot.position.y=-0.49; g.add(knot);
   const str = new THREE.Mesh(new THREE.CylinderGeometry(0.008,0.008,1.4,4), new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.6}));
@@ -4980,6 +5159,7 @@ function popBalloon(bo, weapon) {
   // Celebration: confetti + crowd cheer + pop-chain combo bonus.
   spawnConfetti(pos, 12);
   cheerCrowd();
+  Sound.sfx.pop();
   const nowMs = performance.now();
   comboCount = (nowMs < comboExpireAt) ? comboCount + 1 : 1;
   comboExpireAt = nowMs + 2500;
@@ -4987,16 +5167,28 @@ function popBalloon(bo, weapon) {
     const bonus = Math.min(comboCount, 10) * 5;
     addScore(bonus);
     showComboText(comboCount, bonus);
+    Sound.sfx.combo(comboCount);
+  }
+  // Bonus round: a 6+ combo ignites GOLDEN RUSH — every balloon pays 5x for 12s.
+  if (comboCount === 6 && performance.now() >= goldenRushUntil) {
+    goldenRushUntil = performance.now() + 12000;
+    flashScreen(0xffd200, 0.35); cheerCrowd(); Sound.sfx.golden();
+    showPrompt('✨✨ GOLDEN RUSH! Everything pays 5× — pop fast! ✨✨', 3500);
+    addKillFeed('✨ GOLDEN RUSH activated!');
   }
 
-  // Golden balloon bonus: 5x points + extra sparkle.
-  if (bo.mesh.userData.golden) {
+  // Golden balloon bonus (or during Golden Rush): 5x points + extra sparkle.
+  if (bo.mesh.userData.golden || performance.now() < goldenRushUntil) {
     const gb = weapon.pts * 4;
     addScore(gb);
     spawnConfetti(pos, 22, 0.28);
     showFloatingScore(gb);
     addKillFeed('★ GOLDEN BALLOON +' + gb + '!');
+    Sound.sfx.golden();
   }
+
+  // Power-up balloon: grant its effect.
+  if (bo.mesh.userData.power) { activatePowerup(bo.mesh.userData.power, pos); }
 
   // Level 2 "Balloon Frenzy" scoring + fast respawn.
   if (level2Active) {
@@ -5446,8 +5638,10 @@ function shoot() {
   if (currentWeapon<0) { showPrompt('Press E near a weapon to pick it up!',1800); return; }
   const w = WEAPONS[currentWeapon];
   const now = Date.now();
-  if (now-lastShot < w.fireRate) return;
+  const rate = (performance.now() < fireRapidUntil) ? w.fireRate * 0.4 : w.fireRate;
+  if (now-lastShot < rate) return;
   lastShot = now;
+  Sound.sfx.shoot();
 
   // Kick animation
   if (heldMesh) {
@@ -5814,6 +6008,7 @@ function awardPrize(key) {
   const p = PRIZES[key];
   const rec = wallet.prizes[key];
   if (rec.won) return;
+  Sound.sfx.win();
   rec.won = true;
   if (!rec.coupon) rec.coupon = makeCoupon();
   if (key === 'plush') { wallet.plushAwarded = true; wallet.coupon = rec.coupon; markPlushieSlot(); }
@@ -5957,6 +6152,41 @@ function buyBalloons() {
   refreshWalletUi();
 }
 document.getElementById('buy-balloons-btn').addEventListener('click', buyBalloons);
+
+// ── Leaderboard ───────────────────────────────────────────────────────────
+let lastSubmittedScore = 0;
+function submitScore() {
+  if (score <= 0 || score <= lastSubmittedScore) return;
+  lastSubmittedScore = score;
+  const p = window.__zebraPlayer || {};
+  const name = ((p.firstName || '') + ' ' + (p.lastName || '')).trim() || 'Player';
+  fetch('/api/leaderboard', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, email: p.email || '', score, level: currentLevel }),
+  }).catch(() => {});
+}
+function openLeaderboard() {
+  Sound.sfx.click();
+  submitScore(); // record current run before showing the board
+  const list = document.getElementById('lb-list');
+  list.innerHTML = '<div class="lb-loading">Loading…</div>';
+  document.getElementById('leaderboard-overlay').style.display = 'flex';
+  const p = window.__zebraPlayer || {};
+  const myName = ((p.firstName || '') + ' ' + (p.lastName || '')).trim();
+  fetch('/api/leaderboard?format=json').then(r => r.json()).then(d => {
+    const rows = (d.leaderboard || []);
+    if (!rows.length) { list.innerHTML = '<div class="lb-empty">No scores yet — be the first!</div>'; return; }
+    list.innerHTML = '<table><tbody>' + rows.map((r, i) =>
+      `<tr class="${r.name === myName ? 'me' : ''}"><td>${i + 1}</td><td>${(r.name || '').replace(/[<>&]/g,'')}</td>`
+      + `<td style="text-align:right;font-family:Space Mono,monospace">${r.score}</td><td style="color:#8090b0">L${r.level}</td></tr>`).join('')
+      + '</tbody></table>';
+  }).catch(() => { list.innerHTML = '<div class="lb-empty">Leaderboard unavailable offline.</div>'; });
+}
+function closeLeaderboard() { document.getElementById('leaderboard-overlay').style.display = 'none'; }
+document.getElementById('open-leaderboard-btn').addEventListener('click', openLeaderboard);
+document.getElementById('lb-close').addEventListener('click', closeLeaderboard);
+document.getElementById('lb-back').addEventListener('click', closeLeaderboard);
+document.getElementById('leaderboard-overlay').addEventListener('mousedown', (e) => e.stopPropagation());
 // ── Prize claim machine (ZD421) ──────────────────────────────────────────
 let activePrizeKey = 'plush';
 function openPrizeMachine(key) {
@@ -6179,6 +6409,7 @@ function updateGame(delta, t) {
   animateSpectators(t);
   tickLevel2();
   tickLevel3();
+  updatePowerupHud();
   if (rfidUnlocked) updateRfidHud();
   for (const s of circusSpotlights) {
     const a = t * s.speed + s.phase;
@@ -6214,10 +6445,11 @@ function updateGame(delta, t) {
 
   if (gameActive) balloons.forEach(b=>{
     if(!b.alive) return;
+    const slowF = (performance.now() < balloonSlowUntil) ? 0.35 : 1;
     if ((level2Active || level3Active) && b.vel) {
       // Frenzy/minions: balloons zip around and bounce off the arena walls/floor/roof.
       const p = b.mesh.position;
-      p.x += b.vel.x; p.y += b.vel.y; p.z += b.vel.z;
+      p.x += b.vel.x * slowF; p.y += b.vel.y * slowF; p.z += b.vel.z * slowF;
       const r = Math.sqrt(p.x*p.x + p.z*p.z);
       if (r > 20) { // reflect off the outer wall
         const nx = p.x / r, nz = p.z / r;
