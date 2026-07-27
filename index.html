@@ -5084,6 +5084,7 @@ function makeBalloon(index) {
     ix.fillText(POWERUPS[powerKey].icon, 32, 36);
     const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(ic), transparent: true }));
     spr.scale.set(0.4, 0.4, 0.4); spr.position.set(0, 0.15, 0);
+    spr.raycast = function () {}; // sprites need a camera on the raycaster; shots use a camera-less ray → skip
     g.add(spr);
   }
   const knot = new THREE.Mesh(new THREE.SphereGeometry(0.055,6,6), new THREE.MeshPhongMaterial({color}));
