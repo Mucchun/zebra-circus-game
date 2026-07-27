@@ -16,6 +16,7 @@ const browser = await chromium.launch({ headless: true });
 const AVATARS = { Alpha: "zebra", Beta: "elephant" };
 async function boot(name) {
   const page = await browser.newPage({ viewport: { width: 900, height: 600 } });
+  await page.addInitScript(() => localStorage.setItem("zebraPlayerRegistered", "1")); // skip lead-capture sign-in
   const avatar = AVATARS[name] ? `&mpAvatar=${AVATARS[name]}` : "";
   await page.goto(`${GAME}/?mp=1&mpUrl=${encodeURIComponent(WS)}&mpName=${name}${avatar}`, { waitUntil: "networkidle" });
   await page.waitForSelector("#play-btn", { state: "visible", timeout: 20000 });
@@ -40,7 +41,9 @@ check("beta connected to plaza", betaDebug.connected && betaDebug.room === "plaz
 check("alpha sees exactly one remote", alphaDebug.remotes.length === 1, `remotes=${alphaDebug.remotes.length}`);
 check("beta sees exactly one remote", betaDebug.remotes.length === 1, `remotes=${betaDebug.remotes.length}`);
 
-async function waitForRemoteModel(page, timeoutMs = 25000) {
+// Slow: her merge eager-loads ~90MB of prop GLBs on start, so remote patronus
+// models can take 15-40s to finish loading behind them (perf follow-up).
+async function waitForRemoteModel(page, timeoutMs = 60000) {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     if (await page.evaluate(() => window.__mpDebug().remotes[0]?.hasModel === true)) return true;

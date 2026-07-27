@@ -51,6 +51,16 @@ try {
   await play.goto(`${BASE}/?mp=0`, { waitUntil: "domcontentloaded" });
   await play.waitForSelector("#play-btn", { state: "visible", timeout: 30000 });
   await play.click("#play-btn");
+  // Lead-capture sign-in gate: fill + submit if it appears (backend POST fails
+  // harmlessly in CI - the game starts regardless).
+  if (await play.locator("#register-screen").isVisible().catch(() => false)) {
+    await play.fill("#reg-first", "CI");
+    await play.fill("#reg-last", "Gate");
+    await play.fill("#reg-email", "ci@example.com");
+    await play.fill("#reg-phone", "1234567");
+    await play.check("#reg-consent");
+    await play.click("#reg-submit");
+  }
   await play.waitForSelector("#tut-go-btn", { state: "visible", timeout: 15000 });
   await play.click("#tut-go-btn");
   await play.waitForTimeout(1500);

@@ -294,6 +294,78 @@ body { background: #000; overflow: hidden; font-family: 'Source Sans 3', 'Barlow
 }
 #start-screen > * { position: relative; z-index: 1; }
 
+/* Registration panel */
+#register-screen { background:#05050d; display:flex; align-items:center; justify-content:center; }
+.reg-card {
+  width: 380px; max-width: 92vw; background:#0b0b16;
+  border:1px solid #00a651; border-top:4px solid #00a651;
+  padding: 26px 28px; box-shadow:0 0 60px rgba(0,166,81,0.25);
+}
+.reg-title { font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:26px; letter-spacing:3px; color:#fff; }
+.reg-sub { font-family:'Source Sans 3',sans-serif; font-size:13px; color:#8090b0; margin:6px 0 18px; line-height:1.5; }
+#reg-form { display:flex; flex-direction:column; gap:11px; }
+.reg-row { display:flex; gap:11px; }
+.reg-row input { flex:1; min-width:0; }
+#reg-form input[type=text], #reg-form input[type=email], #reg-form input[type=tel] {
+  background:#05050d; border:1px solid #2a2a44; color:#fff; padding:11px 12px;
+  font-family:'Source Sans 3',sans-serif; font-size:14px; outline:none; width:100%;
+}
+#reg-form input:focus { border-color:#00a651; }
+.reg-consent { display:flex; align-items:flex-start; gap:9px; font-family:'Source Sans 3',sans-serif;
+  font-size:12px; color:#b9c0d8; line-height:1.45; cursor:pointer; margin-top:3px; }
+.reg-consent input { margin-top:2px; accent-color:#00a651; flex-shrink:0; }
+.reg-error { color:#ff6a5a; font-family:'Source Sans 3',sans-serif; font-size:12px; min-height:14px; }
+#reg-submit { margin-top:4px; }
+.reg-fine { font-family:'Source Sans 3',sans-serif; font-size:10.5px; color:#4a5070; text-align:center; margin-top:8px; letter-spacing:0.3px; }
+
+/* Prize claim machine */
+#prize-overlay { position:fixed; inset:0; z-index:1300; background:rgba(5,5,15,0.9);
+  display:flex; align-items:center; justify-content:center; pointer-events:auto; }
+#prize-machine { position:relative; width:460px; max-width:94vw; max-height:92vh; overflow:auto;
+  background:#0b0b16; border:1px solid #ffd200; border-top:5px solid #ffd200;
+  padding:22px 24px; box-shadow:0 0 70px rgba(255,210,0,0.22); font-family:'Source Sans 3',sans-serif; }
+#prize-close { position:absolute; top:10px; right:12px; background:transparent; color:#8090b0;
+  border:1px solid #333; width:26px; height:26px; cursor:pointer; font-size:14px; }
+#pm-printer3d { width:100%; height:220px; background:radial-gradient(ellipse at 50% 40%, #14142a 0%, #05050d 75%);
+  border:1px solid #2a2a44; margin-bottom:14px; }
+#pm-printer3d canvas { display:block; margin:0 auto; }
+.pm-headtext { text-align:center; margin-bottom:14px; }
+.pm-headtext .pm-coupon { margin-top:6px; }
+.pm-title { font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:20px; color:#ffd200; letter-spacing:1px; line-height:1.1; }
+.pm-sub { font-size:12px; color:#8090b0; margin:5px 0 8px; line-height:1.45; }
+.pm-coupon { font-family:'Space Mono',monospace; font-size:13px; color:#00c060; }
+.pm-coupon b { color:#fff; letter-spacing:1px; }
+#prize-form { display:flex; flex-direction:column; gap:10px; }
+.pm-row { display:flex; gap:10px; }
+.pm-row input { flex:1; min-width:0; }
+.pm-row label { flex:1; font-size:12px; color:#8090b0; display:flex; flex-direction:column; gap:5px; }
+#prize-form input, #prize-form select {
+  background:#05050d; border:1px solid #2a2a44; color:#fff; padding:11px 12px;
+  font-family:'Source Sans 3',sans-serif; font-size:14px; outline:none; width:100%; }
+#prize-form input:focus, #prize-form select:focus { border-color:#ffd200; }
+.pm-error { color:#ff6a5a; font-size:12px; min-height:14px; }
+.pm-fine { font-size:10.5px; color:#4a5070; text-align:center; margin-top:6px; }
+#pm-done { text-align:center; padding:16px 4px; }
+.pm-done-icon { font-size:52px; }
+.pm-done-title { font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:24px; color:#00c060; letter-spacing:2px; margin:6px 0; }
+.pm-done-sub { font-size:13px; color:#cdd3ea; line-height:1.5; margin-bottom:16px; }
+
+/* Leaderboard */
+#leaderboard-overlay { position:fixed; inset:0; z-index:1300; background:rgba(5,5,15,0.9);
+  display:flex; align-items:center; justify-content:center; pointer-events:auto; }
+#leaderboard-panel { position:relative; width:420px; max-width:94vw; max-height:88vh; overflow:auto;
+  background:#0b0b16; border:1px solid #ff6a00; border-top:5px solid #ff6a00; padding:24px 26px;
+  font-family:'Source Sans 3',sans-serif; }
+#lb-close { position:absolute; top:10px; right:12px; background:transparent; color:#8090b0; border:1px solid #333; width:26px; height:26px; cursor:pointer; }
+.lb-title { font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:26px; letter-spacing:2px; color:#ffd200; }
+.lb-sub { font-size:12px; color:#8090b0; margin:4px 0 14px; }
+#lb-list table { width:100%; border-collapse:collapse; }
+#lb-list td { padding:9px 12px; border-bottom:1px solid #14142a; font-size:14px; }
+#lb-list td:first-child { color:#ffd200; font-weight:800; width:38px; }
+#lb-list tr.me td { background:rgba(255,106,0,0.12); color:#fff; }
+.lb-loading, .lb-empty { color:#4a5070; text-align:center; padding:24px; }
+#lb-back { margin-top:16px; }
+
 /* Corner brackets */
 .ss-corner {
   position: absolute; width: 68px; height: 68px;
@@ -467,12 +539,34 @@ body { background: #000; overflow: hidden; font-family: 'Source Sans 3', 'Barlow
   <button class="btn btn-lg" id="play-btn">PLAY NOW</button>
 </div>
 
+<div id="register-screen" class="screen" style="display:none;">
+  <div class="reg-card">
+    <div class="reg-title">PLAYER SIGN-IN</div>
+    <div class="reg-sub">Enter your details to start — and to claim your Zebra reward.</div>
+    <form id="reg-form" autocomplete="on" novalidate>
+      <div class="reg-row">
+        <input id="reg-first" name="firstName" type="text" placeholder="First name" required maxlength="60">
+        <input id="reg-last" name="lastName" type="text" placeholder="Surname" required maxlength="60">
+      </div>
+      <input id="reg-email" name="email" type="email" placeholder="Email address" required maxlength="120">
+      <input id="reg-phone" name="phone" type="tel" placeholder="Phone number" required maxlength="40">
+      <label class="reg-consent">
+        <input id="reg-consent" type="checkbox" required>
+        <span>I agree to be contacted about Zebra products and to the storage of my details.</span>
+      </label>
+      <div class="reg-error" id="reg-error"></div>
+      <button class="btn btn-lg" id="reg-submit" type="submit">START PLAYING →</button>
+      <div class="reg-fine">Your details are stored securely. You can request removal at any time.</div>
+    </form>
+  </div>
+</div>
+
 <div id="tutorial-overlay" style="display:none;">
   <div class="tut-title">// HOW TO PLAY //</div>
   <div class="tut-cards">
     <div class="tut-card">
-      <div class="tut-head">Reach 200 Points</div>
-      <div class="tut-body">Hit <strong style="color:var(--c-accent)">200 points</strong> to unlock the full Zebra Technologies product catalogue!</div>
+      <div class="tut-head">Reach 1000 Points</div>
+      <div class="tut-body">Hit <strong style="color:var(--c-accent)">1000 points</strong> to unlock the full Zebra Technologies product catalogue!</div>
     </div>
     <div class="tut-card">
       <div class="tut-head">Scan QR Codes</div>
@@ -581,7 +675,7 @@ body { background: #000; overflow: hidden; font-family: 'Source Sans 3', 'Barlow
   </div>
 
   <div id="progress-wrap">
-    <div id="progress-lbl">REACH 200 PTS — EXPLORE ZEBRA PRODUCTS</div>
+    <div id="progress-lbl">REACH 1000 PTS — EXPLORE ZEBRA PRODUCTS</div>
     <div id="progress-track"><div id="progress-fill"></div></div>
   </div>
 
@@ -591,25 +685,105 @@ body { background: #000; overflow: hidden; font-family: 'Source Sans 3', 'Barlow
 <div id="pause-overlay">
   <div id="pause-panel">
     <div class="pp-title">PAUSED</div>
-    <div class="pp-balance">BALLOON BANK: <b id="wallet-balance">0</b> 🎈 <span style="font-size:12px">(pop balloons to earn)</span></div>
-    <div class="shop-card">
+    <div class="pp-balance">SCORE: <b id="pause-score">0</b> pts &nbsp;·&nbsp; BALLOON BANK: <b id="wallet-balance">0</b> 🎈</div>
+    <div class="shop-card" id="buy-balloons-card">
       <div>
-        <div class="sc-name">ZEBRA PLUSH TOY 🦓</div>
-        <div class="sc-sub">Auto-unlocked at 200 balloons — claim online, no code</div>
+        <div class="sc-name">🎈 BUY +50 BALLOONS</div>
+        <div class="sc-sub" id="buy-balloons-sub">Convert 1000 points into 50 balloons for the bank.</div>
       </div>
-      <div class="sc-cost">200 🎈</div>
-      <button class="shop-btn" id="shop-buy-plush" type="button" disabled>AUTO</button>
+      <div class="sc-cost">1000 pts</div>
+      <button class="shop-btn" id="buy-balloons-btn" type="button" disabled>NEED 1000</button>
     </div>
-    <div class="shop-card">
+    <div class="shop-card" id="prize-card-plush">
       <div>
-        <div class="sc-name">ZEBRA TERMINAL</div>
-        <div class="sc-sub">The real device. Yes, really.</div>
+        <div class="sc-name">🦓 ZEBRA PLUSHIE</div>
+        <div class="sc-sub" id="prize-sub-plush">Win a real plushie at 5000 balloons.</div>
       </div>
-      <div class="sc-cost">10,000 🎈</div>
-      <button class="shop-btn" id="shop-buy-terminal" type="button">REDEEM</button>
+      <div class="sc-cost">5000 🎈</div>
+      <button class="shop-btn claim-prize-btn" data-prize="plush" type="button" disabled>LOCKED</button>
+    </div>
+    <div class="shop-card" id="prize-card-terminal">
+      <div>
+        <div class="sc-name">📟 ZEBRA HAND TERMINAL</div>
+        <div class="sc-sub" id="prize-sub-terminal">Win a real hand terminal at 10000 balloons.</div>
+      </div>
+      <div class="sc-cost">10000 🎈</div>
+      <button class="shop-btn claim-prize-btn" data-prize="terminal" type="button" disabled>LOCKED</button>
+    </div>
+    <div class="shop-card" id="level2-card">
+      <div>
+        <div class="sc-name">⚡ LEVEL 2 — BALLOON FRENZY</div>
+        <div class="sc-sub" id="level2-sub">Reach 1000 points to unlock a fast, timed balloon challenge.</div>
+      </div>
+      <div class="sc-cost">🔥</div>
+      <button class="shop-btn" id="start-level2-btn" type="button" disabled>LOCKED</button>
+    </div>
+    <div class="shop-card" id="level3-card">
+      <div>
+        <div class="sc-name">👑 LEVEL 3 — BIG TOP BOSS</div>
+        <div class="sc-sub" id="level3-sub">Clear Level 2 to unlock a giant balloon boss battle.</div>
+      </div>
+      <div class="sc-cost">💥</div>
+      <button class="shop-btn" id="start-level3-btn" type="button" disabled>LOCKED</button>
+    </div>
+    <div class="shop-card" id="leaderboard-card">
+      <div>
+        <div class="sc-name">🏆 LEADERBOARD</div>
+        <div class="sc-sub">See the top players and where you rank.</div>
+      </div>
+      <div class="sc-cost">🏆</div>
+      <button class="shop-btn" id="open-leaderboard-btn" type="button">VIEW</button>
     </div>
     <div id="wallet-codes"></div>
     <button id="resume-btn" type="button">RESUME</button>
+  </div>
+</div>
+
+<div id="leaderboard-overlay" style="display:none;">
+  <div id="leaderboard-panel">
+    <button id="lb-close" type="button">✕</button>
+    <div class="lb-title">🏆 LEADERBOARD</div>
+    <div class="lb-sub" id="lb-sub">Top players in the Zebra Circus</div>
+    <div id="lb-list"><div class="lb-loading">Loading…</div></div>
+    <button class="btn btn-lg" id="lb-back" type="button">BACK</button>
+  </div>
+</div>
+
+<div id="prize-overlay" style="display:none;">
+  <div id="prize-machine">
+    <button id="prize-close" type="button">✕</button>
+    <div id="pm-printer3d" title="Zebra ZD421 — printing your voucher"></div>
+    <div class="pm-headtext">
+      <div class="pm-title">🎉 CONGRATULATIONS — YOU WON!</div>
+      <div class="pm-sub">The Zebra ZD421 just printed your voucher. Enter your address and we'll ship your prize.</div>
+      <div class="pm-coupon">VOUCHER: <b id="pm-coupon">—</b></div>
+    </div>
+    <form id="prize-form" autocomplete="on" novalidate>
+      <div class="pm-row">
+        <label>Prize
+          <select id="pm-prize" name="prize">
+            <option value="Zebra Plushie">🦓 Zebra Plushie</option>
+            <option value="Zebra Hand Terminal">📟 Zebra Hand Terminal</option>
+          </select>
+        </label>
+      </div>
+      <input id="pm-name" name="fullName" type="text" placeholder="Full name" required maxlength="80">
+      <input id="pm-addr" name="address" type="text" placeholder="Home address (street, number)" required maxlength="160">
+      <div class="pm-row">
+        <input id="pm-city" name="city" type="text" placeholder="City" required maxlength="80">
+        <input id="pm-post" name="postcode" type="text" placeholder="Postal code" required maxlength="20">
+      </div>
+      <input id="pm-country" name="country" type="text" placeholder="Country" required maxlength="60">
+      <div class="pm-error" id="pm-error"></div>
+      <button class="btn btn-lg" id="pm-submit" type="submit">SHIP MY PRIZE →</button>
+      <div class="pm-fine">Ships to the address above. Your voucher verifies the win.</div>
+    </form>
+    <div id="pm-done" style="display:none;">
+      <div class="pm-done-icon">📦</div>
+      <div class="pm-done-title">YOUR PRIZE IS ON ITS WAY!</div>
+      <div class="pm-done-sub" id="pm-done-sub"></div>
+      <button class="btn btn-lg" id="pm-done-close" type="button">BACK TO GAME</button>
+    </div>
   </div>
 </div>
 <script src="vendor/three.min.js"></script>
@@ -701,13 +875,34 @@ let yaw = 0, pitch = 0;
 let weaponFlipStart = 0;
 const keys = {};
 const PLAYER_H = 1.7;
-const WIN_SCORE = 200;
+const WIN_SCORE = 1000;
 
 let balloons = [], weaponObjs = [], qrObjs = [], particles = [], projectiles = [], ringWaves = [], scanMarkers = [];
 let comboCount = 0, comboExpireAt = 0;   // pop-chain combo
 const circusSpotlights = [];             // sweeping colored lights
 let plushieGltf = null, plushieTrophy = null; // Zebra plushie reward model
 let holdingPlushie = false;              // player is holding the plushie item
+// ── Levels: L1 = classic, L2 = "Balloon Frenzy" (moving/faster, timed) ──
+let currentLevel = 1;
+let level2Unlocked = false;
+let level2Active = false;
+let level2EndAt = 0;                      // performance.now() deadline
+let level2Score = 0;
+const LEVEL2_SECONDS = 90;
+const LEVEL2_TARGET = 60;                 // balloons to pop in the time limit
+// ── Level 3: "Big Top Boss" — a giant balloon boss with a health bar ──
+let level3Unlocked = false, level3Active = false;
+let boss = null;                          // { mesh, hp, maxHp, vel, spawnAt }
+const BOSS_HP = 45;
+// ── Power-ups (dropped by special balloons) ──
+let fireRapidUntil = 0, balloonSlowUntil = 0, goldenRushUntil = 0;
+const POWERUPS = {
+  slow:  { icon: '⏱', label: 'SLOW-MO',   color: 0x2ec4ff },
+  rapid: { icon: '🔥', label: 'RAPID FIRE', color: 0xff6a00 },
+  clear: { icon: '💥', label: 'BALLOON BOMB', color: 0xff2d55 },
+  bonus: { icon: '✨', label: 'BONUS +300', color: 0xffd200 },
+};
+const POWERUP_KEYS = Object.keys(POWERUPS);
 let heldMesh = null;
 let promptTimer = null;
 let clock;
@@ -1572,7 +1767,53 @@ function loadDeviceModels() {
   });
 }
 
-document.getElementById('play-btn').addEventListener('click', startGame);
+// PLAY → show the player sign-in panel; the form submit starts the game.
+document.getElementById('play-btn').addEventListener('click', () => {
+  // If this browser already registered, skip straight to the game.
+  if (localStorage.getItem('zebraPlayerRegistered') === '1') { startGame(); return; }
+  document.getElementById('start-screen').style.display = 'none';
+  document.getElementById('register-screen').style.display = 'flex';
+  setTimeout(() => document.getElementById('reg-first').focus(), 60);
+});
+
+document.getElementById('reg-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const firstName = document.getElementById('reg-first').value.trim();
+  const lastName  = document.getElementById('reg-last').value.trim();
+  const email     = document.getElementById('reg-email').value.trim();
+  const phone     = document.getElementById('reg-phone').value.trim();
+  const consent   = document.getElementById('reg-consent').checked;
+  const err = document.getElementById('reg-error');
+  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const phoneOk = /[0-9]{6,}/.test(phone.replace(/[^0-9]/g, ''));
+  if (!firstName || !lastName) { err.textContent = 'Please enter your first name and surname.'; return; }
+  if (!emailOk) { err.textContent = 'Please enter a valid email address.'; return; }
+  if (!phoneOk) { err.textContent = 'Please enter a valid phone number.'; return; }
+  if (!consent) { err.textContent = 'Please tick the consent box to continue.'; return; }
+  err.textContent = '';
+
+  const player = { firstName, lastName, email, phone, consent: true, at: new Date().toISOString() };
+  try { localStorage.setItem('zebraPlayer', JSON.stringify(player)); } catch (_) {}
+  window.__zebraPlayer = player;
+
+  const btn = document.getElementById('reg-submit');
+  btn.disabled = true; btn.textContent = 'STARTING…';
+
+  // Persist to the leads database (best-effort; never blocks play).
+  try {
+    const res = await fetch('/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(player),
+    });
+    if (res.ok) localStorage.setItem('zebraPlayerRegistered', '1');
+  } catch (_) { /* offline / no backend: continue anyway */ }
+
+  if (typeof LunaAnalytics !== 'undefined') LunaAnalytics.track('player_registered', {});
+  document.getElementById('register-screen').style.display = 'none';
+  btn.disabled = false; btn.textContent = 'START PLAYING →';
+  startGame();
+});
 document.getElementById('restart-btn').addEventListener('click', restartGame);
 document.getElementById('tut-go-btn').addEventListener('click', dismissTutorial);
 document.getElementById('ip-close').addEventListener('click', () => closeInfo({ resumeGame: true }));
@@ -3211,6 +3452,89 @@ const LunaAnalytics = (() => {
 })();
 window.lunaAnalytics = LunaAnalytics;
 
+// ═══════════════════════════════════════════════
+//  AUDIO — synthesized SFX + looping circus music (Web Audio, no files)
+// ═══════════════════════════════════════════════
+const Sound = (() => {
+  let ctx = null, master = null, musicGain = null, sfxGain = null;
+  let muted = false, musicTimer = null, step = 0;
+  try { muted = localStorage.getItem('zebraMuted') === '1'; } catch (_) {}
+
+  function ensure() {
+    if (ctx) return;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    ctx = new AC();
+    master = ctx.createGain(); master.gain.value = muted ? 0 : 0.9; master.connect(ctx.destination);
+    musicGain = ctx.createGain(); musicGain.gain.value = 0.18; musicGain.connect(master);
+    sfxGain = ctx.createGain(); sfxGain.gain.value = 0.9; sfxGain.connect(master);
+  }
+  function resume() { ensure(); if (ctx && ctx.state === 'suspended') ctx.resume(); }
+
+  // One synth blip.
+  function blip(freq, dur, type = 'square', dest = sfxGain, vol = 0.5, glideTo = null) {
+    if (!ctx || muted) return;
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, ctx.currentTime);
+    if (glideTo) o.frequency.exponentialRampToValueAtTime(glideTo, ctx.currentTime + dur);
+    g.gain.setValueAtTime(0.0001, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(vol, ctx.currentTime + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + dur);
+    o.connect(g); g.connect(dest); o.start(); o.stop(ctx.currentTime + dur + 0.02);
+  }
+
+  const sfx = {
+    shoot:  () => blip(220, 0.07, 'sawtooth', sfxGain, 0.25, 120),
+    pop:    () => { blip(680, 0.09, 'square', sfxGain, 0.4, 320); },
+    combo:  (n) => blip(400 + Math.min(n, 12) * 60, 0.12, 'square', sfxGain, 0.4, null),
+    golden: () => { [880, 1174, 1568].forEach((f, i) => setTimeout(() => blip(f, 0.12, 'triangle', sfxGain, 0.4), i * 60)); },
+    win:    () => { [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => blip(f, 0.22, 'triangle', sfxGain, 0.5), i * 120)); },
+    bosshit:() => blip(140, 0.08, 'sawtooth', sfxGain, 0.35, 90),
+    bossdie:() => { [200, 150, 100, 400, 800].forEach((f, i) => setTimeout(() => blip(f, 0.18, 'sawtooth', sfxGain, 0.5), i * 90)); },
+    click:  () => blip(520, 0.06, 'square', sfxGain, 0.3),
+    powerup:() => { [523, 784, 1046].forEach((f, i) => setTimeout(() => blip(f, 0.14, 'triangle', sfxGain, 0.45), i * 70)); },
+  };
+
+  // Simple looping circus melody ("Entry of the Gladiators" vibe, original notes).
+  const MELODY = [523,494,466,440,466,494,523,587,523,494,466,440,392,440,466,494,
+                  523,494,466,440,466,494,523,587,659,587,523,494,523,440,392,0];
+  function startMusic() {
+    if (!ctx || musicTimer) return;
+    step = 0;
+    const beat = 200;
+    musicTimer = setInterval(() => {
+      const n = MELODY[step % MELODY.length];
+      if (n) blip(n, 0.16, 'triangle', musicGain, 0.5);
+      if (step % 2 === 0) blip(n ? n / 2 : 130, 0.16, 'sine', musicGain, 0.4); // bassline
+      step++;
+    }, beat);
+  }
+  function stopMusic() { if (musicTimer) { clearInterval(musicTimer); musicTimer = null; } }
+  function toggleMute() {
+    muted = !muted;
+    if (master) master.gain.value = muted ? 0 : 0.9;
+    try { localStorage.setItem('zebraMuted', muted ? '1' : '0'); } catch (_) {}
+    updateMuteHud();
+    return muted;
+  }
+  function updateMuteHud() {
+    let el = document.getElementById('__mute');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = '__mute';
+      el.title = 'Toggle sound (M)';
+      el.style.cssText = 'position:fixed;bottom:14px;left:16px;z-index:940;cursor:pointer;pointer-events:auto;'
+        + 'font-size:20px;padding:4px 8px;background:rgba(5,5,15,0.7);border:1px solid #333;user-select:none;';
+      el.addEventListener('click', () => { resume(); toggleMute(); });
+      document.body.appendChild(el);
+    }
+    el.textContent = muted ? '🔇' : '🔊';
+  }
+  updateMuteHud();
+  return { resume, sfx, startMusic, stopMusic, toggleMute, updateMuteHud, isMuted: () => muted };
+})();
+window.addEventListener('keydown', (e) => { if (e.code === 'KeyM' && !e.repeat) Sound.toggleMute(); });
+
 async function startGame() {
   document.getElementById('start-screen').style.display = 'none';
   document.getElementById('tutorial-overlay').style.display = 'flex';
@@ -3232,6 +3556,8 @@ function dismissTutorial() {
   gameActive = true;
   LunaAnalytics.startSession();
   if (wallet.plushAwarded) markPlushieSlot(); // restore owned plushie in inventory
+  updateLevelHud();
+  Sound.resume(); Sound.startMusic();
 }
 
 function restartGame() {
@@ -3240,6 +3566,10 @@ function restartGame() {
   balloons = []; weaponObjs = []; qrObjs = []; particles = []; projectiles = []; ringWaves = []; scanMarkers = [];
   heldMesh = null; mouseDown = false; infoOpen = false; milestoneShown = false;
   rfidUnlocked = false; rfidCooldownUntil = 0; comboCount = 0; plushieTrophy = null; holdingPlushie = false;
+  currentLevel = 1; level2Active = false; level2Score = 0; level3Active = false;
+  fireRapidUntil = 0; balloonSlowUntil = 0; goldenRushUntil = 0; updatePowerupHud();
+  if (boss && boss.mesh) { scene.remove(boss.mesh); } boss = null; updateBossHud();
+  balloons.forEach(b => { b.vel = null; if (b.mesh) b.mesh.scale.setScalar(1); });
   { const r = document.getElementById('__rfid'); if (r) r.style.display = 'none'; }
   document.getElementById('milestone-popup').style.display = 'none';
   document.getElementById('score-value').textContent = '0';
@@ -3480,6 +3810,8 @@ function addCircusProps() {
     { file: 'models/props/carousel.glb', angle: Math.PI * 0.0, radius: 11.0, height: 3.8, spin: 0.25 },
     { file: 'models/props/elephant.glb', angle: Math.PI * 0.5, radius: 10.6, height: 2.4 },
     { file: 'models/props/clown.glb', angle: Math.PI * 1.5, radius: 10.4, height: 2.2 },
+    // ZD421 "prize machine" — sits on a small stand near the arena edge.
+    { file: 'models/props/zd421-printer.glb', angle: Math.PI * 1.0, radius: 7.0, height: 1.0, standH: 1.0 },
   ];
   const loader = new THREE.GLTFLoader();
   // Preload the plushie reward model so it's ready for the 200-balloon trophy.
@@ -3497,6 +3829,18 @@ function addCircusProps() {
       model.position.x -= c.x;
       model.position.z -= c.z;
       model.position.y -= box.min.y; // rest on the ground
+      // Optional pedestal/stand under a prop (e.g. the ZD421 prize machine).
+      if (p.standH) {
+        const b2 = new THREE.Box3().setFromObject(model);
+        const w = Math.max(b2.max.x - b2.min.x, b2.max.z - b2.min.z) * 1.25;
+        const stand = new THREE.Mesh(
+          new THREE.CylinderGeometry(w * 0.5, w * 0.58, p.standH, 20),
+          new THREE.MeshStandardMaterial({ color: 0x1a1a22, roughness: 0.7 })
+        );
+        stand.position.y = p.standH / 2;
+        grp.add(stand);
+        model.position.y += p.standH; // sit the prop on top of the stand
+      }
       grp.position.set(Math.cos(p.angle) * p.radius, 0, Math.sin(p.angle) * p.radius);
       grp.rotation.y = Math.atan2(-Math.cos(p.angle), -Math.sin(p.angle)); // face center
       grp.userData.circusProp = true;
@@ -3602,6 +3946,231 @@ function showComboText(n, bonus) {
     el.style.transition = 'opacity 0.8s ease-out';
     el.style.opacity = '0';
   });
+}
+
+// ── Power-ups ─────────────────────────────────────────────────────────────
+function activatePowerup(key, pos) {
+  const p = POWERUPS[key];
+  Sound.sfx.powerup();
+  spawnConfetti(pos, 20, 0.3);
+  flashScreen(p.color, 0.25);
+  const now = performance.now();
+  if (key === 'slow')  { balloonSlowUntil = now + 8000; }
+  else if (key === 'rapid') { fireRapidUntil = now + 8000; }
+  else if (key === 'bonus') { addScore(300); showFloatingScore(300); }
+  else if (key === 'clear') {
+    const w = currentWeapon >= 0 ? WEAPONS[currentWeapon] : WEAPONS[0];
+    balloons.filter(b => b.alive).forEach((b, i) => setTimeout(() => { if (b.alive) { popBalloon(b, w); addScore(w.pts); } }, i * 25));
+  }
+  showPrompt(p.icon + ' ' + p.label + '!', 2200);
+  addKillFeed(p.icon + ' POWER-UP: ' + p.label);
+  updatePowerupHud();
+}
+function updatePowerupHud() {
+  let el = document.getElementById('__power');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = '__power';
+    el.style.cssText = 'position:fixed;top:78px;right:16px;z-index:938;pointer-events:none;'
+      + 'font-family:"Barlow Condensed",sans-serif;font-weight:800;letter-spacing:1px;font-size:15px;text-align:right;';
+    document.body.appendChild(el);
+  }
+  const now = performance.now();
+  const active = [];
+  if (now < goldenRushUntil) active.push('✨ GOLDEN RUSH ' + Math.ceil((goldenRushUntil - now) / 1000) + 's');
+  if (now < balloonSlowUntil) active.push('⏱ SLOW-MO ' + Math.ceil((balloonSlowUntil - now) / 1000) + 's');
+  if (now < fireRapidUntil) active.push('🔥 RAPID ' + Math.ceil((fireRapidUntil - now) / 1000) + 's');
+  el.innerHTML = active.map(a => '<div style="background:rgba(5,5,15,0.8);border:1px solid #ff6a00;padding:3px 8px;margin-bottom:4px;color:#fff">' + a + '</div>').join('');
+  el.style.display = active.length ? 'block' : 'none';
+}
+
+// ── Level system ──────────────────────────────────────────────────────────
+function updateLevelHud() {
+  let el = document.getElementById('__level');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = '__level';
+    el.style.cssText = 'position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:930;'
+      + 'pointer-events:none;font-family:"Barlow Condensed",sans-serif;font-weight:800;letter-spacing:2px;'
+      + 'padding:6px 16px;background:rgba(5,5,15,0.85);border:1px solid #ff6a00;color:#fff;font-size:15px;';
+    document.body.appendChild(el);
+  }
+  if (level2Active) {
+    const left = Math.max(0, Math.ceil((level2EndAt - performance.now()) / 1000));
+    const mm = Math.floor(left / 60), ss = String(left % 60).padStart(2, '0');
+    el.style.borderColor = '#ff2d55';
+    el.innerHTML = `⚡ LEVEL 2 · BALLOON FRENZY &nbsp; <span style="color:#ffd200">${mm}:${ss}</span> &nbsp; ${level2Score}/${LEVEL2_TARGET}`;
+    el.style.display = 'block';
+  } else if (level3Active) {
+    el.style.borderColor = '#ff2d55';
+    el.innerHTML = '👑 LEVEL 3 · BIG TOP BOSS';
+    el.style.display = 'block';
+  } else if (currentLevel === 1) {
+    el.style.borderColor = '#ff6a00';
+    el.innerHTML = 'LEVEL 1 · CIRCUS BLASTER' + (level2Unlocked ? ' &nbsp;<span style="color:#38d66b">— L2 unlocked! Pause → Level 2</span>' : '');
+    el.style.display = 'block';
+  } else { el.style.display = 'none'; }
+}
+
+function unlockLevel2() {
+  if (level2Unlocked) return;
+  level2Unlocked = true;
+  showPrompt('⚡ LEVEL 2 UNLOCKED — BALLOON FRENZY! Open Pause (P) → START LEVEL 2', 6000);
+  addKillFeed('⚡ Level 2 unlocked — Balloon Frenzy!');
+  refreshWalletUi();
+  updateLevelHud();
+}
+
+function startLevel2() {
+  currentLevel = 2; level2Active = true; level2Score = 0;
+  level2EndAt = performance.now() + LEVEL2_SECONDS * 1000;
+  // Give every balloon a fast random velocity + shrink it (harder target).
+  balloons.forEach(b => {
+    b.vel = new THREE.Vector3((Math.random()-0.5)*0.14, (Math.random()-0.5)*0.08, (Math.random()-0.5)*0.14);
+    b.mesh.scale.setScalar(0.7);
+    if (!b.alive) respawnBalloon(b);
+  });
+  closePause();
+  flashScreen(0xff2d55, 0.3);
+  showPrompt('⚡ GO! Pop ' + LEVEL2_TARGET + ' balloons in ' + LEVEL2_SECONDS + 's!', 3000);
+  updateLevelHud();
+  LunaAnalytics.track('level2_start', {});
+}
+
+function tickLevel2() {
+  if (!level2Active) return;
+  updateLevelHud();
+  if (performance.now() >= level2EndAt) endLevel2();
+}
+
+function endLevel2() {
+  if (!level2Active) return;
+  level2Active = false;
+  submitScore();
+  const won = level2Score >= LEVEL2_TARGET;
+  // Restore balloons to normal size + drift.
+  balloons.forEach(b => { b.vel = null; b.mesh.scale.setScalar(1); });
+  LunaAnalytics.track('level2_end', { popped: level2Score, won });
+  if (won) { for (let k=0;k<6;k++) spawnConfetti(new THREE.Vector3((Math.random()-0.5)*14,5+Math.random()*4,(Math.random()-0.5)*14),28,0.3); cheerCrowd(); if (!level3Unlocked) { level3Unlocked = true; addKillFeed('👑 Level 3 unlocked — Big Top Boss!'); } }
+  showBigMessage(won ? '⚡ FRENZY CLEARED!' : '⏱ TIME! ' + level2Score + ' POPPED',
+    won ? 'You popped ' + level2Score + ' balloons! 👑 LEVEL 3 unlocked — face the Big Top Boss from the Pause menu.' : 'You popped ' + level2Score + ' of ' + LEVEL2_TARGET + '. Try again from Pause → Level 2.',
+    () => { currentLevel = 1; updateLevelHud(); refreshWalletUi(); });
+}
+
+// ── Level 3: Big Top Boss battle ──────────────────────────────────────────
+function startLevel3() {
+  currentLevel = 3; level3Active = true;
+  // Giant boss balloon in the middle of the arena.
+  const g = new THREE.Group();
+  const mat = new THREE.MeshPhongMaterial({ color: 0xff2d55, shininess: 160, specular: 0xffffff, emissive: 0x400010, emissiveIntensity: 0.4 });
+  const body = new THREE.Mesh(new THREE.SphereGeometry(1.7, 24, 24), mat);
+  body.scale.y = 1.2; g.add(body);
+  // Big scannable tag so it reads as a Zebra boss.
+  const tag = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.4), new THREE.MeshBasicMaterial({ map: makeBarcodeTexture('QR', 0xb0550000) }));
+  tag.position.set(0, 0.1, 1.75); g.add(tag);
+  g.userData.tag = tag; g.userData.bossBody = body;
+  g.position.set(0, 7.5, 0);
+  scene.add(g);
+  boss = { mesh: g, body, mat, hp: BOSS_HP, maxHp: BOSS_HP,
+    vel: new THREE.Vector3((Math.random()-0.5)*0.1, 0, (Math.random()-0.5)*0.1), spawnAt: performance.now() + 3000 };
+  closePause();
+  flashScreen(0xff2d55, 0.35);
+  showPrompt('👑 THE BIG TOP BOSS APPEARS! Shoot it — ' + BOSS_HP + ' hits to pop it!', 3500);
+  updateLevelHud(); updateBossHud();
+  LunaAnalytics.track('level3_start', {});
+}
+
+function damageBoss(w) {
+  if (!boss) return;
+  Sound.sfx.bosshit();
+  const dmg = (w && w.effect === 'rapid') ? 1 : 2; // heavy weapons hit harder
+  boss.hp = Math.max(0, boss.hp - dmg);
+  // Feedback: flash, shrink-punch, confetti at the boss.
+  boss.mat.emissiveIntensity = 1.0;
+  setTimeout(() => { if (boss) boss.mat.emissiveIntensity = 0.4; }, 80);
+  boss.mesh.scale.setScalar(0.94); setTimeout(() => { if (boss) boss.mesh.scale.setScalar(1); }, 70);
+  spawnConfetti(boss.mesh.position.clone(), 6, 0.2);
+  addScore((w && w.pts) || 10);
+  // Phase colors as it weakens: red → orange → gold.
+  const frac = boss.hp / boss.maxHp;
+  boss.mat.color.setHex(frac > 0.6 ? 0xff2d55 : frac > 0.3 ? 0xff8a00 : 0xffcf3f);
+  updateBossHud();
+  if (boss.hp <= 0) defeatBoss();
+}
+
+function defeatBoss() {
+  if (!boss) return;
+  Sound.sfx.bossdie();
+  submitScore();
+  const pos = boss.mesh.position.clone();
+  scene.remove(boss.mesh);
+  boss = null; level3Active = false;
+  // Big pop: confetti storm + crowd cheer.
+  for (let k = 0; k < 10; k++) spawnConfetti(pos.clone().add(new THREE.Vector3((Math.random()-0.5)*4, (Math.random()-0.5)*4, (Math.random()-0.5)*4)), 26, 0.35);
+  cheerCrowd(); flashScreen(0xffd200, 0.4);
+  addScore(500);
+  LunaAnalytics.track('level3_win', {});
+  updateBossHud();
+  showBigMessage('👑 BOSS DEFEATED!', 'You popped the Big Top Boss and won +500! You are the Zebra Circus champion. 🎉',
+    () => { currentLevel = 1; updateLevelHud(); });
+}
+
+function tickLevel3() {
+  if (!level3Active || !boss) return;
+  const t = performance.now();
+  const frac = boss.hp / boss.maxHp;
+  const spd = 1 + (1 - frac) * 2.2; // angrier = faster as HP drops
+  const p = boss.mesh.position;
+  p.x += boss.vel.x * spd; p.z += boss.vel.z * spd;
+  p.y = 7.5 + Math.sin(t * 0.002) * 1.6;
+  const r = Math.sqrt(p.x*p.x + p.z*p.z);
+  if (r > 14) { const nx = p.x/r, nz = p.z/r, dot = boss.vel.x*nx + boss.vel.z*nz; boss.vel.x -= 2*dot*nx; boss.vel.z -= 2*dot*nz; }
+  // Keep the barcode tag facing the player.
+  const tag = boss.mesh.userData.tag;
+  if (tag) { const d = new THREE.Vector3().subVectors(camera.position, p).normalize(); tag.position.set(d.x*1.75, 0.1 + d.y*1.75, d.z*1.75); tag.lookAt(camera.position); }
+  // Periodically spawn a few fast "minion" balloons for extra chaos.
+  if (t >= boss.spawnAt) {
+    boss.spawnAt = t + 5000;
+    balloons.filter(b => !b.alive).slice(0, 4).forEach(b => { respawnBalloon(b); b.vel = new THREE.Vector3((Math.random()-0.5)*0.12,(Math.random()-0.5)*0.06,(Math.random()-0.5)*0.12); b.mesh.scale.setScalar(0.7); });
+  }
+  updateBossHud();
+}
+
+function updateBossHud() {
+  let el = document.getElementById('__boss');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = '__boss';
+    el.style.cssText = 'position:fixed;top:44px;left:50%;transform:translateX(-50%);z-index:929;'
+      + 'pointer-events:none;width:340px;max-width:70vw;text-align:center;font-family:"Barlow Condensed",sans-serif;';
+    el.innerHTML = '<div style="font-weight:800;letter-spacing:2px;color:#ff2d55;font-size:14px;margin-bottom:3px">👑 BIG TOP BOSS</div>'
+      + '<div style="height:14px;background:rgba(5,5,15,0.8);border:1px solid #ff2d55"><div id="__bosshp" style="height:100%;width:100%;background:linear-gradient(90deg,#ff2d55,#ffcf3f)"></div></div>';
+    document.body.appendChild(el);
+  }
+  if (!level3Active || !boss) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  document.getElementById('__bosshp').style.width = Math.max(0, (boss.hp / boss.maxHp) * 100) + '%';
+}
+
+// Generic centered result banner with a single button.
+function showBigMessage(title, sub, onClose) {
+  let el = document.getElementById('__bigmsg');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = '__bigmsg';
+    el.style.cssText = 'position:fixed;inset:0;z-index:1250;display:flex;align-items:center;justify-content:center;'
+      + 'background:rgba(5,5,15,0.85);font-family:"Barlow Condensed",sans-serif;';
+    document.body.appendChild(el);
+  }
+  if (document.pointerLockElement) document.exitPointerLock();
+  el.innerHTML = '<div style="background:#0b0b16;border:2px solid #ffd200;border-top:6px solid #ffd200;max-width:440px;'
+    + 'padding:28px 30px;text-align:center;color:#fff">'
+    + '<div style="font-size:30px;font-weight:800;letter-spacing:2px;color:#ffd200">' + title + '</div>'
+    + '<div style="font-family:\'Source Sans 3\',sans-serif;font-size:14px;color:#cdd3ea;margin:10px 0 18px;line-height:1.5">' + sub + '</div>'
+    + '<button id="__bigmsg-btn" style="width:100%;background:#ff6a00;color:#fff;border:none;padding:12px;'
+    + 'font-family:\'Barlow Condensed\',sans-serif;font-weight:800;font-size:16px;letter-spacing:2px;cursor:pointer">CONTINUE</button></div>';
+  el.style.display = 'flex';
+  document.getElementById('__bigmsg-btn').onclick = () => { el.style.display = 'none'; if (onClose) onClose(); };
 }
 
 // Procedural idle animation for the static Meshy spectators: a gentle seated
@@ -3994,14 +4563,19 @@ function makeZebraSign(parent) {
     ctx.strokeRect(14, 14, W - 28, H - 28);
     // "ZEBRA" wordmark on top.
     ctx.fillStyle = ZBLACK;
-    ctx.font = '900 150px Arial, sans-serif';
+    ctx.font = '900 140px Arial, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('ZEBRA', W / 2, 130);
+    ctx.fillText('ZEBRA', W / 2, 118);
+    // "TECHNOLOGIES" underneath, letter-spaced like the real wordmark.
+    ctx.font = '700 44px Arial, sans-serif';
+    try { ctx.letterSpacing = '14px'; } catch (_) {}
+    ctx.fillText('TECHNOLOGIES', W / 2 + 7, 190);
+    try { ctx.letterSpacing = '0px'; } catch (_) {}
     // Logo below the wordmark (recolored: green tile -> black, keep white head).
     if (logoImg) {
-      const s = 250;
-      ctx.drawImage(logoImg, (W - s) / 2, 210, s, s);
+      const s = 230;
+      ctx.drawImage(logoImg, (W - s) / 2, 245, s, s);
     }
     t.needsUpdate = true;
   }
@@ -4038,6 +4612,31 @@ function makeZebraSign(parent) {
   );
   mesh.position.set(0, 6, -17);
   parent.add(mesh);
+
+  makeLunaSign(parent);
+}
+
+// LUNA GROUP sponsor banner mounted just below/in front of the Zebra sign.
+function makeLunaSign(parent) {
+  const loader = new THREE.TextureLoader();
+  loader.load('images/luna-group.png', (tex) => {
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const aspect = (tex.image && tex.image.width && tex.image.height) ? tex.image.width / tex.image.height : 2.75;
+    const w = 6.0, h = w / aspect;
+    // White plaque backing so the logo reads against the dark tent wall.
+    const plaque = new THREE.Mesh(
+      new THREE.PlaneGeometry(w + 0.5, h + 0.5),
+      new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide })
+    );
+    plaque.position.set(0, 11.6, -16.6); // higher up, above the Zebra banner
+    parent.add(plaque);
+    const logo = new THREE.Mesh(
+      new THREE.PlaneGeometry(w, h),
+      new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide })
+    );
+    logo.position.set(0, 11.6, -16.58); // slightly in front of the plaque
+    parent.add(logo);
+  }, undefined, () => { /* logo missing: skip */ });
 }
 
 function buildBleachers() {
@@ -4475,12 +5074,28 @@ function makeBarcodeTexture(type, seed) {
 function makeBalloon(index) {
   // Match the editor asset cycle so a balloon keeps the same authored colour
   // in runtime, Studio, reloads, and deterministic visual tests.
-  const color = BAL_COLORS[index % BAL_COLORS.length];
+  const golden = Math.random() < 0.12; // rare bonus balloon worth 5x
+  const powerKey = (!golden && Math.random() < 0.08) ? POWERUP_KEYS[(Math.random()*POWERUP_KEYS.length)|0] : null;
+  const color = powerKey ? POWERUPS[powerKey].color : (golden ? 0xffcf3f : BAL_COLORS[index % BAL_COLORS.length]);
   const g = new THREE.Group();
+  g.userData.golden = golden;
+  g.userData.power = powerKey;
   g.userData.visualSource = `balloon:${index}:${BARCODE_TYPES[index % BARCODE_TYPES.length]}`;
-  const bMat = new THREE.MeshPhongMaterial({ color, shininess:120, specular:0xffffff });
+  const bMat = (golden || powerKey)
+    ? new THREE.MeshPhongMaterial({ color, shininess:200, specular:0xffffff, emissive:color, emissiveIntensity:golden?0.5:0.6 })
+    : new THREE.MeshPhongMaterial({ color, shininess:120, specular:0xffffff });
   const balloon = new THREE.Mesh(new THREE.SphereGeometry(0.38,16,16), bMat);
   balloon.scale.y = 1.28; g.add(balloon);
+  if (powerKey) {
+    // Emoji icon so the power-up balloon reads at a glance.
+    const ic = document.createElement('canvas'); ic.width = ic.height = 64;
+    const ix = ic.getContext('2d'); ix.font = '48px sans-serif'; ix.textAlign = 'center'; ix.textBaseline = 'middle';
+    ix.fillText(POWERUPS[powerKey].icon, 32, 36);
+    const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(ic), transparent: true }));
+    spr.scale.set(0.4, 0.4, 0.4); spr.position.set(0, 0.15, 0);
+    spr.raycast = function () {}; // sprites need a camera on the raycaster; shots use a camera-less ray → skip
+    g.add(spr);
+  }
   const knot = new THREE.Mesh(new THREE.SphereGeometry(0.055,6,6), new THREE.MeshPhongMaterial({color}));
   knot.position.y=-0.49; g.add(knot);
   const str = new THREE.Mesh(new THREE.CylinderGeometry(0.008,0.008,1.4,4), new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.6}));
@@ -4554,6 +5169,7 @@ function popBalloon(bo, weapon) {
   // Celebration: confetti + crowd cheer + pop-chain combo bonus.
   spawnConfetti(pos, 12);
   cheerCrowd();
+  Sound.sfx.pop();
   const nowMs = performance.now();
   comboCount = (nowMs < comboExpireAt) ? comboCount + 1 : 1;
   comboExpireAt = nowMs + 2500;
@@ -4561,10 +5177,38 @@ function popBalloon(bo, weapon) {
     const bonus = Math.min(comboCount, 10) * 5;
     addScore(bonus);
     showComboText(comboCount, bonus);
+    Sound.sfx.combo(comboCount);
+  }
+  // Bonus round: a 6+ combo ignites GOLDEN RUSH — every balloon pays 5x for 12s.
+  if (comboCount === 6 && performance.now() >= goldenRushUntil) {
+    goldenRushUntil = performance.now() + 12000;
+    flashScreen(0xffd200, 0.35); cheerCrowd(); Sound.sfx.golden();
+    showPrompt('✨✨ GOLDEN RUSH! Everything pays 5× — pop fast! ✨✨', 3500);
+    addKillFeed('✨ GOLDEN RUSH activated!');
+  }
+
+  // Golden balloon bonus (or during Golden Rush): 5x points + extra sparkle.
+  if (bo.mesh.userData.golden || performance.now() < goldenRushUntil) {
+    const gb = weapon.pts * 4;
+    addScore(gb);
+    spawnConfetti(pos, 22, 0.28);
+    showFloatingScore(gb);
+    addKillFeed('★ GOLDEN BALLOON +' + gb + '!');
+    Sound.sfx.golden();
+  }
+
+  // Power-up balloon: grant its effect.
+  if (bo.mesh.userData.power) { activatePowerup(bo.mesh.userData.power, pos); }
+
+  // Level 2 "Balloon Frenzy" scoring + fast respawn.
+  if (level2Active) {
+    level2Score += 1;
+    updateLevelHud();
   }
 
   // In multiplayer the room owns the shared balloon pool and its respawns.
-  setTimeout(() => { if(gameActive && !(MP.enabled && MP.connected())) respawnBalloon(bo); }, 3500+Math.random()*2000);
+  const respawnMs = level2Active ? (700 + Math.random() * 700) : (3500 + Math.random() * 2000);
+  setTimeout(() => { if(gameActive && !(MP.enabled && MP.connected())) respawnBalloon(bo); }, respawnMs);
 }
 
 // Green "+" targeting reticle with corner brackets — like a barcode scanner locking on.
@@ -5004,8 +5648,10 @@ function shoot() {
   if (currentWeapon<0) { showPrompt('Press E near a weapon to pick it up!',1800); return; }
   const w = WEAPONS[currentWeapon];
   const now = Date.now();
-  if (now-lastShot < w.fireRate) return;
+  const rate = (performance.now() < fireRapidUntil) ? w.fireRate * 0.4 : w.fireRate;
+  if (now-lastShot < rate) return;
   lastShot = now;
+  Sound.sfx.shoot();
 
   // Kick animation
   if (heldMesh) {
@@ -5159,6 +5805,12 @@ function explodeCryo(pos, w) {
 
 function rayHit(origin, dir, w) {
   const ray = new THREE.Raycaster(origin, dir, 0, 50);
+
+  // Boss hit (Level 3) — takes priority; shooting the boss damages it.
+  if (level3Active && boss && boss.mesh) {
+    const bossHits = ray.intersectObject(boss.mesh, true);
+    if (bossHits.length > 0) { damageBoss(w); return; }
+  }
 
   // Balloon hits
   const bMeshes = balloons.filter(b=>b.alive).map(b=>b.mesh);
@@ -5317,17 +5969,35 @@ const SHOP_ITEMS = {
   terminal: { cost: 10000, label: 'ZEBRA TERMINAL (REAL DEVICE)', prefix: 'ZC-TERM' },
 };
 const PLUSH_GOAL = 200;
-// Where players go to claim their real Zebra plushie. TODO: point this at the
-// real Zebra store / plush-claim page when available.
+// Two real prizes, each won at a balloon goal, each claimed via the ZD421
+// machine (its own voucher + shipping address).
+const PRIZES = {
+  plush:    { key: 'plush',    goal: 5000,  label: 'Zebra Plushie',       emoji: '🦓' },
+  terminal: { key: 'terminal', goal: 10000, label: 'Zebra Hand Terminal', emoji: '📟' },
+};
 const ZEBRA_PLUSH_URL = 'https://www.zebra.com';
-const wallet = { earned: 0, spent: 0, codes: [], plushAwarded: false };
+const wallet = { earned: 0, spent: 0, codes: [], prizes: {}, plushAwarded: false, coupon: null, claimed: false };
+for (const k of Object.keys(PRIZES)) wallet.prizes[k] = { won: false, coupon: null, claimed: false };
 try {
   const stored = JSON.parse(localStorage.getItem('zebraBalloonWallet') || '{}');
   if (Number.isFinite(stored.earned)) wallet.earned = Math.max(0, Math.floor(stored.earned));
   if (Number.isFinite(stored.spent)) wallet.spent = Math.max(0, Math.floor(stored.spent));
   if (Array.isArray(stored.codes)) wallet.codes = stored.codes.slice(0, 40);
-  wallet.plushAwarded = !!stored.plushAwarded;
+  if (stored.prizes) for (const k of Object.keys(PRIZES)) if (stored.prizes[k]) wallet.prizes[k] = stored.prizes[k];
+  // Back-compat with the earlier single-plush fields.
+  if (stored.plushAwarded && !wallet.prizes.plush.won) { wallet.prizes.plush.won = true; wallet.prizes.plush.coupon = stored.coupon || null; wallet.prizes.plush.claimed = !!stored.claimed; }
+  wallet.plushAwarded = wallet.prizes.plush.won;
+  wallet.coupon = wallet.prizes.plush.coupon;
 } catch (err) {}
+
+// A winning voucher code that verifies the physical-prize claim.
+function makeCoupon() {
+  const abc = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  const b = new Uint8Array(8);
+  (crypto.getRandomValues ? crypto.getRandomValues(b) : b.map(() => Math.floor(Math.random() * 255)));
+  let s = ''; b.forEach((v) => { s += abc[v % abc.length]; });
+  return 'ZC-WIN-' + s.slice(0, 4) + '-' + s.slice(4);
+}
 
 function walletBalance() { return Math.max(0, wallet.earned - wallet.spent); }
 function saveWallet() {
@@ -5335,25 +6005,32 @@ function saveWallet() {
 }
 function earnBalloon() {
   wallet.earned += 1;
-  // Auto-award the Zebra plushie the moment 200 balloons are reached — no
-  // points exchange, no redemption code.
-  if (wallet.earned >= PLUSH_GOAL && !wallet.plushAwarded) {
-    wallet.plushAwarded = true;
-    awardZebraPlushie();
+  for (const p of Object.values(PRIZES)) {
+    if (wallet.earned >= p.goal && !wallet.prizes[p.key].won) awardPrize(p.key);
   }
   saveWallet();
   refreshWalletUi();
 }
 
-function awardZebraPlushie() {
-  LunaAnalytics.track('plushie_awarded', {});
+// Award a prize: generate its voucher, celebrate, and (for the plush) drop the
+// inventory item. The player then claims it in Pause → the ZD421 machine.
+function awardPrize(key) {
+  const p = PRIZES[key];
+  const rec = wallet.prizes[key];
+  if (rec.won) return;
+  Sound.sfx.win();
+  rec.won = true;
+  if (!rec.coupon) rec.coupon = makeCoupon();
+  if (key === 'plush') { wallet.plushAwarded = true; wallet.coupon = rec.coupon; markPlushieSlot(); }
+  LunaAnalytics.track('prize_won', { prize: p.label });
   cheerCrowd();
-  // Small celebratory confetti near the player (no big overlay/trophy).
   spawnConfetti(camera.position.clone().add(new THREE.Vector3(0, 0.5, -2)), 24, 0.25);
-  markPlushieSlot();
-  showPrompt('🦓 ZEBRA PLUSHIE added to your inventory! Press 5 to hold · Claim online in Pause (P)', 5000);
-  addKillFeed('🦓 Zebra Plushie earned — added to inventory!');
+  showPrompt('🎉 YOU WON A ' + p.emoji + ' ' + p.label.toUpperCase() + '! Voucher ' + rec.coupon + ' — Pause (P) → CLAIM', 6500);
+  addKillFeed('🎉 ' + p.label + ' won! Voucher ' + rec.coupon);
+  saveWallet();
 }
+// Back-compat alias.
+function awardZebraPlushie() { awardPrize('plush'); }
 
 // Show the plushie inventory slot as owned.
 function markPlushieSlot() {
@@ -5399,24 +6076,38 @@ function refreshWalletUi() {
   const balance = walletBalance();
   document.getElementById('wallet-hud').textContent = balance;
   document.getElementById('wallet-balance').textContent = balance;
-  // Plush = auto-awarded: show progress or a claim link, never a manual redeem.
-  const plushBtn = document.getElementById('shop-buy-plush');
-  if (plushBtn) {
-    plushBtn.disabled = !wallet.plushAwarded;
-    plushBtn.textContent = wallet.plushAwarded ? 'CLAIM →' : `${Math.min(wallet.earned, PLUSH_GOAL)}/${PLUSH_GOAL}`;
+  const ps = document.getElementById('pause-score'); if (ps) ps.textContent = score;
+  const bb = document.getElementById('buy-balloons-btn');
+  const bbs = document.getElementById('buy-balloons-sub');
+  if (bb) {
+    if (score >= 1000) { bb.disabled = false; bb.textContent = 'BUY ▸ +50 🎈'; if (bbs) bbs.textContent = 'Spend 1000 points → +50 balloons in the bank.'; }
+    else { bb.disabled = true; bb.textContent = `NEED ${1000 - score}`; if (bbs) bbs.textContent = 'Reach 1000 points to convert into balloons.'; }
   }
-  for (const [key, item] of Object.entries(SHOP_ITEMS)) {
-    const button = document.getElementById('shop-buy-' + key);
-    if (!button.classList.contains('arm')) {
-      button.disabled = balance < item.cost;
-      button.textContent = balance >= item.cost ? 'REDEEM' : `NEED ${item.cost - balance} MORE`;
-    }
+  for (const p of Object.values(PRIZES)) {
+    const rec = wallet.prizes[p.key];
+    const btn = document.querySelector('.claim-prize-btn[data-prize="' + p.key + '"]');
+    const sub = document.getElementById('prize-sub-' + p.key);
+    if (!btn) continue;
+    if (rec.claimed) { btn.disabled = true; btn.textContent = 'CLAIMED ✓'; if (sub) sub.textContent = 'On its way! Voucher ' + (rec.coupon || ''); }
+    else if (rec.won) { btn.disabled = false; btn.textContent = '🎁 CLAIM'; if (sub) sub.textContent = 'You won! Voucher ' + (rec.coupon || '') + ' — click to enter your address.'; }
+    else { btn.disabled = true; btn.textContent = `${Math.min(wallet.earned, p.goal)}/${p.goal}`; if (sub) sub.textContent = 'Win a real ' + p.label.toLowerCase() + ' at ' + p.goal + ' balloons.'; }
   }
-  const codes = document.getElementById('wallet-codes');
-  codes.innerHTML = wallet.codes.length
-    ? wallet.codes.map((entry) => `<div class="code-row">${entry.label}: <b>${entry.code}</b></div>`).join('')
-      + '<div class="code-hint">Save or screenshot your codes — show them to the Zebra Circus team to claim your reward.</div>'
-    : '';
+  // Level 2 unlock button.
+  const l2 = document.getElementById('start-level2-btn');
+  const l2sub = document.getElementById('level2-sub');
+  if (l2) {
+    if (level2Active) { l2.disabled = true; l2.textContent = 'PLAYING'; if (l2sub) l2sub.textContent = 'Balloon Frenzy in progress!'; }
+    else if (level2Unlocked) { l2.disabled = false; l2.textContent = '▶ START'; if (l2sub) l2sub.textContent = 'Pop ' + LEVEL2_TARGET + ' fast-moving balloons in ' + LEVEL2_SECONDS + 's!'; }
+    else { l2.disabled = true; l2.textContent = 'LOCKED'; if (l2sub) l2sub.textContent = 'Reach 1000 points to unlock a fast, timed balloon challenge.'; }
+  }
+  // Level 3 unlock button.
+  const l3 = document.getElementById('start-level3-btn');
+  const l3sub = document.getElementById('level3-sub');
+  if (l3) {
+    if (level3Active) { l3.disabled = true; l3.textContent = 'FIGHTING'; if (l3sub) l3sub.textContent = 'Big Top Boss battle in progress!'; }
+    else if (level3Unlocked) { l3.disabled = false; l3.textContent = '▶ START'; if (l3sub) l3sub.textContent = 'Shoot the giant boss ' + BOSS_HP + ' times to defeat it!'; }
+    else { l3.disabled = true; l3.textContent = 'LOCKED'; if (l3sub) l3sub.textContent = 'Clear Level 2 to unlock a giant balloon boss battle.'; }
+  }
 }
 function armThenRedeem(key) {
   const item = SHOP_ITEMS[key];
@@ -5458,11 +6149,196 @@ function closePause() {
 document.getElementById('pause-btn').addEventListener('click', openPause);
 document.getElementById('pause-btn').addEventListener('mousedown', (event) => { event.stopPropagation(); });
 document.getElementById('resume-btn').addEventListener('click', closePause);
-// Plush is auto-awarded at 200 balloons; its button just opens the claim link.
-document.getElementById('shop-buy-plush').addEventListener('click', () => {
-  if (wallet.plushAwarded) window.open(ZEBRA_PLUSH_URL, '_blank', 'noopener,noreferrer');
+document.getElementById('start-level2-btn').addEventListener('click', () => { if (level2Unlocked && !level2Active) startLevel2(); });
+document.getElementById('start-level3-btn').addEventListener('click', () => { if (level3Unlocked && !level3Active) startLevel3(); });
+
+// Buy +50 balloons for 1000 points — convert score into balloon-bank progress.
+const BUY_COST = 1000, BUY_AMOUNT = 50;
+function buyBalloons() {
+  if (score < BUY_COST) return;
+  addScore(-BUY_COST);                 // spend points (updates score box)
+  for (let i = 0; i < BUY_AMOUNT; i++) earnBalloon(); // +50 balloons, with prize checks
+  addKillFeed('🎈 Bought +' + BUY_AMOUNT + ' balloons for ' + BUY_COST + ' pts!');
+  refreshWalletUi();
+}
+document.getElementById('buy-balloons-btn').addEventListener('click', buyBalloons);
+
+// ── Leaderboard ───────────────────────────────────────────────────────────
+let lastSubmittedScore = 0;
+function submitScore() {
+  if (score <= 0 || score <= lastSubmittedScore) return;
+  lastSubmittedScore = score;
+  const p = window.__zebraPlayer || {};
+  const name = ((p.firstName || '') + ' ' + (p.lastName || '')).trim() || 'Player';
+  fetch('/api/leaderboard', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, email: p.email || '', score, level: currentLevel }),
+  }).catch(() => {});
+}
+function openLeaderboard() {
+  Sound.sfx.click();
+  submitScore(); // record current run before showing the board
+  const list = document.getElementById('lb-list');
+  list.innerHTML = '<div class="lb-loading">Loading…</div>';
+  document.getElementById('leaderboard-overlay').style.display = 'flex';
+  const p = window.__zebraPlayer || {};
+  const myName = ((p.firstName || '') + ' ' + (p.lastName || '')).trim();
+  fetch('/api/leaderboard?format=json').then(r => r.json()).then(d => {
+    const rows = (d.leaderboard || []);
+    if (!rows.length) { list.innerHTML = '<div class="lb-empty">No scores yet — be the first!</div>'; return; }
+    list.innerHTML = '<table><tbody>' + rows.map((r, i) =>
+      `<tr class="${r.name === myName ? 'me' : ''}"><td>${i + 1}</td><td>${(r.name || '').replace(/[<>&]/g,'')}</td>`
+      + `<td style="text-align:right;font-family:Space Mono,monospace">${r.score}</td><td style="color:#8090b0">L${r.level}</td></tr>`).join('')
+      + '</tbody></table>';
+  }).catch(() => { list.innerHTML = '<div class="lb-empty">Leaderboard unavailable offline.</div>'; });
+}
+function closeLeaderboard() { document.getElementById('leaderboard-overlay').style.display = 'none'; }
+document.getElementById('open-leaderboard-btn').addEventListener('click', openLeaderboard);
+document.getElementById('lb-close').addEventListener('click', closeLeaderboard);
+document.getElementById('lb-back').addEventListener('click', closeLeaderboard);
+document.getElementById('leaderboard-overlay').addEventListener('mousedown', (e) => e.stopPropagation());
+// ── Prize claim machine (ZD421) ──────────────────────────────────────────
+let activePrizeKey = 'plush';
+function openPrizeMachine(key) {
+  const rec = wallet.prizes[key];
+  if (!rec || !rec.won || rec.claimed) return;
+  activePrizeKey = key;
+  const p = PRIZES[key];
+  if (!rec.coupon) rec.coupon = makeCoupon();
+  document.getElementById('pm-coupon').textContent = rec.coupon;
+  const sel = document.getElementById('pm-prize');
+  sel.value = p.label; sel.disabled = true; // prize is fixed to the one you won
+  document.getElementById('prize-form').style.display = 'flex';
+  document.getElementById('pm-done').style.display = 'none';
+  const pl = window.__zebraPlayer;
+  if (pl && !document.getElementById('pm-name').value) {
+    document.getElementById('pm-name').value = ((pl.firstName || '') + ' ' + (pl.lastName || '')).trim();
+  }
+  document.getElementById('prize-overlay').style.display = 'flex';
+  startPrinterScene(rec.coupon); // 3D ZD421 prints the voucher
+  LunaAnalytics.track('prize_machine_opened', { prize: p.label });
+}
+function closePrizeMachine() {
+  document.getElementById('prize-overlay').style.display = 'none';
+  stopPrinterScene();
+}
+
+document.querySelectorAll('.claim-prize-btn').forEach((b) =>
+  b.addEventListener('click', () => openPrizeMachine(b.getAttribute('data-prize'))));
+document.getElementById('prize-close').addEventListener('click', closePrizeMachine);
+document.getElementById('pm-done-close').addEventListener('click', closePrizeMachine);
+document.getElementById('prize-overlay').addEventListener('mousedown', (e) => { e.stopPropagation(); });
+
+document.getElementById('prize-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const g = (id) => document.getElementById(id).value.trim();
+  const rec = wallet.prizes[activePrizeKey];
+  const claim = {
+    coupon: rec.coupon,
+    prize: PRIZES[activePrizeKey].label,
+    fullName: g('pm-name'), address: g('pm-addr'), city: g('pm-city'),
+    postcode: g('pm-post'), country: g('pm-country'),
+    email: (window.__zebraPlayer && window.__zebraPlayer.email) || '',
+  };
+  const err = document.getElementById('pm-error');
+  if (!claim.fullName || !claim.address || !claim.city || !claim.postcode || !claim.country) {
+    err.textContent = 'Please fill in all address fields.'; return;
+  }
+  err.textContent = '';
+  const btn = document.getElementById('pm-submit');
+  btn.disabled = true; btn.textContent = 'SHIPPING…';
+  try {
+    await fetch('/api/claim', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(claim) });
+  } catch (_) { /* best-effort */ }
+  rec.claimed = true; saveWallet(); refreshWalletUi();
+  LunaAnalytics.track('prize_claimed', { prize: claim.prize });
+  btn.disabled = false; btn.textContent = 'SHIP MY PRIZE →';
+  document.getElementById('prize-form').style.display = 'none';
+  document.getElementById('pm-done-sub').innerHTML =
+    'Your <b>' + claim.prize + '</b> will ship to:<br>' + claim.address + ', ' + claim.city + ' ' + claim.postcode + ', ' + claim.country
+    + '<br><br>Voucher <b>' + claim.coupon + '</b>';
+  document.getElementById('pm-done').style.display = 'block';
 });
-document.getElementById('shop-buy-terminal').addEventListener('click', () => armThenRedeem('terminal'));
+
+// ── 3D ZD421 printer that prints the voucher inside the modal ─────────────
+let printerAnim = null;
+function startPrinterScene(coupon) {
+  stopPrinterScene();
+  const host = document.getElementById('pm-printer3d');
+  if (!host || typeof THREE === 'undefined') return;
+  host.innerHTML = '';
+  const W = host.clientWidth || 400, H = host.clientHeight || 220;
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setSize(W, H); renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+  host.appendChild(renderer.domElement);
+  const scene = new THREE.Scene();
+  const cam = new THREE.PerspectiveCamera(34, W / H, 0.01, 100);
+  cam.position.set(0.34, 0.30, 1.05);
+  cam.lookAt(0, -0.05, 0);
+  scene.add(new THREE.AmbientLight(0xffffff, 1.1));
+  const dl = new THREE.DirectionalLight(0xffffff, 1.0); dl.position.set(1, 2, 2); scene.add(dl);
+  const dl2 = new THREE.DirectionalLight(0xffd200, 0.4); dl2.position.set(-1, 0.5, 1); scene.add(dl2);
+
+  // Voucher slip (coupon on paper) that scrolls out of the front slot.
+  const vc = document.createElement('canvas'); vc.width = 320; vc.height = 150;
+  const x = vc.getContext('2d');
+  x.fillStyle = '#fff'; x.fillRect(0, 0, 320, 150);
+  x.strokeStyle = '#111'; x.lineWidth = 5; x.strokeRect(5, 5, 310, 140);
+  x.fillStyle = '#111'; x.font = 'bold 24px Arial'; x.textAlign = 'center';
+  x.fillText('ZEBRA WINNER', 160, 42);
+  x.font = 'bold 26px monospace'; x.fillText(coupon, 160, 88);
+  x.font = '15px Arial'; x.fillText('★ Prize Voucher ★', 160, 122);
+  const voucherTex = new THREE.CanvasTexture(vc);
+  const voucher = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.42, 0.2),
+    new THREE.MeshBasicMaterial({ map: voucherTex, side: THREE.DoubleSide, transparent: true })
+  );
+  voucher.visible = false; scene.add(voucher);
+  let slotY = -0.1, slotZ = 0.3; // updated once the printer loads
+
+  const holder = new THREE.Group(); scene.add(holder);
+  new THREE.GLTFLoader().load('models/props/zd421-printer.glb', (g) => {
+    const m = g.scene;
+    const box = new THREE.Box3().setFromObject(m);
+    const size = box.getSize(new THREE.Vector3());
+    const md = Math.max(size.x, size.y, size.z) || 1;
+    m.scale.setScalar(0.55 / md);
+    const b2 = new THREE.Box3().setFromObject(m);
+    m.position.sub(b2.getCenter(new THREE.Vector3()));
+    holder.add(m);
+    const front = new THREE.Box3().setFromObject(holder);
+    slotY = front.min.y + 0.06; slotZ = front.max.z + 0.03;
+    voucher.position.set(0, slotY, slotZ);
+  }, undefined, () => {});
+
+  const state = { raf: 0, renderer, host, running: true };
+  const t0 = performance.now();
+  function frame() {
+    if (!state.running) return;
+    const t = (performance.now() - t0) / 1000;
+    holder.rotation.y = 0.45 + Math.sin(t * 0.4) * 0.18;
+    // Print: after 0.8s the voucher scrolls out and down over ~1.6s.
+    if (t > 0.8) {
+      voucher.visible = true;
+      const k = Math.min(1, (t - 0.8) / 1.6);
+      voucher.position.set(0, slotY - k * 0.22, slotZ + k * 0.05);
+      voucher.scale.set(1, 0.15 + 0.85 * k, 1);
+    }
+    renderer.render(scene, cam);
+    state.raf = requestAnimationFrame(frame);
+  }
+  state.raf = requestAnimationFrame(frame);
+  printerAnim = state;
+}
+function stopPrinterScene() {
+  if (!printerAnim) return;
+  printerAnim.running = false;
+  try { cancelAnimationFrame(printerAnim.raf); } catch (_) {}
+  try { printerAnim.renderer.dispose(); } catch (_) {}
+  try { if (printerAnim.host) printerAnim.host.innerHTML = ''; } catch (_) {}
+  printerAnim = null;
+}
+
 document.getElementById('pause-overlay').addEventListener('mousedown', (event) => { event.stopPropagation(); });
 refreshWalletUi();
 
@@ -5474,6 +6350,7 @@ function addScore(pts) {
   document.getElementById('score-value').textContent = score;
   document.getElementById('progress-fill').style.width = Math.min(100,score/WIN_SCORE*100)+'%';
   if(score>=WIN_SCORE && !milestoneShown) { milestoneShown=true; setTimeout(showMilestone,600); }
+  if(score>=WIN_SCORE && !level2Unlocked) unlockLevel2(); // clear L1 → unlock L2
 }
 
 function showMilestone() {
@@ -5539,10 +6416,13 @@ function animate() {
 
 function updateGame(delta, t) {
 
-  // Ambient motion stays frozen until gameplay begins so the Studio's
-  // same-camera Edit/Play parity holds (matches the weapon-bob gating below).
+  // Ambient motion AND gameplay ticks stay frozen until gameplay begins so the
+  // Studio's same-camera Edit/Play parity holds (matches the weapon-bob gating).
   if (gameActive) {
     animateSpectators(t);
+    tickLevel2();
+    tickLevel3();
+    updatePowerupHud();
     for (const s of circusSpotlights) {
       const a = t * s.speed + s.phase;
       s.light.target.position.set(Math.cos(a) * s.radius, 0, Math.sin(a) * s.radius);
@@ -5579,9 +6459,24 @@ function updateGame(delta, t) {
 
   if (gameActive) balloons.forEach(b=>{
     if(!b.alive) return;
-    b.mesh.position.y += Math.sin(t*b.spd+b.bob)*0.003;
-    b.mesh.position.x += Math.cos(t*0.18+b.da)*0.003;
-    b.mesh.position.z += Math.sin(t*0.18+b.da)*0.003;
+    const slowF = (performance.now() < balloonSlowUntil) ? 0.35 : 1;
+    if ((level2Active || level3Active) && b.vel) {
+      // Frenzy/minions: balloons zip around and bounce off the arena walls/floor/roof.
+      const p = b.mesh.position;
+      p.x += b.vel.x * slowF; p.y += b.vel.y * slowF; p.z += b.vel.z * slowF;
+      const r = Math.sqrt(p.x*p.x + p.z*p.z);
+      if (r > 20) { // reflect off the outer wall
+        const nx = p.x / r, nz = p.z / r;
+        const dot = b.vel.x*nx + b.vel.z*nz;
+        b.vel.x -= 2*dot*nx; b.vel.z -= 2*dot*nz;
+      }
+      if (p.y < 1.4) { p.y = 1.4; b.vel.y = Math.abs(b.vel.y); }
+      if (p.y > 12) { p.y = 12; b.vel.y = -Math.abs(b.vel.y); }
+    } else {
+      b.mesh.position.y += Math.sin(t*b.spd+b.bob)*0.003;
+      b.mesh.position.x += Math.cos(t*0.18+b.da)*0.003;
+      b.mesh.position.z += Math.sin(t*0.18+b.da)*0.003;
+    }
     const d=Math.sqrt(b.mesh.position.x**2+b.mesh.position.z**2);
     if(d>21){b.mesh.position.x*=0.99;b.mesh.position.z*=0.99;}
     // Keep the barcode tag on the camera-facing side, turned toward the player

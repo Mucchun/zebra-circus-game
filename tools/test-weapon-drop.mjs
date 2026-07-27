@@ -8,6 +8,7 @@ const check = (name, pass, detail = "") => results.push(`${pass ? "PASS" : "FAIL
 
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 900, height: 600 } });
+await page.addInitScript(() => localStorage.setItem("zebraPlayerRegistered", "1")); // skip lead-capture sign-in
 await page.goto("http://127.0.0.1:8765/?mp=0", { waitUntil: "domcontentloaded" });
 await page.click("#play-btn");
 await page.waitForSelector("#tut-go-btn", { state: "visible" });
