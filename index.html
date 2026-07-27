@@ -710,44 +710,11 @@ body { background: #000; overflow: hidden; font-family: 'Source Sans 3', 'Barlow
       <div class="sc-cost">10000 🎈</div>
       <button class="shop-btn claim-prize-btn" data-prize="terminal" type="button" disabled>LOCKED</button>
     </div>
-    <div class="shop-card" id="level2-card">
-      <div>
-        <div class="sc-name">⚡ LEVEL 2 — BALLOON FRENZY</div>
-        <div class="sc-sub" id="level2-sub">Reach 1000 points to unlock a fast, timed balloon challenge.</div>
-      </div>
-      <div class="sc-cost">🔥</div>
-      <button class="shop-btn" id="start-level2-btn" type="button" disabled>LOCKED</button>
-    </div>
-    <div class="shop-card" id="level3-card">
-      <div>
-        <div class="sc-name">👑 LEVEL 3 — BIG TOP BOSS</div>
-        <div class="sc-sub" id="level3-sub">Clear Level 2 to unlock a giant balloon boss battle.</div>
-      </div>
-      <div class="sc-cost">💥</div>
-      <button class="shop-btn" id="start-level3-btn" type="button" disabled>LOCKED</button>
-    </div>
-    <div class="shop-card" id="leaderboard-card">
-      <div>
-        <div class="sc-name">🏆 LEADERBOARD</div>
-        <div class="sc-sub">See the top players and where you rank.</div>
-      </div>
-      <div class="sc-cost">🏆</div>
-      <button class="shop-btn" id="open-leaderboard-btn" type="button">VIEW</button>
-    </div>
     <div id="wallet-codes"></div>
     <button id="resume-btn" type="button">RESUME</button>
   </div>
 </div>
 
-<div id="leaderboard-overlay" style="display:none;">
-  <div id="leaderboard-panel">
-    <button id="lb-close" type="button">✕</button>
-    <div class="lb-title">🏆 LEADERBOARD</div>
-    <div class="lb-sub" id="lb-sub">Top players in the Zebra Circus</div>
-    <div id="lb-list"><div class="lb-loading">Loading…</div></div>
-    <button class="btn btn-lg" id="lb-back" type="button">BACK</button>
-  </div>
-</div>
 
 <div id="prize-overlay" style="display:none;">
   <div id="prize-machine">
@@ -4015,18 +3982,19 @@ function updateLevelHud() {
 function unlockLevel2() {
   if (level2Unlocked) return;
   level2Unlocked = true;
-  showPrompt('⚡ LEVEL 2 UNLOCKED — BALLOON FRENZY! Open Pause (P) → START LEVEL 2', 6000);
-  addKillFeed('⚡ Level 2 unlocked — Balloon Frenzy!');
-  refreshWalletUi();
+  addKillFeed('⚡ Level 1 cleared — Balloon Frenzy incoming!');
+  showPrompt('⚡ LEVEL 1 CLEARED! Get ready for BALLOON FRENZY…', 2600);
+  flashScreen(0xff2d55, 0.3);
   updateLevelHud();
+  setTimeout(() => { if (gameActive && !level2Active) startLevel2(); }, 2600); // auto-advance
 }
 
 function startLevel2() {
   currentLevel = 2; level2Active = true; level2Score = 0;
   level2EndAt = performance.now() + LEVEL2_SECONDS * 1000;
-  // Give every balloon a fast random velocity + shrink it (harder target).
+  // Give every balloon a moving velocity + shrink it (harder target).
   balloons.forEach(b => {
-    b.vel = new THREE.Vector3((Math.random()-0.5)*0.14, (Math.random()-0.5)*0.08, (Math.random()-0.5)*0.14);
+    b.vel = new THREE.Vector3((Math.random()-0.5)*0.11, (Math.random()-0.5)*0.06, (Math.random()-0.5)*0.11);
     b.mesh.scale.setScalar(0.7);
     if (!b.alive) respawnBalloon(b);
   });
@@ -4051,10 +4019,11 @@ function endLevel2() {
   // Restore balloons to normal size + drift.
   balloons.forEach(b => { b.vel = null; b.mesh.scale.setScalar(1); });
   LunaAnalytics.track('level2_end', { popped: level2Score, won });
-  if (won) { for (let k=0;k<6;k++) spawnConfetti(new THREE.Vector3((Math.random()-0.5)*14,5+Math.random()*4,(Math.random()-0.5)*14),28,0.3); cheerCrowd(); if (!level3Unlocked) { level3Unlocked = true; addKillFeed('👑 Level 3 unlocked — Big Top Boss!'); } }
+  if (won) { for (let k=0;k<6;k++) spawnConfetti(new THREE.Vector3((Math.random()-0.5)*14,5+Math.random()*4,(Math.random()-0.5)*14),28,0.3); cheerCrowd(); }
+  level3Unlocked = true;
   showBigMessage(won ? '⚡ FRENZY CLEARED!' : '⏱ TIME! ' + level2Score + ' POPPED',
-    won ? 'You popped ' + level2Score + ' balloons! 👑 LEVEL 3 unlocked — face the Big Top Boss from the Pause menu.' : 'You popped ' + level2Score + ' of ' + LEVEL2_TARGET + '. Try again from Pause → Level 2.',
-    () => { currentLevel = 1; updateLevelHud(); refreshWalletUi(); });
+    won ? 'You popped ' + level2Score + ' balloons! 👑 Next up: the BIG TOP BOSS.' : 'You popped ' + level2Score + ' of ' + LEVEL2_TARGET + '. On to the BIG TOP BOSS!',
+    () => { updateLevelHud(); startLevel3(); }); // auto-advance to Level 3
 }
 
 // ── Level 3: Big Top Boss battle ──────────────────────────────────────────
@@ -4131,7 +4100,7 @@ function tickLevel3() {
   // Periodically spawn a few fast "minion" balloons for extra chaos.
   if (t >= boss.spawnAt) {
     boss.spawnAt = t + 5000;
-    balloons.filter(b => !b.alive).slice(0, 4).forEach(b => { respawnBalloon(b); b.vel = new THREE.Vector3((Math.random()-0.5)*0.12,(Math.random()-0.5)*0.06,(Math.random()-0.5)*0.12); b.mesh.scale.setScalar(0.7); });
+    balloons.filter(b => !b.alive).slice(0, 4).forEach(b => { respawnBalloon(b); b.vel = new THREE.Vector3((Math.random()-0.5)*0.1,(Math.random()-0.5)*0.05,(Math.random()-0.5)*0.1); b.mesh.scale.setScalar(0.7); });
   }
   updateBossHud();
 }
@@ -6092,22 +6061,6 @@ function refreshWalletUi() {
     else if (rec.won) { btn.disabled = false; btn.textContent = '🎁 CLAIM'; if (sub) sub.textContent = 'You won! Voucher ' + (rec.coupon || '') + ' — click to enter your address.'; }
     else { btn.disabled = true; btn.textContent = `${Math.min(wallet.earned, p.goal)}/${p.goal}`; if (sub) sub.textContent = 'Win a real ' + p.label.toLowerCase() + ' at ' + p.goal + ' balloons.'; }
   }
-  // Level 2 unlock button.
-  const l2 = document.getElementById('start-level2-btn');
-  const l2sub = document.getElementById('level2-sub');
-  if (l2) {
-    if (level2Active) { l2.disabled = true; l2.textContent = 'PLAYING'; if (l2sub) l2sub.textContent = 'Balloon Frenzy in progress!'; }
-    else if (level2Unlocked) { l2.disabled = false; l2.textContent = '▶ START'; if (l2sub) l2sub.textContent = 'Pop ' + LEVEL2_TARGET + ' fast-moving balloons in ' + LEVEL2_SECONDS + 's!'; }
-    else { l2.disabled = true; l2.textContent = 'LOCKED'; if (l2sub) l2sub.textContent = 'Reach 1000 points to unlock a fast, timed balloon challenge.'; }
-  }
-  // Level 3 unlock button.
-  const l3 = document.getElementById('start-level3-btn');
-  const l3sub = document.getElementById('level3-sub');
-  if (l3) {
-    if (level3Active) { l3.disabled = true; l3.textContent = 'FIGHTING'; if (l3sub) l3sub.textContent = 'Big Top Boss battle in progress!'; }
-    else if (level3Unlocked) { l3.disabled = false; l3.textContent = '▶ START'; if (l3sub) l3sub.textContent = 'Shoot the giant boss ' + BOSS_HP + ' times to defeat it!'; }
-    else { l3.disabled = true; l3.textContent = 'LOCKED'; if (l3sub) l3sub.textContent = 'Clear Level 2 to unlock a giant balloon boss battle.'; }
-  }
 }
 function armThenRedeem(key) {
   const item = SHOP_ITEMS[key];
@@ -6149,8 +6102,6 @@ function closePause() {
 document.getElementById('pause-btn').addEventListener('click', openPause);
 document.getElementById('pause-btn').addEventListener('mousedown', (event) => { event.stopPropagation(); });
 document.getElementById('resume-btn').addEventListener('click', closePause);
-document.getElementById('start-level2-btn').addEventListener('click', () => { if (level2Unlocked && !level2Active) startLevel2(); });
-document.getElementById('start-level3-btn').addEventListener('click', () => { if (level3Unlocked && !level3Active) startLevel3(); });
 
 // Buy +50 balloons for 1000 points — convert score into balloon-bank progress.
 const BUY_COST = 1000, BUY_AMOUNT = 50;
@@ -6175,28 +6126,7 @@ function submitScore() {
     body: JSON.stringify({ name, email: p.email || '', score, level: currentLevel }),
   }).catch(() => {});
 }
-function openLeaderboard() {
-  Sound.sfx.click();
-  submitScore(); // record current run before showing the board
-  const list = document.getElementById('lb-list');
-  list.innerHTML = '<div class="lb-loading">Loading…</div>';
-  document.getElementById('leaderboard-overlay').style.display = 'flex';
-  const p = window.__zebraPlayer || {};
-  const myName = ((p.firstName || '') + ' ' + (p.lastName || '')).trim();
-  fetch('/api/leaderboard?format=json').then(r => r.json()).then(d => {
-    const rows = (d.leaderboard || []);
-    if (!rows.length) { list.innerHTML = '<div class="lb-empty">No scores yet — be the first!</div>'; return; }
-    list.innerHTML = '<table><tbody>' + rows.map((r, i) =>
-      `<tr class="${r.name === myName ? 'me' : ''}"><td>${i + 1}</td><td>${(r.name || '').replace(/[<>&]/g,'')}</td>`
-      + `<td style="text-align:right;font-family:Space Mono,monospace">${r.score}</td><td style="color:#8090b0">L${r.level}</td></tr>`).join('')
-      + '</tbody></table>';
-  }).catch(() => { list.innerHTML = '<div class="lb-empty">Leaderboard unavailable offline.</div>'; });
-}
-function closeLeaderboard() { document.getElementById('leaderboard-overlay').style.display = 'none'; }
-document.getElementById('open-leaderboard-btn').addEventListener('click', openLeaderboard);
-document.getElementById('lb-close').addEventListener('click', closeLeaderboard);
-document.getElementById('lb-back').addEventListener('click', closeLeaderboard);
-document.getElementById('leaderboard-overlay').addEventListener('mousedown', (e) => e.stopPropagation());
+// (Leaderboard UI removed; scores still recorded silently via submitScore.)
 // ── Prize claim machine (ZD421) ──────────────────────────────────────────
 let activePrizeKey = 'plush';
 function openPrizeMachine(key) {
@@ -6349,8 +6279,7 @@ function addScore(pts) {
   score += pts;
   document.getElementById('score-value').textContent = score;
   document.getElementById('progress-fill').style.width = Math.min(100,score/WIN_SCORE*100)+'%';
-  if(score>=WIN_SCORE && !milestoneShown) { milestoneShown=true; setTimeout(showMilestone,600); }
-  if(score>=WIN_SCORE && !level2Unlocked) unlockLevel2(); // clear L1 → unlock L2
+  if(score>=WIN_SCORE && !level2Unlocked) { milestoneShown = true; unlockLevel2(); } // clear L1 → auto-advance to L2
 }
 
 function showMilestone() {
