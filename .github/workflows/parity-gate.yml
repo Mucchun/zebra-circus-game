@@ -1,0 +1,65 @@
+name: Zebra parity gate
+
+# Enforces the studio contracts documented in AGENTS.md / CONTRIBUTING.md.
+# Runs on every pull request to main (against the merge result) and on pushes
+# to main. A branch that breaks a contract fails here and must be fixed to
+# comply - do not force-push main or delete this gate to get around it.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: parity-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contracts:
+    name: Studio contracts + boot smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Check out the game (merge result for PRs)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Set up Node
+        uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a
+        with:
+          node-version: 20
+
+      - name: Install the gate's own Playwright (isolated from game deps)
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/gate
+          cp tests/ci-contracts.mjs /tmp/gate/ci-contracts.mjs
+          cd /tmp/gate
+          npm init -y >/dev/null 2>&1
+          npm install --no-audit --no-fund playwright@1.48.2
+          npx playwright install --with-deps chromium
+
+      - name: Serve the game
+        run: |
+          set -euo pipefail
+          python3 -m http.server 8765 --directory "$GITHUB_WORKSPACE" >/tmp/http.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -sf -o /dev/null http://127.0.0.1:8765/index.html; then echo "server up"; break; fi
+            sleep 1
+          done
+
+      - name: Run the parity gate
+        run: CI_GAME_URL=http://127.0.0.1:8765 node /tmp/gate/ci-contracts.mjs
+
+      - name: If the gate failed
+        if: failure()
+        run: |
+          echo "::error::Zebra parity gate failed. This branch breaks a studio contract."
+          echo "Read AGENTS.md and CONTRIBUTING.md in this repo and FIX YOUR BRANCH to comply."
+          echo "Do NOT force-push main, rewrite history, or remove this gate - that breaks the"
+          echo "shared editor and scene-sync pipeline for everyone. The four contracts and how"
+          echo "to satisfy each are listed in AGENTS.md."

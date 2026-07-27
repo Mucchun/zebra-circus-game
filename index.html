@@ -3106,6 +3106,7 @@ if (STUDIO_AUTHORING_MODE) {
       crowd: {
         seated: PROCEDURAL_CROWD_IDS.map((id) => runtimeObjectVisualFingerprint(id, editableObjects.get(id))).filter(Boolean),
         imported: GLTF_CROWD_IDS.map((id) => runtimeObjectVisualFingerprint(id, editableObjects.get(id))).filter(Boolean),
+        importedSources: GLTF_CROWD_IDS.map((id) => editableObjects.get(id)?.userData?.visualSource || null).filter(Boolean),
       },
     }),
     setCameraView: (view) => {
