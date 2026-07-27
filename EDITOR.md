@@ -1,6 +1,6 @@
 # Zebra scene editing
 
-`zebra-circus.scene.json` uses the stable `scene@0.14` document schema inside the focused Zebra editor v0.19.7. It contains 222 stable objects, 15 Box Colliders and 72 exact built-in GLB assets. The exact set includes four different product QR boards, 40 deterministic seated spectators, and the six original crowd models used across 28 imported spectators. Project uploads extend that immutable pack without rewriting it.
+`zebra-circus.scene.json` uses the stable `scene@0.14` document schema inside the focused Zebra editor v0.19.8. It contains 222 stable objects, 15 Box Colliders and 72 exact built-in GLB assets. The exact set includes four different product QR boards, 40 deterministic seated spectators, and the six original crowd models used across 28 imported spectators. Project uploads extend that immutable pack without rewriting it.
 
 ## Exact scene boundary
 
@@ -64,7 +64,7 @@ Game Port Studio is a separate private repository pinned by `game-port-studio.pr
 git clone https://github.com/Sparkah/game-port-studio.git
 git clone https://github.com/Mucchun/zebra-circus-game.git
 cd game-port-studio
-git checkout v0.19.7
+git checkout v0.19.8
 npm ci
 ```
 
