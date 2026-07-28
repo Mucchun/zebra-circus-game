@@ -3469,6 +3469,9 @@ const Sound = (() => {
       musicEl = new Audio('audio/zebra-tech.mp3');
       musicEl.loop = true;
       musicEl.volume = 0.35;
+      // Belt-and-suspenders: if `loop` doesn't fire (some cache/stream cases),
+      // restart from the top on end.
+      musicEl.addEventListener('ended', () => { musicEl.currentTime = 0; musicEl.play().catch(() => {}); });
     }
     musicEl.muted = muted;
     musicEl.play().catch(() => {}); // needs a user gesture; called from Play/Go
