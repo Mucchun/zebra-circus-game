@@ -1,5 +1,5 @@
 // Zebra Circus Blaster — service worker (offline + installability)
-const CACHE = 'zcb-v15-revert-scanner-facing';
+const CACHE = 'zcb-v16-mobile-touch';
 const CORE = [
   './',
   './index.html',
