@@ -4071,9 +4071,15 @@ function defeatBoss() {
   for (let k = 0; k < 10; k++) spawnConfetti(pos.clone().add(new THREE.Vector3((Math.random()-0.5)*4, (Math.random()-0.5)*4, (Math.random()-0.5)*4)), 26, 0.35);
   cheerCrowd(); flashScreen(0xffd200, 0.4);
   addScore(500);
+  // Reward +500 balloons to the bank (batched, then run prize-award checks once).
+  wallet.earned += 500;
+  for (const p of Object.values(PRIZES)) {
+    if (wallet.earned >= p.goal && !wallet.prizes[p.key].won) awardPrize(p.key);
+  }
+  saveWallet(); refreshWalletUi();
   LunaAnalytics.track('level3_win', {});
   updateBossHud();
-  showBigMessage('👑 BOSS DEFEATED!', 'You popped the Big Top Boss and won +500! You are the Zebra Circus champion. 🎉',
+  showBigMessage('👑 BOSS DEFEATED!', 'You popped the Big Top Boss — +500 points AND +500 balloons! You are the Zebra Circus champion. 🎉',
     () => { currentLevel = 1; updateLevelHud(); });
 }
 
