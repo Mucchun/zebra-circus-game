@@ -1,5 +1,5 @@
 // Zebra Circus Blaster — service worker (offline + installability)
-const CACHE = 'zcb-v7-music-loop';
+const CACHE = 'zcb-v8-level4-poligon';
 const CORE = [
   './',
   './index.html',

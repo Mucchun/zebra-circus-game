@@ -846,6 +846,24 @@ const WEAPONS = [
     specs: ['Android 10 OS','–30°C to +50°C Operation','IP65 & IP67 Rated','4.3" WVGA Display','Heated Screen Technology','Glove-Friendly Touch'],
     effectName: 'CRYO EXPLOSION', effectDesc: 'Launches a cryo-grenade that freezes and shatters all balloons in a large area!',
     effect: 'cryo', fireRate: 1100, projColor: 0x00bcd4, projSpeed: 0.7, pts: 20, spread: 0.04, count: 1, areaR: 4.5, shape: 'tablet'
+  },
+  {
+    id: 'DS3678', name: 'DS3678', fullName: 'Zebra DS3678 Ultra-Rugged Scanner',
+    color: 0x1a1a1a, accent: 0x8ac640, icon: '',
+    url: 'https://www.zebra.com/us/en/products/scanners/ultra-rugged-scanners/ds3600-series.html',
+    desc: 'Ultra-rugged cordless scanner that captures barcodes in the harshest conditions.',
+    specs: ['1D/2D Barcode Capture','IP65 & IP67 Rated','Bluetooth Cordless','6,500-lux Scanning','Withstands 8ft Drops','Long-Range Scanning'],
+    effectName: 'RANGE SCAN', effectDesc: 'A precise long-range scan beam — the poligon marksman weapon!',
+    effect: 'laser', fireRate: 350, projColor: 0x8ac640, projSpeed: 0, pts: 15, spread: 0, count: 1, areaR: 0.3, shape: 'brick'
+  },
+  {
+    id: 'DS2278', name: 'DS2278', fullName: 'Zebra DS2278 Handheld Scanner',
+    color: 0x101018, accent: 0x29b6f6, icon: '',
+    url: 'https://www.zebra.com/us/en/products/scanners/general-purpose-handheld-scanners/ds2278.html',
+    desc: 'Cordless 1D/2D handheld imager for everyday scanning tasks.',
+    specs: ['1D/2D Barcode Capture','Bluetooth Cordless','Lightweight Design','13-Hour Battery','Hands-Free Option','General Purpose'],
+    effectName: 'QUICK SCAN', effectDesc: 'Fast handheld scan pulses — rapid-fire range shooting!',
+    effect: 'rapid', fireRate: 140, projColor: 0x29b6f6, projSpeed: 1.2, pts: 10, spread: 0.02, count: 1, areaR: 0.1, shape: 'slim'
   }
 ];
 
@@ -885,6 +903,10 @@ const LEVEL2_TARGET = 60;                 // balloons to pop in the time limit
 let level3Unlocked = false, level3Active = false;
 let boss = null;                          // { mesh, hp, maxHp, vel, spawnAt }
 const BOSS_HP = 45;
+// Level 4 "Poligon" — a shooting-range level with the DS3678/DS2278 scanners.
+let level4Unlocked = false, level4Active = false;
+const L4_ROWS = [2.2, 4.0, 5.8];          // gallery row heights
+const L4_UNLOCK_BALLOONS = 1000;
 // ── Power-ups (dropped by special balloons) ──
 let fireRapidUntil = 0, balloonSlowUntil = 0, goldenRushUntil = 0;
 const POWERUPS = {
@@ -948,11 +970,15 @@ const ROTATION_LIMIT = 360000;
 const SCALE_MIN = 0.01;
 const SCALE_MAX = 1000;
 const COLLIDER_SIZE_MIN = 0.001;
+// Only the 4 arena products live in the world (scanners DS3678/DS2278 are
+// Level-4-only and equipped directly, so they never get scene layout objects).
+const ARENA_WEAPON_IDS = ['MC9400', 'MC3400', 'PS30', 'TC8300'];
+const ARENA_WEAPON_LIST = WEAPONS.filter((weapon) => ARENA_WEAPON_IDS.includes(weapon.id));
 const REQUIRED_LAYOUT_IDS = [
   'main-camera', 'arena-floor', 'arena-dirt-ring', 'arena-performance-ring',
   'arena-chalk-ring', 'tent',
-  ...WEAPONS.map((weapon) => `weapon-${weapon.id.toLowerCase()}`),
-  ...WEAPONS.map((weapon) => `qr-${weapon.id.toLowerCase()}`),
+  ...ARENA_WEAPON_LIST.map((weapon) => `weapon-${weapon.id.toLowerCase()}`),
+  ...ARENA_WEAPON_LIST.map((weapon) => `qr-${weapon.id.toLowerCase()}`),
   ...Array.from({ length: 4 }, (_, index) => `barrel-${index}`),
   'center-plinth',
   'arena-boundary-north', 'arena-boundary-south',
@@ -1052,8 +1078,11 @@ function makeEmbeddedSceneFallback() {
   const one = { x: 1, y: 1, z: 1 };
   const zero = { x: 0, y: 0, z: 0 };
   const weaponRadius = [5, 6.5, 8, 5];
-  const weaponObjects = WEAPONS.map((weapon, index) => {
-    const angle = index / WEAPONS.length * Math.PI * 2;
+  // Only the 4 arena device weapons get spawn pickups + QR boards. Scanners
+  // (DS3678/DS2278) are Level-4-only and equipped directly.
+  const ARENA_WEAPONS = ARENA_WEAPON_LIST;
+  const weaponObjects = ARENA_WEAPONS.map((weapon, index) => {
+    const angle = index / ARENA_WEAPONS.length * Math.PI * 2;
     return fallbackObject(
       `weapon-${weapon.id.toLowerCase()}`,
       { x: Math.cos(angle) * weaponRadius[index], y: 0.45, z: Math.sin(angle) * weaponRadius[index] },
@@ -1061,8 +1090,8 @@ function makeEmbeddedSceneFallback() {
       { x: 0, y: index * 90, z: 0 },
     );
   });
-  const qrObjects = WEAPONS.map((weapon, index) => {
-    const angle = index / WEAPONS.length * Math.PI * 2 + Math.PI * 0.18;
+  const qrObjects = ARENA_WEAPONS.map((weapon, index) => {
+    const angle = index / ARENA_WEAPONS.length * Math.PI * 2 + Math.PI * 0.18;
     const x = Math.cos(angle) * 9;
     const z = Math.sin(angle) * 9;
     return fallbackObject(
@@ -1685,13 +1714,17 @@ function postRuntimeBridge(message) {
 //  INIT
 // ═══════════════════════════════════════════════
 window.addEventListener('load', async () => {
-  const initialSceneDocument = await loadSceneDocument();
-  const previewGenerationBeforePrepare = runtimeScenePreviewGeneration;
-  await prepareSceneVisuals(initialSceneDocument);
-  if (runtimeScenePreviewGeneration !== previewGenerationBeforePrepare) await runtimeScenePreviewWork;
-  if (!liveEditorSceneApplied) applySceneDocument(initialSceneDocument, runtimeSceneSource);
-  else runtimeSceneSource = 'live-editor';
-  await loadDeviceModels();
+  try {
+    const initialSceneDocument = await loadSceneDocument();
+    const previewGenerationBeforePrepare = runtimeScenePreviewGeneration;
+    await prepareSceneVisuals(initialSceneDocument);
+    if (runtimeScenePreviewGeneration !== previewGenerationBeforePrepare) await runtimeScenePreviewWork;
+    if (!liveEditorSceneApplied) applySceneDocument(initialSceneDocument, runtimeSceneSource);
+    else runtimeSceneSource = 'live-editor';
+    await loadDeviceModels();
+  } catch (e) {
+    console.error('load failed', e); // don't hang the loading screen on error
+  }
   document.getElementById('loading-screen').style.display = 'none';
   if (STUDIO_AUTHORING_MODE) startStudioAuthoring();
   else document.getElementById('start-screen').style.display = 'flex';
@@ -1727,6 +1760,20 @@ function loadDeviceModels() {
   );
 
   const meshIds = ['MC9400', 'MC3400', 'PS30', 'TC8300', 'Tent'];
+  // Scanners (Level 4) are large; load them in the background so they don't
+  // block the start screen. They'll be ready well before the Poligon level.
+  setTimeout(() => {
+    const l = new THREE.GLTFLoader();
+    ['DS3678', 'DS2278'].forEach((id) => l.load(`models/${id}.glb`, (g) => {
+      const root = g.scene;
+      const box = new THREE.Box3().setFromObject(root);
+      const md = Math.max(...box.getSize(new THREE.Vector3()).toArray());
+      if (md > 0) root.scale.setScalar(0.65 / md);
+      const c = new THREE.Box3().setFromObject(root).getCenter(new THREE.Vector3());
+      root.position.sub(c);
+      loadedModels[id] = root;
+    }, undefined, () => {}));
+  }, 1500);
 
   const promises = meshIds.map(id =>
     new Promise(resolve => {
@@ -3597,11 +3644,13 @@ const I18N = {
     v_phone: 'Please enter a valid phone number.',
     v_consent: 'Please tick the consent box to continue.',
     v_address: 'Please fill in all address fields.',
-    // weapon effects
-    eff_laser: 'LASER BURST', eff_laser_d: 'Fires a continuous laser that pierces through multiple balloons at once!',
-    eff_rapid: 'RAPID SCAN', eff_rapid_d: 'Fires rapid pulses of scan energy — fastest fire rate of all terminals!',
-    eff_ring: 'RING SHOCKWAVE', eff_ring_d: 'Emits a circular shockwave that destroys ALL balloons in a wide radius!',
-    eff_cryo: 'CRYO EXPLOSION', eff_cryo_d: 'Launches a cryo-grenade that freezes and shatters all balloons in a large area!',
+    // weapon effects (per weapon id)
+    weff_MC9400: 'LASER BURST', weff_MC9400_d: 'Fires a continuous laser that pierces through multiple balloons at once!',
+    weff_MC3400: 'RAPID SCAN', weff_MC3400_d: 'Fires rapid pulses of scan energy — fastest fire rate of all terminals!',
+    weff_PS30: 'RING SHOCKWAVE', weff_PS30_d: 'Emits a circular shockwave that destroys ALL balloons in a wide radius!',
+    weff_TC8300: 'CRYO EXPLOSION', weff_TC8300_d: 'Launches a cryo-grenade that freezes and shatters all balloons in a large area!',
+    weff_DS3678: 'RANGE SCAN', weff_DS3678_d: 'A precise long-range scan beam — the poligon marksman weapon!',
+    weff_DS2278: 'QUICK SCAN', weff_DS2278_d: 'Fast handheld scan pulses — rapid-fire range shooting!',
     // prize machine
     pm_title: '🎉 CONGRATULATIONS — YOU WON!',
     pm_sub: 'The Zebra ZD421 just printed your voucher. Enter your address and we\'ll ship your prize.',
@@ -3618,6 +3667,9 @@ const I18N = {
     prize_won_sub: 'You won! Voucher {coupon} — click to enter your address.',
     prize_locked_sub: 'Win a real {label} at {goal} balloons.',
     saved_btn: '✓ SAVED',
+    level_4: 'LEVEL 4 · POLIGON RANGE',
+    l4_unlocked_note: 'POLIGON RANGE unlocked!',
+    dyn_l4_go: '🎯 POLIGON! Scan the barcode balloons with the DS3678 — press 2 for the DS2278!',
   },
   tr: {
     loading: 'ZEBRA SİRKİ YÜKLENİYOR...',
@@ -3682,11 +3734,13 @@ const I18N = {
     v_phone: 'Lütfen geçerli bir telefon numarası girin.',
     v_consent: 'Devam etmek için onay kutusunu işaretleyin.',
     v_address: 'Lütfen tüm adres alanlarını doldurun.',
-    // weapon effects
-    eff_laser: 'LAZER PATLAMASI', eff_laser_d: 'Birden fazla balonu aynı anda delen sürekli bir lazer ateşler!',
-    eff_rapid: 'HIZLI TARAMA', eff_rapid_d: 'Hızlı tarama enerjisi darbeleri ateşler — tüm terminallerin en hızlısı!',
-    eff_ring: 'HALKA ŞOK DALGASI', eff_ring_d: 'Geniş bir alandaki TÜM balonları yok eden dairesel bir şok dalgası yayar!',
-    eff_cryo: 'KRİYO PATLAMASI', eff_cryo_d: 'Geniş bir alandaki tüm balonları donduran ve parçalayan bir kriyo-bomba fırlatır!',
+    // weapon effects (per weapon id)
+    weff_MC9400: 'LAZER PATLAMASI', weff_MC9400_d: 'Birden fazla balonu aynı anda delen sürekli bir lazer ateşler!',
+    weff_MC3400: 'HIZLI TARAMA', weff_MC3400_d: 'Hızlı tarama enerjisi darbeleri ateşler — tüm terminallerin en hızlısı!',
+    weff_PS30: 'HALKA ŞOK DALGASI', weff_PS30_d: 'Geniş bir alandaki TÜM balonları yok eden dairesel bir şok dalgası yayar!',
+    weff_TC8300: 'KRİYO PATLAMASI', weff_TC8300_d: 'Geniş bir alandaki tüm balonları donduran ve parçalayan bir kriyo-bomba fırlatır!',
+    weff_DS3678: 'MENZİL TARAMA', weff_DS3678_d: 'Hassas uzun menzilli tarama ışını — poligon nişancı silahı!',
+    weff_DS2278: 'HIZLI TARAMA', weff_DS2278_d: 'Hızlı el tipi tarama darbeleri — seri atışlı poligon ateşi!',
     // prize machine
     pm_title: '🎉 TEBRİKLER — KAZANDIN!',
     pm_sub: 'Zebra ZD421 kuponunu yazdırdı. Adresini gir, ödülünü gönderelim.',
@@ -3703,6 +3757,9 @@ const I18N = {
     prize_won_sub: 'Kazandın! Kupon {coupon} — adresini girmek için tıkla.',
     prize_locked_sub: '{goal} balonda gerçek bir {label} kazan.',
     saved_btn: '✓ KAYDEDİLDİ',
+    level_4: 'BÖLÜM 4 · POLİGON',
+    l4_unlocked_note: 'POLİGON açıldı!',
+    dyn_l4_go: '🎯 POLİGON! DS3678 ile barkodlu balonları tara — DS2278 için 2 tuşuna bas!',
   },
 };
 let currentLang = 'en';
@@ -3797,10 +3854,10 @@ function restartGame() {
   balloons = []; weaponObjs = []; qrObjs = []; particles = []; projectiles = []; ringWaves = []; scanMarkers = [];
   heldMesh = null; mouseDown = false; infoOpen = false; milestoneShown = false;
   rfidUnlocked = false; rfidCooldownUntil = 0; comboCount = 0; plushieTrophy = null; holdingPlushie = false;
-  currentLevel = 1; level2Active = false; level2Score = 0; level3Active = false;
+  currentLevel = 1; level2Active = false; level2Score = 0; level3Active = false; level4Active = false;
   fireRapidUntil = 0; balloonSlowUntil = 0; goldenRushUntil = 0; updatePowerupHud();
   if (boss && boss.mesh) { scene.remove(boss.mesh); } boss = null; updateBossHud();
-  balloons.forEach(b => { b.vel = null; if (b.mesh) b.mesh.scale.setScalar(1); });
+  balloons.forEach(b => { b.vel = null; b.l4 = null; if (b.mesh) b.mesh.scale.setScalar(1); });
   { const r = document.getElementById('__rfid'); if (r) r.style.display = 'none'; }
   document.getElementById('milestone-popup').style.display = 'none';
   document.getElementById('score-value').textContent = '0';
@@ -4236,6 +4293,10 @@ function updateLevelHud() {
     el.style.borderColor = '#ff2d55';
     el.innerHTML = '👑 LEVEL 3 · BIG TOP BOSS';
     el.style.display = 'block';
+  } else if (level4Active) {
+    el.style.borderColor = '#8ac640';
+    el.innerHTML = '🎯 ' + t('level_4');
+    el.style.display = 'block';
   } else if (currentLevel === 1) {
     el.style.borderColor = '#ff6a00';
     el.innerHTML = 'LEVEL 1 · CIRCUS BLASTER' + (level2Unlocked ? ' &nbsp;<span style="color:#38d66b">— L2 unlocked! Pause → Level 2</span>' : '');
@@ -4350,8 +4411,11 @@ function defeatBoss() {
   saveWallet(); refreshWalletUi();
   LunaAnalytics.track('level3_win', {});
   updateBossHud();
-  showBigMessage(t('dyn_boss_defeated'), t('dyn_boss_defeated_sub'),
-    () => { currentLevel = 1; updateLevelHud(); });
+  // After the boss, if the player has 1000+ balloons, unlock the Poligon (Level 4).
+  const toPoligon = wallet.earned >= L4_UNLOCK_BALLOONS;
+  if (toPoligon) level4Unlocked = true;
+  showBigMessage(t('dyn_boss_defeated'), t('dyn_boss_defeated_sub') + (toPoligon ? ' 🎯 ' + t('l4_unlocked_note') : ''),
+    () => { if (toPoligon) startLevel4(); else { currentLevel = 1; updateLevelHud(); } });
 }
 
 function tickLevel3() {
@@ -4394,6 +4458,34 @@ function updateBossHud() {
   if (!level3Active || !boss) { el.style.display = 'none'; return; }
   el.style.display = 'block';
   document.getElementById('__bosshp').style.width = Math.max(0, (boss.hp / boss.maxHp) * 100) + '%';
+}
+
+// ── Level 4: "Poligon" shooting range (DS3678 / DS2278 scanner guns) ──
+function startLevel4() {
+  currentLevel = 4; level4Active = true; level2Active = false; level3Active = false;
+  if (boss && boss.mesh) { scene.remove(boss.mesh); boss = null; updateBossHud(); }
+  // Equip the DS3678 scanner gun (and give DS2278 as an alt with key 2).
+  const iDS3678 = WEAPONS.findIndex(w => w.id === 'DS3678');
+  const iDS2278 = WEAPONS.findIndex(w => w.id === 'DS2278');
+  collected.add(iDS3678); collected.add(iDS2278);
+  trySwitch(iDS3678);
+  // Arrange every balloon into an orbiting shooting gallery at 3 rows/heights.
+  balloons.forEach((b, i) => {
+    if (!b.alive) respawnBalloon(b);
+    b.mesh.scale.setScalar(0.85);
+    b.l4 = {
+      row: L4_ROWS[i % L4_ROWS.length],
+      ang: (i / balloons.length) * Math.PI * 2,
+      angVel: (0.006 + Math.random() * 0.006) * ((i % 2) ? 1 : -1),
+      radius: 9 + (i % L4_ROWS.length) * 2.5,
+    };
+    b.vel = null;
+  });
+  closePause();
+  flashScreen(0x8ac640, 0.35);
+  showPrompt(t('dyn_l4_go'), 3800);
+  updateLevelHud();
+  LunaAnalytics.track('level4_start', {});
 }
 
 // Generic centered result banner with a single button.
@@ -5225,11 +5317,13 @@ function addWeaponLabel(group, w) {
 }
 
 function spawnWeapons() {
-  WEAPONS.forEach((w, i) => {
+  // Only spawn the 4 arena device pickups (scanners are Level-4-only).
+  const arena = WEAPONS.filter(w => ['MC9400','MC3400','PS30','TC8300'].includes(w.id));
+  arena.forEach((w, i) => {
     const mesh = makeWeaponMesh(w);
     mesh.userData.visualSource = `weapon:${w.id}`;
     const editorId = `weapon-${w.id.toLowerCase()}`;
-    const a = (i / WEAPONS.length) * Math.PI * 2;
+    const a = (i / arena.length) * Math.PI * 2;
     const d = 5 + (i%3)*1.5;
     mesh.position.set(Math.cos(a)*d, 0.45, Math.sin(a)*d);
 
@@ -5372,6 +5466,13 @@ function spawnBalloons(n) {
 
 function respawnBalloon(bo) {
   bo.mesh.userData.runtimeStateVisible = true;
+  if (level4Active && bo.l4) {
+    // Poligon: keep gallery size; the orbit in the loop repositions it.
+    bo.mesh.scale.setScalar(0.85);
+    bo.mesh.visible = true;
+    bo.alive = true;
+    return;
+  }
   if (!applyRegisteredObjectTransform(bo.editorId)) {
     const a = Math.random()*Math.PI*2, d = Math.random()*17+1;
     bo.mesh.position.set(Math.cos(a)*d, 2+Math.random()*9, Math.sin(a)*d);
@@ -5451,7 +5552,7 @@ function popBalloon(bo, weapon) {
   }
 
   // In multiplayer the room owns the shared balloon pool and its respawns.
-  const respawnMs = level2Active ? (700 + Math.random() * 700) : (3500 + Math.random() * 2000);
+  const respawnMs = (level2Active || level4Active) ? (700 + Math.random() * 700) : (3500 + Math.random() * 2000);
   setTimeout(() => { if(gameActive && !(MP.enabled && MP.connected())) respawnBalloon(bo); }, respawnMs);
 }
 
@@ -5588,11 +5689,13 @@ function makeCircusStripeTexture() {
 }
 
 function placeQRCodes() {
-  WEAPONS.forEach((w, i) => {
+  // QR boards are only for the 4 arena products (not the Level-4 scanners).
+  const arena = WEAPONS.filter(w => ['MC9400','MC3400','PS30','TC8300'].includes(w.id));
+  arena.forEach((w, i) => {
     // Place each QR code right beside its weapon so it's easy to find.
     // Weapons sit at angle (i/N)*2π, radius 5-6.5.
     // QR board goes at the same angle but radius 9, slightly to the side.
-    const weaponAngle = (i / WEAPONS.length) * Math.PI * 2;
+    const weaponAngle = (i / arena.length) * Math.PI * 2;
     const sideOffset  = Math.PI * 0.18; // ~32° to the side of the weapon
     const a = weaponAngle + sideOffset;
     const d = 9;
@@ -5741,8 +5844,8 @@ function bindControls() {
     if (gameActive && !e.repeat && e.code==='KeyP') { pauseOpen ? closePause() : openPause(); }
     if (!e.repeat && e.code==='KeyB') LunaAnalytics.toggleOverlay();
     if (gameActive && !infoOpen && !pauseOpen && !e.repeat && e.code==='KeyQ') dropWeapon();
-    if (gameActive && !pauseOpen && e.code==='Digit1') trySwitch(0);
-    if (gameActive && !pauseOpen && e.code==='Digit2') trySwitch(1);
+    if (gameActive && !pauseOpen && e.code==='Digit1') trySwitch(level4Active ? WEAPONS.findIndex(w=>w.id==='DS3678') : 0);
+    if (gameActive && !pauseOpen && e.code==='Digit2') trySwitch(level4Active ? WEAPONS.findIndex(w=>w.id==='DS2278') : 1);
     if (gameActive && !pauseOpen && e.code==='Digit3') trySwitch(2);
     if (gameActive && !pauseOpen && e.code==='Digit4') trySwitch(3);
     if (gameActive && !pauseOpen && e.code==='Digit5') equipPlushie(); // plushie inventory item
@@ -5858,7 +5961,7 @@ function trySwitch(idx) {
   currentWeapon = idx;
   for (let i=0;i<6;i++) {
     const s=document.getElementById('slot-'+i);
-    if (collected.has(i)) {
+    if (s && collected.has(i)) {
       s.classList.remove('empty');
       s.classList.toggle('active', i===idx);
       s.classList.toggle('has-it', i!==idx);
@@ -5868,8 +5971,8 @@ function trySwitch(idx) {
   weaponFlipStart = performance.now();
   // Update weapon info HUD
   const wi = document.getElementById('weapon-info');
-  document.getElementById('wi-name').textContent = WEAPONS[idx].name + ' — ' + t('eff_' + WEAPONS[idx].effect);
-  document.getElementById('wi-effect').textContent = t('eff_' + WEAPONS[idx].effect + '_d');
+  document.getElementById('wi-name').textContent = WEAPONS[idx].name + ' — ' + t('weff_' + WEAPONS[idx].id);
+  document.getElementById('wi-effect').textContent = t('weff_' + WEAPONS[idx].id + '_d');
   wi.style.display = 'block';
 }
 
@@ -6677,7 +6780,11 @@ function updateGame(delta, t) {
   if (gameActive) balloons.forEach(b=>{
     if(!b.alive) return;
     const slowF = (performance.now() < balloonSlowUntil) ? 0.35 : 1;
-    if ((level2Active || level3Active) && b.vel) {
+    if (level4Active && b.l4) {
+      // Poligon: balloons orbit the arena at fixed rows/heights (gallery targets).
+      b.l4.ang += b.l4.angVel * slowF;
+      b.mesh.position.set(Math.cos(b.l4.ang) * b.l4.radius, b.l4.row, Math.sin(b.l4.ang) * b.l4.radius);
+    } else if ((level2Active || level3Active) && b.vel) {
       // Frenzy/minions: balloons zip around and bounce off the arena walls/floor/roof.
       const p = b.mesh.position;
       p.x += b.vel.x * slowF; p.y += b.vel.y * slowF; p.z += b.vel.z * slowF;
