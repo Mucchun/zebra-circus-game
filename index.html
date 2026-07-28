@@ -4625,8 +4625,20 @@ function upgradeSeatedAudience() {
 // authored visuals so Edit/Play parity and the scene contract are untouched.
 function upgradePropVisuals() {
   if (STUDIO_AUTHORING_MODE) return;
+  // Retire the central podium/plinth from plain game mode: hide its visual and
+  // drop its collider so the arena centre is clear. The object stays in the
+  // authored scene document, so the Studio contract + validation are untouched.
+  // Drop the collider immediately (it's built by applySceneDocument), and hide
+  // the visual with a retry since authored objects register asynchronously.
+  for (let i = runtimeColliders.length - 1; i >= 0; i--) {
+    if (runtimeColliders[i].id === 'center-plinth') runtimeColliders.splice(i, 1);
+  }
+  (function hidePlinth(attempt) {
+    const plinth = editableObjects.get('center-plinth');
+    if (plinth) { plinth.visible = false; return; }
+    if (attempt < 30) setTimeout(() => hidePlinth(attempt + 1), 500);
+  })(0);
   const swaps = [
-    { ids: ['center-plinth'], file: 'models/props/podium.glb' },
     { ids: ['barrel-0', 'barrel-1', 'barrel-2', 'barrel-3'], file: 'models/props/barrel.glb' },
   ];
   const loader = new THREE.GLTFLoader();
@@ -6734,17 +6746,17 @@ function animate() {
   renderer.render(scene,camera);
 }
 
-function updateGame(delta, t) {
+function updateGame(delta, simTime) {
 
   // Ambient motion AND gameplay ticks stay frozen until gameplay begins so the
   // Studio's same-camera Edit/Play parity holds (matches the weapon-bob gating).
   if (gameActive) {
-    animateSpectators(t);
+    animateSpectators(simTime);
     tickLevel2();
     tickLevel3();
     updatePowerupHud();
     for (const s of circusSpotlights) {
-      const a = t * s.speed + s.phase;
+      const a = simTime * s.speed + s.phase;
       s.light.target.position.set(Math.cos(a) * s.radius, 0, Math.sin(a) * s.radius);
       s.light.target.updateMatrixWorld();
     }
@@ -6760,7 +6772,7 @@ function updateGame(delta, t) {
   if((isLocked || pointerLockFallback) && gameActive && !infoOpen && !pauseOpen) movePlayer(delta);
 
   // Multiplayer shared plaza (?mp=1) - full implementation at the end of this script.
-  if (MP.enabled) MP.tick(delta, t);
+  if (MP.enabled) MP.tick(delta, simTime);
 
   // Auto-fire for rapid weapon
   if(mouseDown && gameActive && !infoOpen && !pauseOpen && currentWeapon>=0 && WEAPONS[currentWeapon].effect==='rapid') {
@@ -6768,12 +6780,12 @@ function updateGame(delta, t) {
   }
 
   // Persistent authored visuals stay frozen until gameplay actually begins.
-  // Studio can therefore compare authoring Game Camera and Play at t=0.
+  // Studio can therefore compare authoring Game Camera and Play at simTime=0.
   if (gameActive) weaponObjs.forEach(o=>{
     if(o.collected) return;
-    o.mesh.position.y = o.baseY+Math.sin(t*1.6+o.bob)*0.1;
+    o.mesh.position.y = o.baseY+Math.sin(simTime*1.6+o.bob)*0.1;
     o.mesh.rotation.y += 0.018;
-    o.pl.intensity = 0.6+Math.sin(t*2.5+o.bob)*0.35;
+    o.pl.intensity = 0.6+Math.sin(simTime*2.5+o.bob)*0.35;
     if(camera.position.distanceTo(o.mesh.position)<2.6) showPrompt(t('dyn_press_e_pickup', {name: o.w.name}),80);
   });
 
@@ -6797,9 +6809,9 @@ function updateGame(delta, t) {
       if (p.y < 1.4) { p.y = 1.4; b.vel.y = Math.abs(b.vel.y); }
       if (p.y > 12) { p.y = 12; b.vel.y = -Math.abs(b.vel.y); }
     } else {
-      b.mesh.position.y += Math.sin(t*b.spd+b.bob)*0.003;
-      b.mesh.position.x += Math.cos(t*0.18+b.da)*0.003;
-      b.mesh.position.z += Math.sin(t*0.18+b.da)*0.003;
+      b.mesh.position.y += Math.sin(simTime*b.spd+b.bob)*0.003;
+      b.mesh.position.x += Math.cos(simTime*0.18+b.da)*0.003;
+      b.mesh.position.z += Math.sin(simTime*0.18+b.da)*0.003;
     }
     const d=Math.sqrt(b.mesh.position.x**2+b.mesh.position.z**2);
     if(d>21){b.mesh.position.x*=0.99;b.mesh.position.z*=0.99;}
@@ -6881,8 +6893,8 @@ function updateGame(delta, t) {
 
   // Held weapon sway
   if(heldMesh){
-    heldMesh.rotation.z=Math.sin(t*2.2)*0.018;
-    heldMesh.position.y=-0.36+Math.sin(t*3)*0.005;
+    heldMesh.rotation.z=Math.sin(simTime*2.2)*0.018;
+    heldMesh.position.y=-0.36+Math.sin(simTime*3)*0.005;
   }
 
 }

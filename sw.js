@@ -1,5 +1,5 @@
 // Zebra Circus Blaster — service worker (offline + installability)
-const CACHE = 'zcb-v8-level4-poligon';
+const CACHE = 'zcb-v9-fix-i18n-plinth';
 const CORE = [
   './',
   './index.html',
