@@ -3462,24 +3462,22 @@ const Sound = (() => {
     powerup:() => { [523, 784, 1046].forEach((f, i) => setTimeout(() => blip(f, 0.14, 'triangle', sfxGain, 0.45), i * 70)); },
   };
 
-  // Simple looping circus melody ("Entry of the Gladiators" vibe, original notes).
-  const MELODY = [523,494,466,440,466,494,523,587,523,494,466,440,392,440,466,494,
-                  523,494,466,440,466,494,523,587,659,587,523,494,523,440,392,0];
+  // Looping background track (Zebra Tech.mp3).
+  let musicEl = null;
   function startMusic() {
-    if (!ctx || musicTimer) return;
-    step = 0;
-    const beat = 200;
-    musicTimer = setInterval(() => {
-      const n = MELODY[step % MELODY.length];
-      if (n) blip(n, 0.16, 'triangle', musicGain, 0.5);
-      if (step % 2 === 0) blip(n ? n / 2 : 130, 0.16, 'sine', musicGain, 0.4); // bassline
-      step++;
-    }, beat);
+    if (!musicEl) {
+      musicEl = new Audio('audio/zebra-tech.mp3');
+      musicEl.loop = true;
+      musicEl.volume = 0.35;
+    }
+    musicEl.muted = muted;
+    musicEl.play().catch(() => {}); // needs a user gesture; called from Play/Go
   }
-  function stopMusic() { if (musicTimer) { clearInterval(musicTimer); musicTimer = null; } }
+  function stopMusic() { if (musicEl) musicEl.pause(); }
   function toggleMute() {
     muted = !muted;
     if (master) master.gain.value = muted ? 0 : 0.9;
+    if (musicEl) musicEl.muted = muted;
     try { localStorage.setItem('zebraMuted', muted ? '1' : '0'); } catch (_) {}
     updateMuteHud();
     return muted;
