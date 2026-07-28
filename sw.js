@@ -1,5 +1,5 @@
 // Zebra Circus Blaster — service worker (offline + installability)
-const CACHE = 'zcb-v13-six-weapons';
+const CACHE = 'zcb-v14-scanner-facing';
 const CORE = [
   './',
   './index.html',
