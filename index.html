@@ -3578,7 +3578,6 @@ const Sound = (() => {
   return { resume, sfx, startMusic, stopMusic, toggleMute, updateMuteHud, isMuted: () => muted };
 })();
 window.addEventListener('keydown', (e) => { if (e.code === 'KeyM' && !e.repeat) Sound.toggleMute(); });
-/*TEMP-OR*/setTimeout(async()=>{try{['start-screen','register-screen','tutorial-overlay'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});await startGame();dismissTutorial();setInterval(()=>{weaponObjs.forEach(o=>{if(['DS3678','DS2278'].includes(o.w.id)){o.collected=false;o.mesh.visible=true;if(!o.mesh.parent)scene.add(o.mesh);}});const t=weaponObjs.find(o=>o.w.id==='DS3678');if(t){camera.position.set(0,1.4,0);const dx=t.mesh.position.x,dz=t.mesh.position.z;yaw=Math.atan2(dx,-dz);pitch=-0.12;}},100);}catch(e){alert(e&&e.stack||e);}},2000);/*END-TEMP-OR*/
 
 // ═══════════════════════════════════════════════
 //  I18N — English / Turkish
@@ -5370,7 +5369,6 @@ function spawnWeapons() {
     const a = (i / scanners.length) * Math.PI * 2 + Math.PI / 4; // offset from the 4 devices
     const d = 6.5;
     mesh.position.set(Math.cos(a)*d, 0.45, Math.sin(a)*d);
-    mesh.rotation.y = a; // face inward like the 4 authored devices (rotY = radial angle)
     const pl = addGlow(mesh, w);
     scene.add(mesh);
     weaponObjs.push({ mesh, w, pl, collected:false, bob:Math.random()*Math.PI*2, editorId:`weapon-${w.id.toLowerCase()}`, baseY:mesh.position.y });
