@@ -4625,20 +4625,8 @@ function upgradeSeatedAudience() {
 // authored visuals so Edit/Play parity and the scene contract are untouched.
 function upgradePropVisuals() {
   if (STUDIO_AUTHORING_MODE) return;
-  // Retire the central podium/plinth from plain game mode: hide its visual and
-  // drop its collider so the arena centre is clear. The object stays in the
-  // authored scene document, so the Studio contract + validation are untouched.
-  // Drop the collider immediately (it's built by applySceneDocument), and hide
-  // the visual with a retry since authored objects register asynchronously.
-  for (let i = runtimeColliders.length - 1; i >= 0; i--) {
-    if (runtimeColliders[i].id === 'center-plinth') runtimeColliders.splice(i, 1);
-  }
-  (function hidePlinth(attempt) {
-    const plinth = editableObjects.get('center-plinth');
-    if (plinth) { plinth.visible = false; return; }
-    if (attempt < 30) setTimeout(() => hidePlinth(attempt + 1), 500);
-  })(0);
   const swaps = [
+    { ids: ['center-plinth'], file: 'models/props/podium.glb' },
     { ids: ['barrel-0', 'barrel-1', 'barrel-2', 'barrel-3'], file: 'models/props/barrel.glb' },
   ];
   const loader = new THREE.GLTFLoader();
@@ -5168,7 +5156,8 @@ function addDecorations() {
     registerEditableObject(`barrel-${i}`, barrel);
   }
 
-  // Performer's podium center-stage
+  // Performer's podium center-stage (base visual; swapped for the Meshy
+  // red-white drum model in plain game mode via upgradePropVisuals).
   const podiumRoot = new THREE.Group();
   const podium = new THREE.Mesh(new THREE.CylinderGeometry(0.423,0.5,1,16), woodMat);
   podiumRoot.add(podium);
