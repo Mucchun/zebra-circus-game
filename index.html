@@ -301,6 +301,14 @@ body { background: #000; overflow: hidden; font-family: 'Source Sans 3', 'Barlow
 }
 #start-screen > * { position: relative; z-index: 1; }
 
+/* Language toggle (top-right) */
+#lang-toggle { position: fixed; top: 14px; right: 16px; z-index: 200; display: flex; gap: 0;
+  border: 1px solid #2a2a44; background: rgba(5,5,15,0.7); }
+#lang-toggle button { background: transparent; color: #8090b0; border: 0; cursor: pointer;
+  font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 13px; letter-spacing: 1px;
+  padding: 6px 12px; }
+#lang-toggle button.active { background: #00a651; color: #fff; }
+
 /* Registration panel */
 #register-screen { background:#05050d; display:flex; align-items:center; justify-content:center; }
 .reg-card {
@@ -513,7 +521,12 @@ body { background: #000; overflow: hidden; font-family: 'Source Sans 3', 'Barlow
 <body>
 
 <div id="loading-screen" class="screen">
-  <p>LOADING ZEBRA CIRCUS...</p>
+  <p data-i18n="loading">LOADING ZEBRA CIRCUS...</p>
+</div>
+
+<div id="lang-toggle" title="Language / Dil">
+  <button data-lang="en" type="button">EN</button>
+  <button data-lang="tr" type="button">TR</button>
 </div>
 
 <div id="start-screen" class="screen" style="display:none;">
@@ -538,67 +551,67 @@ body { background: #000; overflow: hidden; font-family: 'Source Sans 3', 'Barlow
       </svg>
     </div>
     <div class="ss-hline" style="background:linear-gradient(90deg,transparent 0%,#00a651 20%,#00a651 80%,transparent 100%);"></div>
-    <div class="ss-game-title">CIRCUS BLASTER</div>
+    <div class="ss-game-title" data-i18n="game_title">CIRCUS BLASTER</div>
   </div>
-  <div class="ss-qr-banner">
+  <div class="ss-qr-banner" data-i18n="ss_banner">
     SCAN THE QR CODES &nbsp;·&nbsp; LEARN MORE ABOUT THE PRODUCTS
   </div>
-  <button class="btn btn-lg" id="play-btn">PLAY NOW</button>
+  <button class="btn btn-lg" id="play-btn" data-i18n="play_now">PLAY NOW</button>
 </div>
 
 <div id="register-screen" class="screen" style="display:none;">
   <div class="reg-card">
-    <div class="reg-title">PLAYER SIGN-IN</div>
-    <div class="reg-sub">Enter your details to start — and to claim your Zebra reward.</div>
+    <div class="reg-title" data-i18n="reg_title">PLAYER SIGN-IN</div>
+    <div class="reg-sub" data-i18n="reg_sub">Enter your details to start — and to claim your Zebra reward.</div>
     <form id="reg-form" autocomplete="on" novalidate>
       <div class="reg-row">
-        <input id="reg-first" name="firstName" type="text" placeholder="First name" required maxlength="60">
-        <input id="reg-last" name="lastName" type="text" placeholder="Surname" required maxlength="60">
+        <input id="reg-first" name="firstName" type="text" placeholder="First name" data-i18n-ph="ph_first" required maxlength="60">
+        <input id="reg-last" name="lastName" type="text" placeholder="Surname" data-i18n-ph="ph_last" required maxlength="60">
       </div>
-      <input id="reg-email" name="email" type="email" placeholder="Email address" required maxlength="120">
-      <input id="reg-phone" name="phone" type="tel" placeholder="Phone number" required maxlength="40">
+      <input id="reg-email" name="email" type="email" placeholder="Email address" data-i18n-ph="ph_email" required maxlength="120">
+      <input id="reg-phone" name="phone" type="tel" placeholder="Phone number" data-i18n-ph="ph_phone" required maxlength="40">
       <label class="reg-consent">
         <input id="reg-consent" type="checkbox" required>
-        <span>I agree to be contacted about Zebra products and to the storage of my details.</span>
+        <span data-i18n="reg_consent">I agree to be contacted about Zebra products and to the storage of my details.</span>
       </label>
       <div class="reg-error" id="reg-error"></div>
-      <button class="btn btn-lg" id="reg-submit" type="submit">START PLAYING →</button>
-      <div class="reg-fine">Your details are stored securely. You can request removal at any time.</div>
+      <button class="btn btn-lg" id="reg-submit" type="submit" data-i18n="reg_submit">START PLAYING →</button>
+      <div class="reg-fine" data-i18n="reg_fine">Your details are stored securely. You can request removal at any time.</div>
     </form>
   </div>
 </div>
 
 <div id="tutorial-overlay" style="display:none;">
-  <div class="tut-title">// HOW TO PLAY //</div>
+  <div class="tut-title" data-i18n="tut_title">// HOW TO PLAY //</div>
   <div class="tut-cards">
     <div class="tut-card">
-      <div class="tut-head">Reach 1000 Points</div>
-      <div class="tut-body">Hit <strong style="color:var(--c-accent)">1000 points</strong> to unlock the full Zebra Technologies product catalogue!</div>
+      <div class="tut-head" data-i18n="tut1_h">Reach 1000 Points</div>
+      <div class="tut-body" data-i18n="tut1_b">Hit <strong style="color:var(--c-accent)">1000 points</strong> to unlock the full Zebra Technologies product catalogue!</div>
     </div>
     <div class="tut-card">
-      <div class="tut-head">Scan QR Codes</div>
-      <div class="tut-body">Find the QR boards next to each device. Shoot them to scan and <strong style="color:#fff">learn more about Zebra products!</strong></div>
+      <div class="tut-head" data-i18n="tut2_h">Scan QR Codes</div>
+      <div class="tut-body" data-i18n="tut2_b">Find the QR boards next to each device. Shoot them to scan and <strong style="color:#fff">learn more about Zebra products!</strong></div>
     </div>
     <div class="tut-card">
-      <div class="tut-head">Blast Balloons</div>
-      <div class="tut-body">Pick up Zebra hand terminals with <strong style="color:var(--c-accent)">E</strong> and use each device's special ability to pop balloons and score points.</div>
+      <div class="tut-head" data-i18n="tut3_h">Blast Balloons</div>
+      <div class="tut-body" data-i18n="tut3_b">Pick up Zebra hand terminals with <strong style="color:var(--c-accent)">E</strong> and use each device's special ability to pop balloons and score points.</div>
     </div>
     <div class="tut-card">
-      <div class="tut-head">4 Zebra Devices</div>
-      <div class="tut-body">MC9400 · MC3400 · PS30 · TC8300 — each with a unique scanning super-power. Collect them all!</div>
+      <div class="tut-head" data-i18n="tut4_h">4 Zebra Devices</div>
+      <div class="tut-body" data-i18n="tut4_b">MC9400 · MC3400 · PS30 · TC8300 — each with a unique scanning super-power. Collect them all!</div>
     </div>
   </div>
   <div class="tut-controls">
-    <span><span class="k">W A S D</span> &nbsp;Move</span>
-    <span><span class="k">MOUSE</span> &nbsp;Look</span>
-    <span><span class="k">E</span> &nbsp;Pick up device</span>
-    <span><span class="k">CLICK</span> &nbsp;Shoot / Scan</span>
-    <span><span class="k">1 – 4</span> &nbsp;Switch device</span>
-    <span><span class="k">Q</span> &nbsp;Drop device</span>
-    <span><span class="k">P</span> &nbsp;Pause &amp; balloon shop</span>
-    <span><span class="k">QR board</span> &nbsp;Shoot to learn</span>
+    <span><span class="k">W A S D</span> &nbsp;<span data-i18n="ctrl_move">Move</span></span>
+    <span><span class="k">MOUSE</span> &nbsp;<span data-i18n="ctrl_look">Look</span></span>
+    <span><span class="k">E</span> &nbsp;<span data-i18n="ctrl_pick">Pick up device</span></span>
+    <span><span class="k">CLICK</span> &nbsp;<span data-i18n="ctrl_shoot">Shoot / Scan</span></span>
+    <span><span class="k">1 – 4</span> &nbsp;<span data-i18n="ctrl_switch">Switch device</span></span>
+    <span><span class="k">Q</span> &nbsp;<span data-i18n="ctrl_drop">Drop device</span></span>
+    <span><span class="k">P</span> &nbsp;<span data-i18n="ctrl_pause">Pause &amp; balloon shop</span></span>
+    <span><span class="k">QR board</span> &nbsp;<span data-i18n="ctrl_qr">Shoot to learn</span></span>
   </div>
-  <button class="btn" id="tut-go-btn">LET'S GO</button>
+  <button class="btn" id="tut-go-btn" data-i18n="lets_go">LET'S GO</button>
 </div>
 
 <div id="reward-screen" class="screen" style="background:#000;padding:0;justify-content:flex-start;align-items:stretch;">
@@ -682,7 +695,7 @@ body { background: #000; overflow: hidden; font-family: 'Source Sans 3', 'Barlow
   </div>
 
   <div id="progress-wrap">
-    <div id="progress-lbl">REACH 1000 PTS — EXPLORE ZEBRA PRODUCTS</div>
+    <div id="progress-lbl" data-i18n="progress_lbl">REACH 1000 PTS — EXPLORE ZEBRA PRODUCTS</div>
     <div id="progress-track"><div id="progress-fill"></div></div>
   </div>
 
@@ -691,11 +704,11 @@ body { background: #000; overflow: hidden; font-family: 'Source Sans 3', 'Barlow
 
 <div id="pause-overlay">
   <div id="pause-panel">
-    <div class="pp-title">PAUSED</div>
-    <div class="pp-balance">SCORE: <b id="pause-score">0</b> pts &nbsp;·&nbsp; BALLOON BANK: <b id="wallet-balance">0</b> 🎈</div>
+    <div class="pp-title" data-i18n="paused">PAUSED</div>
+    <div class="pp-balance"><span data-i18n="score">SCORE</span>: <b id="pause-score">0</b> <span data-i18n="pts">pts</span> &nbsp;·&nbsp; <span data-i18n="balloon_bank">BALLOON BANK</span>: <b id="wallet-balance">0</b> 🎈</div>
     <div class="shop-card" id="buy-balloons-card">
       <div>
-        <div class="sc-name">🎈 BUY +50 BALLOONS</div>
+        <div class="sc-name" data-i18n="buy_balloons_name">🎈 BUY +50 BALLOONS</div>
         <div class="sc-sub" id="buy-balloons-sub">Convert 1000 points into 50 balloons for the bank.</div>
       </div>
       <div class="sc-cost">1000 pts</div>
@@ -719,10 +732,10 @@ body { background: #000; overflow: hidden; font-family: 'Source Sans 3', 'Barlow
     </div>
     <div id="wallet-codes"></div>
     <div id="pause-actions">
-      <button id="save-progress-btn" type="button">💾 SAVE PROGRESS</button>
-      <button id="exit-btn" type="button">🚪 EXIT</button>
+      <button id="save-progress-btn" type="button" data-i18n="save_progress">💾 SAVE PROGRESS</button>
+      <button id="exit-btn" type="button" data-i18n="exit">🚪 EXIT</button>
     </div>
-    <button id="resume-btn" type="button">RESUME</button>
+    <button id="resume-btn" type="button" data-i18n="resume">RESUME</button>
   </div>
 </div>
 
@@ -3508,6 +3521,88 @@ const Sound = (() => {
   return { resume, sfx, startMusic, stopMusic, toggleMute, updateMuteHud, isMuted: () => muted };
 })();
 window.addEventListener('keydown', (e) => { if (e.code === 'KeyM' && !e.repeat) Sound.toggleMute(); });
+
+// ═══════════════════════════════════════════════
+//  I18N — English / Turkish
+// ═══════════════════════════════════════════════
+const I18N = {
+  en: {
+    loading: 'LOADING ZEBRA CIRCUS...',
+    game_title: 'CIRCUS BLASTER',
+    ss_banner: 'SCAN THE QR CODES &nbsp;·&nbsp; LEARN MORE ABOUT THE PRODUCTS',
+    play_now: 'PLAY NOW',
+    reg_title: 'PLAYER SIGN-IN',
+    reg_sub: 'Enter your details to start — and to claim your Zebra reward.',
+    ph_first: 'First name', ph_last: 'Surname', ph_email: 'Email address', ph_phone: 'Phone number',
+    reg_consent: 'I agree to be contacted about Zebra products and to the storage of my details.',
+    reg_submit: 'START PLAYING →',
+    reg_fine: 'Your details are stored securely. You can request removal at any time.',
+    tut_title: '// HOW TO PLAY //',
+    tut1_h: 'Reach 1000 Points',
+    tut1_b: 'Hit <strong style="color:var(--c-accent)">1000 points</strong> to unlock the full Zebra Technologies product catalogue!',
+    tut2_h: 'Scan QR Codes',
+    tut2_b: 'Find the QR boards next to each device. Shoot them to scan and <strong style="color:#fff">learn more about Zebra products!</strong>',
+    tut3_h: 'Blast Balloons',
+    tut3_b: 'Pick up Zebra hand terminals with <strong style="color:var(--c-accent)">E</strong> and use each device\'s special ability to pop balloons and score points.',
+    tut4_h: '4 Zebra Devices',
+    tut4_b: 'MC9400 · MC3400 · PS30 · TC8300 — each with a unique scanning super-power. Collect them all!',
+    ctrl_move: 'Move', ctrl_look: 'Look', ctrl_pick: 'Pick up device', ctrl_shoot: 'Shoot / Scan',
+    ctrl_switch: 'Switch device', ctrl_drop: 'Drop device', ctrl_pause: 'Pause &amp; balloon shop', ctrl_qr: 'Shoot to learn',
+    lets_go: "LET'S GO",
+    progress_lbl: 'REACH 1000 PTS — EXPLORE ZEBRA PRODUCTS',
+    paused: 'PAUSED', score: 'SCORE', pts: 'pts', balloon_bank: 'BALLOON BANK',
+    buy_balloons_name: '🎈 BUY +50 BALLOONS',
+    save_progress: '💾 SAVE PROGRESS', exit: '🚪 EXIT', resume: 'RESUME',
+  },
+  tr: {
+    loading: 'ZEBRA SİRKİ YÜKLENİYOR...',
+    game_title: 'SİRK NİŞANCISI',
+    ss_banner: 'QR KODLARINI TARAYIN &nbsp;·&nbsp; ÜRÜNLER HAKKINDA BİLGİ EDİNİN',
+    play_now: 'OYNA',
+    reg_title: 'OYUNCU GİRİŞİ',
+    reg_sub: 'Başlamak ve Zebra ödülünüzü almak için bilgilerinizi girin.',
+    ph_first: 'Ad', ph_last: 'Soyad', ph_email: 'E-posta adresi', ph_phone: 'Telefon numarası',
+    reg_consent: 'Zebra ürünleri hakkında benimle iletişime geçilmesini ve bilgilerimin saklanmasını kabul ediyorum.',
+    reg_submit: 'OYUNA BAŞLA →',
+    reg_fine: 'Bilgileriniz güvenle saklanır. İstediğiniz zaman silinmesini talep edebilirsiniz.',
+    tut_title: '// NASIL OYNANIR //',
+    tut1_h: '1000 Puana Ulaş',
+    tut1_b: 'Tüm Zebra Technologies ürün kataloğunu açmak için <strong style="color:var(--c-accent)">1000 puan</strong> yap!',
+    tut2_h: 'QR Kodları Tara',
+    tut2_b: 'Her cihazın yanındaki QR panolarını bul. Taramak için ateş et ve <strong style="color:#fff">Zebra ürünleri hakkında bilgi edin!</strong>',
+    tut3_h: 'Balonları Patlat',
+    tut3_b: 'Zebra el terminallerini <strong style="color:var(--c-accent)">E</strong> ile al ve her cihazın özel yeteneğini kullanarak balonları patlat, puan kazan.',
+    tut4_h: '4 Zebra Cihazı',
+    tut4_b: 'MC9400 · MC3400 · PS30 · TC8300 — her biri benzersiz bir tarama süper-gücüne sahip. Hepsini topla!',
+    ctrl_move: 'Hareket', ctrl_look: 'Bak', ctrl_pick: 'Cihaz al', ctrl_shoot: 'Ateş / Tara',
+    ctrl_switch: 'Cihaz değiştir', ctrl_drop: 'Cihazı bırak', ctrl_pause: 'Duraklat &amp; balon mağazası', ctrl_qr: 'Öğrenmek için ateş et',
+    lets_go: 'HADİ BAŞLAYALIM',
+    progress_lbl: '1000 PUANA ULAŞ — ZEBRA ÜRÜNLERİNİ KEŞFET',
+    paused: 'DURAKLATILDI', score: 'PUAN', pts: 'puan', balloon_bank: 'BALON BANKASI',
+    buy_balloons_name: '🎈 +50 BALON AL',
+    save_progress: '💾 İLERLEMEYİ KAYDET', exit: '🚪 ÇIKIŞ', resume: 'DEVAM ET',
+  },
+};
+let currentLang = 'en';
+function applyLang(lang) {
+  const dict = I18N[lang] || I18N.en;
+  currentLang = I18N[lang] ? lang : 'en';
+  document.querySelectorAll('[data-i18n]').forEach((el) => {
+    const v = dict[el.getAttribute('data-i18n')];
+    if (v != null) el.innerHTML = v;
+  });
+  document.querySelectorAll('[data-i18n-ph]').forEach((el) => {
+    const v = dict[el.getAttribute('data-i18n-ph')];
+    if (v != null) el.placeholder = v;
+  });
+  document.documentElement.lang = currentLang;
+  try { localStorage.setItem('zebraLang', currentLang); } catch (_) {}
+  document.querySelectorAll('#lang-toggle button').forEach((b) =>
+    b.classList.toggle('active', b.getAttribute('data-lang') === currentLang));
+}
+document.querySelectorAll('#lang-toggle button').forEach((b) =>
+  b.addEventListener('click', () => applyLang(b.getAttribute('data-lang'))));
+applyLang(localStorage.getItem('zebraLang') || 'en');
 
 async function startGame() {
   document.getElementById('start-screen').style.display = 'none';
