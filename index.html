@@ -191,9 +191,16 @@ body { background: #000; overflow: hidden; font-family: 'Source Sans 3', 'Barlow
 }
 #wallet-codes .code-hint { font-size: 11px; color: var(--c-muted); margin-top: 8px; letter-spacing: 0.5px; }
 #resume-btn {
-  margin-top: 18px; width: 100%; background: #ffd76a; border: 0; color: #10131f; cursor: pointer;
+  margin-top: 12px; width: 100%; background: #ffd76a; border: 0; color: #10131f; cursor: pointer;
   font-family: inherit; font-size: 16px; font-weight: 800; letter-spacing: 4px; padding: 13px;
 }
+#pause-actions { display: flex; gap: 10px; margin-top: 16px; }
+#pause-actions button {
+  flex: 1; background: transparent; border: 1px solid #2a2a44; color: #d8ddf0; cursor: pointer;
+  font-family: inherit; font-size: 13px; font-weight: 700; letter-spacing: 1px; padding: 11px;
+}
+#pause-actions #save-progress-btn:hover { border-color: #00a651; color: #fff; }
+#pause-actions #exit-btn:hover { border-color: #ff6a5a; color: #fff; }
 #progress-track {
   background: rgba(255,255,255,0.05); height: 8px;
   border: 1px solid rgba(255,106,0,0.3); overflow: hidden;
@@ -711,6 +718,10 @@ body { background: #000; overflow: hidden; font-family: 'Source Sans 3', 'Barlow
       <button class="shop-btn claim-prize-btn" data-prize="terminal" type="button" disabled>LOCKED</button>
     </div>
     <div id="wallet-codes"></div>
+    <div id="pause-actions">
+      <button id="save-progress-btn" type="button">💾 SAVE PROGRESS</button>
+      <button id="exit-btn" type="button">🚪 EXIT</button>
+    </div>
     <button id="resume-btn" type="button">RESUME</button>
   </div>
 </div>
@@ -3524,8 +3535,42 @@ function dismissTutorial() {
   gameActive = true;
   LunaAnalytics.startSession();
   if (wallet.plushAwarded) markPlushieSlot(); // restore owned plushie in inventory
+  loadProgress(); // restore saved score + level unlocks
   updateLevelHud();
   Sound.resume(); Sound.startMusic();
+}
+
+// ── Save / load progress + exit ───────────────────────────────────────────
+function saveProgress() {
+  // Wallet (balloons, prizes, coupons) is already auto-saved; also persist
+  // the run's score and which levels are unlocked.
+  try {
+    localStorage.setItem('zebraProgress', JSON.stringify({
+      score, level2Unlocked, level3Unlocked,
+    }));
+  } catch (_) {}
+  saveWallet();
+}
+function loadProgress() {
+  try {
+    const p = JSON.parse(localStorage.getItem('zebraProgress') || '{}');
+    if (Number.isFinite(p.score) && p.score > score) {
+      score = Math.floor(p.score);
+      document.getElementById('score-value').textContent = score;
+      document.getElementById('progress-fill').style.width = Math.min(100, score / WIN_SCORE * 100) + '%';
+    }
+    if (p.level2Unlocked) level2Unlocked = true;
+    if (p.level3Unlocked) level3Unlocked = true;
+  } catch (_) {}
+}
+function exitToMenu() {
+  saveProgress();
+  Sound.stopMusic();
+  gameActive = false; pauseOpen = false;
+  if (document.pointerLockElement) document.exitPointerLock();
+  // Reload to the start screen for a clean state; saved progress restores on
+  // the next play. (Renderer/scene aren't torn down cleanly otherwise.)
+  location.reload();
 }
 
 function restartGame() {
@@ -6110,6 +6155,16 @@ function closePause() {
 document.getElementById('pause-btn').addEventListener('click', openPause);
 document.getElementById('pause-btn').addEventListener('mousedown', (event) => { event.stopPropagation(); });
 document.getElementById('resume-btn').addEventListener('click', closePause);
+document.getElementById('save-progress-btn').addEventListener('click', () => {
+  saveProgress();
+  const b = document.getElementById('save-progress-btn');
+  b.textContent = '✓ SAVED'; setTimeout(() => { b.textContent = '💾 SAVE PROGRESS'; }, 1500);
+  if (typeof Sound !== 'undefined') Sound.sfx.click();
+});
+document.getElementById('exit-btn').addEventListener('click', () => {
+  if (typeof Sound !== 'undefined') Sound.sfx.click();
+  exitToMenu();
+});
 
 // Buy +50 balloons for 1000 points — convert score into balloon-bank progress.
 const BUY_COST = 1000, BUY_AMOUNT = 50;
