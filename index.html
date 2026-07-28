@@ -1141,7 +1141,7 @@ function makeEmbeddedSceneFallback() {
       ...weaponObjects,
       ...qrObjects,
       ...barrelObjects,
-      fallbackObject('center-plinth', { x: 0, y: 0.55, z: -2.5 }, { x: 1.3, y: 1.1, z: 1.3 }, zero, [fallbackCollider(one)]),
+      fallbackObject('center-plinth', { x: 0, y: 0.55, z: 0 }, { x: 1.3, y: 1.1, z: 1.3 }, zero, [fallbackCollider(one)]),
       ...boundaryObjects,
     ],
   };
@@ -4743,6 +4743,19 @@ function loadAndPlaceCrowd() {
       root.scale.setScalar(1.5 * s);
       root.userData.crowdMember = true;
 
+      // The char crowd models are rigged (skinned). In three r128, clone(true)
+      // does not rebind a SkinnedMesh to its cloned skeleton, so every clone's
+      // skinned geometry follows the ORIGINAL skeleton at the world origin —
+      // piling all 28 avatars into a grey blob at the arena centre instead of
+      // the bleachers. The Meshy seated audience already fills the stands, so
+      // hide these broken duplicates in plain game mode. runtimeStateVisible is
+      // the engine's persistent hide flag (honoured on every scene apply); we
+      // still register the object so the Studio scene contract is untouched.
+      if (typeof STUDIO_AUTHORING_MODE === 'undefined' || !STUDIO_AUTHORING_MODE) {
+        root.userData.runtimeStateVisible = false;
+        root.visible = false;
+      }
+
       scene.add(root);
       registerEditableObject(GLTF_CROWD_IDS[i], root);
     }
@@ -5877,15 +5890,15 @@ function pickupWeapon(obj) {
   // device is dropped and re-picked within a single frame.
   obj.animToken = (obj.animToken || 0) + 1;
   const myToken = obj.animToken;
-  let t=0;
+  let anim=0;
   const startY = obj.mesh.position.y;
   const go = () => {
     if (STUDIO_AUTHORING_MODE && studioAuthoring?.mode !== 'playing') return;
     if (obj.animToken !== myToken || !obj.collected) return; // superseded or dropped
-    t+=0.06;
-    if (t<=1) {
-      obj.mesh.position.y = startY + t*0.6;
-      obj.mesh.scale.setScalar(1-t);
+    anim+=0.06;
+    if (anim<=1) {
+      obj.mesh.position.y = startY + anim*0.6;
+      obj.mesh.scale.setScalar(1-anim);
       requestAnimationFrame(go);
     } else scene.remove(obj.mesh);
   };
