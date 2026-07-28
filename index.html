@@ -4146,9 +4146,14 @@ function tickLevel3() {
   p.y = 7.5 + Math.sin(t * 0.002) * 1.6;
   const r = Math.sqrt(p.x*p.x + p.z*p.z);
   if (r > 14) { const nx = p.x/r, nz = p.z/r, dot = boss.vel.x*nx + boss.vel.z*nz; boss.vel.x -= 2*dot*nx; boss.vel.z -= 2*dot*nz; }
-  // Keep the barcode tag facing the player.
+  // Keep the barcode tag on the surface facing the player (body r=1.7, y*1.2).
   const tag = boss.mesh.userData.tag;
-  if (tag) { const d = new THREE.Vector3().subVectors(camera.position, p).normalize(); tag.position.set(d.x*1.75, 0.1 + d.y*1.75, d.z*1.75); tag.lookAt(camera.position); }
+  if (tag) {
+    const d = new THREE.Vector3().subVectors(camera.position, p).normalize();
+    const surf = Math.sqrt((1.7*d.x)**2 + (2.04*d.y)**2 + (1.7*d.z)**2);
+    const r = surf + 0.2;
+    tag.position.set(d.x*r, d.y*r, d.z*r); tag.lookAt(camera.position);
+  }
   // Periodically spawn a few fast "minion" balloons for extra chaos.
   if (t >= boss.spawnAt) {
     boss.spawnAt = t + 5000;
@@ -6471,11 +6476,16 @@ function updateGame(delta, t) {
     }
     const d=Math.sqrt(b.mesh.position.x**2+b.mesh.position.z**2);
     if(d>21){b.mesh.position.x*=0.99;b.mesh.position.z*=0.99;}
-    // Keep the barcode tag on the camera-facing side, turned toward the player
+    // Keep the barcode tag on the camera-facing side, just outside the balloon
+    // surface. The body is a sphere r=0.38 stretched y*1.28 (vertical r=0.486),
+    // so place the tag along the view dir past that ellipsoid's extent.
     const tag = b.mesh.userData.tag;
     if (tag) {
       const dir = new THREE.Vector3().subVectors(camera.position, b.mesh.position).normalize();
-      tag.position.set(dir.x*0.44, 0.05+dir.y*0.44, dir.z*0.44);
+      const rx = 0.38, ry = 0.486;
+      const surf = Math.sqrt((rx*dir.x)**2 + (ry*dir.y)**2 + (rx*dir.z)**2);
+      const r = surf + 0.12; // clear the surface with margin
+      tag.position.set(dir.x*r, dir.y*r, dir.z*r);
       tag.lookAt(camera.position);
     }
   });
