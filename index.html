@@ -3770,8 +3770,8 @@ function addCircusProps() {
     { file: 'models/props/carousel.glb', angle: Math.PI * 0.0, radius: 11.0, height: 3.8, spin: 0.25 },
     { file: 'models/props/elephant.glb', angle: Math.PI * 0.5, radius: 10.6, height: 2.4 },
     { file: 'models/props/clown.glb', angle: Math.PI * 1.5, radius: 10.4, height: 2.2 },
-    // ZD421 "prize machine" — sits on a small stand near the arena edge.
-    { file: 'models/props/zd421-printer.glb', angle: Math.PI * 1.0, radius: 7.0, height: 1.0, standH: 1.0 },
+    // (ZD421 printer is NOT placed in the world — it only appears in the
+    //  prize-claim modal where it prints the voucher.)
   ];
   const loader = new THREE.GLTFLoader();
   // Preload the plushie reward model so it's ready for the 200-balloon trophy.
