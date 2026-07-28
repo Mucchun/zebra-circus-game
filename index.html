@@ -3495,11 +3495,30 @@ const Sound = (() => {
     powerup:() => { [523, 784, 1046].forEach((f, i) => setTimeout(() => blip(f, 0.14, 'triangle', sfxGain, 0.45), i * 70)); },
   };
 
-  // Simple looping circus melody ("Entry of the Gladiators" vibe, original notes).
+  // Recorded circus bed, looped through Web Audio (never an <audio> element, so it
+  // does not hand control to the OS media player). See audio/README.md for provenance.
+  const MUSIC_URL = './audio/bigtop_theme.mp3';
+  const MUSIC_GAIN_FILE = 0.32;   // mastered track, quieter here than the raw synth blips
+  const MUSIC_GAIN_SYNTH = 0.18;
+  let musicBuffer = null, musicSource = null, musicLoading = null, musicWanted = false;
+
+  function loadMusic() {
+    if (musicLoading) return musicLoading;
+    musicLoading = fetch(MUSIC_URL)
+      .then((r) => { if (!r.ok) throw new Error('music http ' + r.status); return r.arrayBuffer(); })
+      // Callback form: Safari still does not return a promise from decodeAudioData.
+      .then((raw) => new Promise((res, rej) => ctx.decodeAudioData(raw, res, rej)))
+      .then((decoded) => { musicBuffer = decoded; return decoded; });
+    return musicLoading;
+  }
+
+  // Fallback melody ("Entry of the Gladiators" vibe, original notes). Only used if the
+  // recorded bed cannot be fetched or decoded, so the game is never silent.
   const MELODY = [523,494,466,440,466,494,523,587,523,494,466,440,392,440,466,494,
                   523,494,466,440,466,494,523,587,659,587,523,494,523,440,392,0];
-  function startMusic() {
+  function startProceduralMusic() {
     if (!ctx || musicTimer) return;
+    musicGain.gain.value = MUSIC_GAIN_SYNTH;
     step = 0;
     const beat = 200;
     musicTimer = setInterval(() => {
@@ -3509,7 +3528,39 @@ const Sound = (() => {
       step++;
     }, beat);
   }
-  function stopMusic() { if (musicTimer) { clearInterval(musicTimer); musicTimer = null; } }
+
+  function startMusic() {
+    if (!ctx) return;
+    musicWanted = true;
+    if (musicSource || musicTimer) return;
+    loadMusic().then((buf) => {
+      // stopMusic() may have run while the file was still downloading.
+      if (!musicWanted || musicSource || musicTimer || !ctx) return;
+      musicGain.gain.value = MUSIC_GAIN_FILE;
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.loop = true;
+      src.connect(musicGain);
+      src.start(0);
+      musicSource = src;
+    }).catch(() => { if (musicWanted) startProceduralMusic(); });
+  }
+
+  function stopMusic() {
+    musicWanted = false;
+    if (musicSource) {
+      try { musicSource.stop(); } catch (_) {}
+      try { musicSource.disconnect(); } catch (_) {}
+      musicSource = null;
+    }
+    if (musicTimer) { clearInterval(musicTimer); musicTimer = null; }
+  }
+
+  // Do not keep playing over a backgrounded tab.
+  document.addEventListener('visibilitychange', () => {
+    if (!ctx) return;
+    if (document.hidden) ctx.suspend(); else ctx.resume();
+  });
   function toggleMute() {
     muted = !muted;
     if (master) master.gain.value = muted ? 0 : 0.9;
