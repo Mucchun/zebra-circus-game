@@ -1758,12 +1758,15 @@ function loadDeviceModels() {
   });
 }
 
-// PLAY → show the player sign-in panel; the form submit starts the game.
+// PLAY → always show the player sign-in panel so every player is captured
+// (important on shared/kiosk browsers). The form submit starts the game.
 document.getElementById('play-btn').addEventListener('click', () => {
-  // If this browser already registered, skip straight to the game.
-  if (localStorage.getItem('zebraPlayerRegistered') === '1') { startGame(); return; }
   document.getElementById('start-screen').style.display = 'none';
   document.getElementById('register-screen').style.display = 'flex';
+  // Clear the previous player's typed details for a fresh capture.
+  ['reg-first','reg-last','reg-email','reg-phone'].forEach((id) => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const c = document.getElementById('reg-consent'); if (c) c.checked = false;
+  document.getElementById('reg-error').textContent = '';
   setTimeout(() => document.getElementById('reg-first').focus(), 60);
 });
 
