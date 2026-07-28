@@ -5629,6 +5629,13 @@ function shoot() {
     setTimeout(()=>{ if(heldMesh) heldMesh.position.z=-0.90; },70);
   }
 
+  // Universal Level-3 boss hit: any weapon aimed at the boss damages it.
+  if (level3Active && boss && boss.mesh) {
+    const dir = new THREE.Vector3(); camera.getWorldDirection(dir);
+    const bossRay = new THREE.Raycaster(camera.position.clone(), dir, 0, 60);
+    if (bossRay.intersectObject(boss.mesh, true).length > 0) damageBoss(w);
+  }
+
   switch(w.effect) {
     case 'laser':    fireLaser(w);   break;
     case 'rapid':    fireProjectile(w,0);   break;
@@ -5775,12 +5782,6 @@ function explodeCryo(pos, w) {
 
 function rayHit(origin, dir, w) {
   const ray = new THREE.Raycaster(origin, dir, 0, 50);
-
-  // Boss hit (Level 3) — takes priority; shooting the boss damages it.
-  if (level3Active && boss && boss.mesh) {
-    const bossHits = ray.intersectObject(boss.mesh, true);
-    if (bossHits.length > 0) { damageBoss(w); return; }
-  }
 
   // Balloon hits
   const bMeshes = balloons.filter(b=>b.alive).map(b=>b.mesh);
