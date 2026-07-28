@@ -691,7 +691,9 @@ body { background: #000; overflow: hidden; font-family: 'Source Sans 3', 'Barlow
     <div class="wslot empty" id="slot-1" data-num="2"><div class="ico">MC3400</div></div>
     <div class="wslot empty" id="slot-2" data-num="3"><div class="ico">PS30</div></div>
     <div class="wslot empty" id="slot-3" data-num="4"><div class="ico">TC8300</div></div>
-    <div class="wslot empty" id="slot-4" data-num="5"><div class="ico">🦓 PLUSH</div></div>
+    <div class="wslot empty" id="slot-4" data-num="5"><div class="ico">DS3678</div></div>
+    <div class="wslot empty" id="slot-5" data-num="6"><div class="ico">DS2278</div></div>
+    <div class="wslot empty" id="slot-6" data-num="7"><div class="ico">🦓 PLUSH</div></div>
   </div>
 
   <div id="progress-wrap">
@@ -3308,7 +3310,7 @@ function resetStudioGameplayState() {
   document.getElementById('score-value').textContent = '0';
   document.getElementById('progress-fill').style.width = '0%';
   document.getElementById('weapon-info').style.display = 'none';
-  for (let index = 0; index < 4; index++) document.getElementById(`slot-${index}`).className = 'wslot empty';
+  for (let index = 0; index < 6; index++) document.getElementById(`slot-${index}`).className = 'wslot empty';
   if (heldMesh) camera.remove(heldMesh);
   heldMesh = null;
   for (const collection of [particles, projectiles, ringWaves, scanMarkers]) {
@@ -3863,7 +3865,7 @@ function restartGame() {
   document.getElementById('score-value').textContent = '0';
   document.getElementById('progress-fill').style.width = '0%';
   document.getElementById('weapon-info').style.display = 'none';
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 6; i++) {
     const s = document.getElementById('slot-' + i);
     s.className = 'wslot empty';
   }
@@ -5331,7 +5333,17 @@ function addWeaponLabel(group, w) {
 }
 
 function spawnWeapons() {
-  // Only spawn the 4 arena device pickups (scanners are Level-4-only).
+  const addGlow = (mesh, w) => {
+    const glow = new THREE.Mesh(new THREE.SphereGeometry(0.5,8,8),
+      new THREE.MeshBasicMaterial({color:w.accent,transparent:true,opacity:0.08}));
+    mesh.add(glow);
+    const pl = new THREE.PointLight(w.accent, 0.7, 2.5);
+    pl.position.set(0, 0, 0); mesh.add(pl);
+    return pl;
+  };
+
+  // The 4 authored arena products: positioned by the scene document (registered
+  // as editable objects so Studio/runtime transforms stay 1:1).
   const arena = WEAPONS.filter(w => ['MC9400','MC3400','PS30','TC8300'].includes(w.id));
   arena.forEach((w, i) => {
     const mesh = makeWeaponMesh(w);
@@ -5340,19 +5352,26 @@ function spawnWeapons() {
     const a = (i / arena.length) * Math.PI * 2;
     const d = 5 + (i%3)*1.5;
     mesh.position.set(Math.cos(a)*d, 0.45, Math.sin(a)*d);
-
-    const geoGlow = new THREE.SphereGeometry(0.5,8,8);
-    const matGlow = new THREE.MeshBasicMaterial({color:w.accent,transparent:true,opacity:0.08});
-    const glow = new THREE.Mesh(geoGlow,matGlow);
-    mesh.add(glow);
-
-    const pl = new THREE.PointLight(w.accent, 0.7, 2.5);
-    pl.position.set(0, 0, 0);
-    mesh.add(pl);
+    const pl = addGlow(mesh, w);
     scene.add(mesh);
     registerEditableObject(editorId, mesh);
-
     weaponObjs.push({ mesh, w, pl, collected:false, bob:Math.random()*Math.PI*2, editorId, baseY:mesh.position.y });
+  });
+
+  // The 2 rugged scanners are arena pickups too (6 weapons in total). They are
+  // not in the authored scene document, so place them procedurally between the
+  // devices and do NOT register them — reconcileDynamicSceneObjects would strip
+  // ids missing from the document, and the Studio contract is a fixed set.
+  const scanners = WEAPONS.filter(w => ['DS3678','DS2278'].includes(w.id));
+  scanners.forEach((w, i) => {
+    const mesh = makeWeaponMesh(w);
+    mesh.userData.visualSource = `weapon:${w.id}`;
+    const a = (i / scanners.length) * Math.PI * 2 + Math.PI / 4; // offset from the 4 devices
+    const d = 6.5;
+    mesh.position.set(Math.cos(a)*d, 0.45, Math.sin(a)*d);
+    const pl = addGlow(mesh, w);
+    scene.add(mesh);
+    weaponObjs.push({ mesh, w, pl, collected:false, bob:Math.random()*Math.PI*2, editorId:`weapon-${w.id.toLowerCase()}`, baseY:mesh.position.y });
   });
 }
 
@@ -5862,8 +5881,9 @@ function bindControls() {
     if (gameActive && !pauseOpen && e.code==='Digit2') trySwitch(level4Active ? WEAPONS.findIndex(w=>w.id==='DS2278') : 1);
     if (gameActive && !pauseOpen && e.code==='Digit3') trySwitch(2);
     if (gameActive && !pauseOpen && e.code==='Digit4') trySwitch(3);
-    if (gameActive && !pauseOpen && e.code==='Digit5') equipPlushie(); // plushie inventory item
-    if (gameActive && e.code==='Digit6') trySwitch(5);
+    if (gameActive && !pauseOpen && e.code==='Digit5') trySwitch(4); // DS3678 scanner
+    if (gameActive && !pauseOpen && e.code==='Digit6') trySwitch(5); // DS2278 scanner
+    if (gameActive && !pauseOpen && e.code==='Digit7') equipPlushie(); // plushie inventory item
     if (e.code==='Escape') closeInfo();
   });
   document.addEventListener('keyup', e => { keys[e.code]=false; });
@@ -5969,7 +5989,7 @@ function trySwitch(idx) {
   if (!collected.has(idx)) return;
   if (holdingPlushie) {
     holdingPlushie = false;
-    const ps = document.getElementById('slot-4');
+    const ps = document.getElementById('slot-6');
     if (ps) { ps.classList.remove('active'); ps.classList.add('has-it'); }
   }
   currentWeapon = idx;
@@ -6396,7 +6416,7 @@ function awardZebraPlushie() { awardPrize('plush'); }
 
 // Show the plushie inventory slot as owned.
 function markPlushieSlot() {
-  const s = document.getElementById('slot-4');
+  const s = document.getElementById('slot-6');
   if (s && !holdingPlushie) { s.classList.remove('empty'); s.classList.add('has-it'); }
 }
 
@@ -6418,10 +6438,10 @@ function equipPlushie() {
   heldMesh = g;
   camera.add(g);
   document.getElementById('weapon-info').style.display = 'none';
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 7; i++) {
     const s = document.getElementById('slot-' + i);
     if (!s) continue;
-    if (i === 4) { s.classList.remove('empty', 'has-it'); s.classList.add('active'); }
+    if (i === 6) { s.classList.remove('empty', 'has-it'); s.classList.add('active'); }
     else s.classList.toggle('active', false);
   }
   showPrompt(t('dyn_holding_plushie'), 1400);
