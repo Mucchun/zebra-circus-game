@@ -745,35 +745,35 @@ body { background: #000; overflow: hidden; font-family: 'Source Sans 3', 'Barlow
     <button id="prize-close" type="button">✕</button>
     <div id="pm-printer3d" title="Zebra ZD421 — printing your voucher"></div>
     <div class="pm-headtext">
-      <div class="pm-title">🎉 CONGRATULATIONS — YOU WON!</div>
-      <div class="pm-sub">The Zebra ZD421 just printed your voucher. Enter your address and we'll ship your prize.</div>
-      <div class="pm-coupon">VOUCHER: <b id="pm-coupon">—</b></div>
+      <div class="pm-title" data-i18n="pm_title">🎉 CONGRATULATIONS — YOU WON!</div>
+      <div class="pm-sub" data-i18n="pm_sub">The Zebra ZD421 just printed your voucher. Enter your address and we'll ship your prize.</div>
+      <div class="pm-coupon"><span data-i18n="pm_voucher">VOUCHER:</span> <b id="pm-coupon">—</b></div>
     </div>
     <form id="prize-form" autocomplete="on" novalidate>
       <div class="pm-row">
-        <label>Prize
+        <label><span data-i18n="pm_prize">Prize</span>
           <select id="pm-prize" name="prize">
             <option value="Zebra Plushie">🦓 Zebra Plushie</option>
             <option value="Zebra Hand Terminal">📟 Zebra Hand Terminal</option>
           </select>
         </label>
       </div>
-      <input id="pm-name" name="fullName" type="text" placeholder="Full name" required maxlength="80">
-      <input id="pm-addr" name="address" type="text" placeholder="Home address (street, number)" required maxlength="160">
+      <input id="pm-name" name="fullName" type="text" placeholder="Full name" data-i18n-ph="pm_ph_name" required maxlength="80">
+      <input id="pm-addr" name="address" type="text" placeholder="Home address (street, number)" data-i18n-ph="pm_ph_addr" required maxlength="160">
       <div class="pm-row">
-        <input id="pm-city" name="city" type="text" placeholder="City" required maxlength="80">
-        <input id="pm-post" name="postcode" type="text" placeholder="Postal code" required maxlength="20">
+        <input id="pm-city" name="city" type="text" placeholder="City" data-i18n-ph="pm_ph_city" required maxlength="80">
+        <input id="pm-post" name="postcode" type="text" placeholder="Postal code" data-i18n-ph="pm_ph_post" required maxlength="20">
       </div>
-      <input id="pm-country" name="country" type="text" placeholder="Country" required maxlength="60">
+      <input id="pm-country" name="country" type="text" placeholder="Country" data-i18n-ph="pm_ph_country" required maxlength="60">
       <div class="pm-error" id="pm-error"></div>
-      <button class="btn btn-lg" id="pm-submit" type="submit">SHIP MY PRIZE →</button>
-      <div class="pm-fine">Ships to the address above. Your voucher verifies the win.</div>
+      <button class="btn btn-lg" id="pm-submit" type="submit" data-i18n="pm_submit">SHIP MY PRIZE →</button>
+      <div class="pm-fine" data-i18n="pm_fine">Ships to the address above. Your voucher verifies the win.</div>
     </form>
     <div id="pm-done" style="display:none;">
       <div class="pm-done-icon">📦</div>
-      <div class="pm-done-title">YOUR PRIZE IS ON ITS WAY!</div>
+      <div class="pm-done-title" data-i18n="pm_done_title">YOUR PRIZE IS ON ITS WAY!</div>
       <div class="pm-done-sub" id="pm-done-sub"></div>
-      <button class="btn btn-lg" id="pm-done-close" type="button">BACK TO GAME</button>
+      <button class="btn btn-lg" id="pm-done-close" type="button" data-i18n="pm_done_back">BACK TO GAME</button>
     </div>
   </div>
 </div>
@@ -1780,10 +1780,10 @@ document.getElementById('reg-form').addEventListener('submit', async (e) => {
   const err = document.getElementById('reg-error');
   const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const phoneOk = /[0-9]{6,}/.test(phone.replace(/[^0-9]/g, ''));
-  if (!firstName || !lastName) { err.textContent = 'Please enter your first name and surname.'; return; }
-  if (!emailOk) { err.textContent = 'Please enter a valid email address.'; return; }
-  if (!phoneOk) { err.textContent = 'Please enter a valid phone number.'; return; }
-  if (!consent) { err.textContent = 'Please tick the consent box to continue.'; return; }
+  if (!firstName || !lastName) { err.textContent = t('v_name'); return; }
+  if (!emailOk) { err.textContent = t('v_email'); return; }
+  if (!phoneOk) { err.textContent = t('v_phone'); return; }
+  if (!consent) { err.textContent = t('v_consent'); return; }
   err.textContent = '';
 
   const player = { firstName, lastName, email, phone, consent: true, at: new Date().toISOString() };
@@ -1805,7 +1805,7 @@ document.getElementById('reg-form').addEventListener('submit', async (e) => {
 
   if (typeof LunaAnalytics !== 'undefined') LunaAnalytics.track('player_registered', {});
   document.getElementById('register-screen').style.display = 'none';
-  btn.disabled = false; btn.textContent = 'START PLAYING →';
+  btn.disabled = false; btn.textContent = t('reg_submit');
   startGame();
 });
 document.getElementById('restart-btn').addEventListener('click', restartGame);
@@ -3556,6 +3556,63 @@ const I18N = {
     paused: 'PAUSED', score: 'SCORE', pts: 'pts', balloon_bank: 'BALLOON BANK',
     buy_balloons_name: '🎈 BUY +50 BALLOONS',
     save_progress: '💾 SAVE PROGRESS', exit: '🚪 EXIT', resume: 'RESUME',
+    // ── dynamic in-game ──
+    dyn_l1_cleared_kf: '⚡ Level 1 cleared — Balloon Frenzy incoming!',
+    dyn_l1_cleared: '⚡ LEVEL 1 CLEARED! Get ready for BALLOON FRENZY…',
+    dyn_l2_go: '⚡ GO! Pop {n} balloons in {s}s!',
+    dyn_boss_appear: '👑 THE BIG TOP BOSS APPEARS! Shoot it — {n} hits to pop it!',
+    dyn_boss_defeated: '👑 BOSS DEFEATED!',
+    dyn_boss_defeated_sub: 'You popped the Big Top Boss — +500 points AND +500 balloons! You are the Zebra Circus champion. 🎉',
+    dyn_frenzy_cleared: '⚡ FRENZY CLEARED!',
+    dyn_frenzy_cleared_sub: 'You popped {n} balloons! 👑 Next up: the BIG TOP BOSS.',
+    dyn_time_up: '⏱ TIME! {n} POPPED',
+    dyn_time_up_sub: 'You popped {n} of {t}. On to the BIG TOP BOSS!',
+    dyn_golden_rush: '✨✨ GOLDEN RUSH! Everything pays 5× — pop fast! ✨✨',
+    dyn_golden_rush_kf: '✨ GOLDEN RUSH activated!',
+    dyn_golden_balloon_kf: '★ GOLDEN BALLOON +{n}!',
+    dyn_picked_up: 'Picked up {name}!',
+    dyn_dropped: 'Dropped {name}',
+    dyn_press_e_weapon: 'Press E near a weapon to pick it up!',
+    dyn_ring_shockwave: 'RING SHOCKWAVE',
+    dyn_cryo_blast: 'CRYO BLAST — {n} balloons frozen!',
+    dyn_qr_scanned: 'QR SCANNED: {name} +50pts!',
+    dyn_rfid_unlocked: 'ALL ZEBRA PRODUCTS SCANNED — RFID BULK READ UNLOCKED! Press R',
+    dyn_rfid_unlocked_kf: '★ RFID BULK READ UNLOCKED — press R',
+    dyn_rfid_bulk: '📡 RFID BULK READ — {n} tags read (+{s})',
+    dyn_prize_won: '🎉 YOU WON A {emoji} {label}! Voucher {coupon} — Pause (P) → CLAIM',
+    dyn_prize_won_kf: '🎉 {label} won! Voucher {coupon}',
+    dyn_holding_plushie: '🦓 Holding your Zebra Plushie',
+    dyn_bought_balloons: '🎈 Bought +{n} balloons for {c} pts!',
+    dyn_press_e_pickup: 'Press E — pick up {name}',
+    dyn_powerup: '{icon} {label}!',
+    dyn_powerup_kf: '{icon} POWER-UP: {label}',
+    // validation
+    v_name: 'Please enter your first name and surname.',
+    v_email: 'Please enter a valid email address.',
+    v_phone: 'Please enter a valid phone number.',
+    v_consent: 'Please tick the consent box to continue.',
+    v_address: 'Please fill in all address fields.',
+    // weapon effects
+    eff_laser: 'LASER BURST', eff_laser_d: 'Fires a continuous laser that pierces through multiple balloons at once!',
+    eff_rapid: 'RAPID SCAN', eff_rapid_d: 'Fires rapid pulses of scan energy — fastest fire rate of all terminals!',
+    eff_ring: 'RING SHOCKWAVE', eff_ring_d: 'Emits a circular shockwave that destroys ALL balloons in a wide radius!',
+    eff_cryo: 'CRYO EXPLOSION', eff_cryo_d: 'Launches a cryo-grenade that freezes and shatters all balloons in a large area!',
+    // prize machine
+    pm_title: '🎉 CONGRATULATIONS — YOU WON!',
+    pm_sub: 'The Zebra ZD421 just printed your voucher. Enter your address and we\'ll ship your prize.',
+    pm_voucher: 'VOUCHER:', pm_prize: 'Prize',
+    pm_ph_name: 'Full name', pm_ph_addr: 'Home address (street, number)', pm_ph_city: 'City', pm_ph_post: 'Postal code', pm_ph_country: 'Country',
+    pm_submit: 'SHIP MY PRIZE →', pm_fine: 'Ships to the address above. Your voucher verifies the win.',
+    pm_done_title: 'YOUR PRIZE IS ON ITS WAY!', pm_done_back: 'BACK TO GAME',
+    pm_done_ship: 'Your <b>{prize}</b> will ship to:<br>{addr}<br><br>Voucher <b>{coupon}</b>',
+    // pause shop dynamic
+    buy_ready: 'BUY ▸ +50 🎈', buy_ready_sub: 'Spend 1000 points → +50 balloons in the bank.',
+    buy_need_sub: 'Reach 1000 points to convert into balloons.',
+    prize_claimed_btn: 'CLAIMED ✓', prize_claim_btn: '🎁 CLAIM',
+    prize_claimed_sub: 'On its way! Voucher {coupon}',
+    prize_won_sub: 'You won! Voucher {coupon} — click to enter your address.',
+    prize_locked_sub: 'Win a real {label} at {goal} balloons.',
+    saved_btn: '✓ SAVED',
   },
   tr: {
     loading: 'ZEBRA SİRKİ YÜKLENİYOR...',
@@ -3584,6 +3641,63 @@ const I18N = {
     paused: 'DURAKLATILDI', score: 'PUAN', pts: 'puan', balloon_bank: 'BALON BANKASI',
     buy_balloons_name: '🎈 +50 BALON AL',
     save_progress: '💾 İLERLEMEYİ KAYDET', exit: '🚪 ÇIKIŞ', resume: 'DEVAM ET',
+    // ── dynamic in-game ──
+    dyn_l1_cleared_kf: '⚡ 1. Bölüm tamamlandı — Balon Çılgınlığı geliyor!',
+    dyn_l1_cleared: '⚡ 1. BÖLÜM TAMAMLANDI! BALON ÇILGINLIĞINA hazırlan…',
+    dyn_l2_go: '⚡ BAŞLA! {s} saniyede {n} balon patlat!',
+    dyn_boss_appear: '👑 BÜYÜK PATRON GELDİ! Ateş et — patlatmak için {n} isabet!',
+    dyn_boss_defeated: '👑 PATRON YENİLDİ!',
+    dyn_boss_defeated_sub: 'Büyük Patronu patlattın — +500 puan VE +500 balon! Zebra Sirki şampiyonusun. 🎉',
+    dyn_frenzy_cleared: '⚡ ÇILGINLIK TAMAMLANDI!',
+    dyn_frenzy_cleared_sub: '{n} balon patlattın! 👑 Sırada: BÜYÜK PATRON.',
+    dyn_time_up: '⏱ SÜRE DOLDU! {n} PATLADI',
+    dyn_time_up_sub: '{t} balondan {n} tanesini patlattın. Haydi BÜYÜK PATRONA!',
+    dyn_golden_rush: '✨✨ ALTIN YAĞMURU! Her şey 5× — hızlı patlat! ✨✨',
+    dyn_golden_rush_kf: '✨ ALTIN YAĞMURU başladı!',
+    dyn_golden_balloon_kf: '★ ALTIN BALON +{n}!',
+    dyn_picked_up: '{name} alındı!',
+    dyn_dropped: '{name} bırakıldı',
+    dyn_press_e_weapon: 'Silah almak için bir cihazın yanında E tuşuna bas!',
+    dyn_ring_shockwave: 'HALKA ŞOK DALGASI',
+    dyn_cryo_blast: 'KRİYO PATLAMASI — {n} balon donduruldu!',
+    dyn_qr_scanned: 'QR TARANDI: {name} +50 puan!',
+    dyn_rfid_unlocked: 'TÜM ZEBRA ÜRÜNLERİ TARANDI — RFID TOPLU OKUMA AÇILDI! R tuşuna bas',
+    dyn_rfid_unlocked_kf: '★ RFID TOPLU OKUMA AÇILDI — R tuşuna bas',
+    dyn_rfid_bulk: '📡 RFID TOPLU OKUMA — {n} etiket okundu (+{s})',
+    dyn_prize_won: '🎉 BİR {emoji} {label} KAZANDIN! Kupon {coupon} — Duraklat (P) → AL',
+    dyn_prize_won_kf: '🎉 {label} kazanıldı! Kupon {coupon}',
+    dyn_holding_plushie: '🦓 Zebra Peluşunu tutuyorsun',
+    dyn_bought_balloons: '🎈 {c} puana +{n} balon alındı!',
+    dyn_press_e_pickup: 'E tuşuna bas — {name} al',
+    dyn_powerup: '{icon} {label}!',
+    dyn_powerup_kf: '{icon} GÜÇ: {label}',
+    // validation
+    v_name: 'Lütfen adınızı ve soyadınızı girin.',
+    v_email: 'Lütfen geçerli bir e-posta adresi girin.',
+    v_phone: 'Lütfen geçerli bir telefon numarası girin.',
+    v_consent: 'Devam etmek için onay kutusunu işaretleyin.',
+    v_address: 'Lütfen tüm adres alanlarını doldurun.',
+    // weapon effects
+    eff_laser: 'LAZER PATLAMASI', eff_laser_d: 'Birden fazla balonu aynı anda delen sürekli bir lazer ateşler!',
+    eff_rapid: 'HIZLI TARAMA', eff_rapid_d: 'Hızlı tarama enerjisi darbeleri ateşler — tüm terminallerin en hızlısı!',
+    eff_ring: 'HALKA ŞOK DALGASI', eff_ring_d: 'Geniş bir alandaki TÜM balonları yok eden dairesel bir şok dalgası yayar!',
+    eff_cryo: 'KRİYO PATLAMASI', eff_cryo_d: 'Geniş bir alandaki tüm balonları donduran ve parçalayan bir kriyo-bomba fırlatır!',
+    // prize machine
+    pm_title: '🎉 TEBRİKLER — KAZANDIN!',
+    pm_sub: 'Zebra ZD421 kuponunu yazdırdı. Adresini gir, ödülünü gönderelim.',
+    pm_voucher: 'KUPON:', pm_prize: 'Ödül',
+    pm_ph_name: 'Ad Soyad', pm_ph_addr: 'Ev adresi (sokak, numara)', pm_ph_city: 'Şehir', pm_ph_post: 'Posta kodu', pm_ph_country: 'Ülke',
+    pm_submit: 'ÖDÜLÜMÜ GÖNDER →', pm_fine: 'Yukarıdaki adrese gönderilir. Kuponun kazanımı doğrular.',
+    pm_done_title: 'ÖDÜLÜN YOLDA!', pm_done_back: 'OYUNA DÖN',
+    pm_done_ship: '<b>{prize}</b> şu adrese gönderilecek:<br>{addr}<br><br>Kupon <b>{coupon}</b>',
+    // pause shop dynamic
+    buy_ready: 'AL ▸ +50 🎈', buy_ready_sub: '1000 puan harca → bankaya +50 balon.',
+    buy_need_sub: 'Balona çevirmek için 1000 puana ulaş.',
+    prize_claimed_btn: 'ALINDI ✓', prize_claim_btn: '🎁 AL',
+    prize_claimed_sub: 'Yolda! Kupon {coupon}',
+    prize_won_sub: 'Kazandın! Kupon {coupon} — adresini girmek için tıkla.',
+    prize_locked_sub: '{goal} balonda gerçek bir {label} kazan.',
+    saved_btn: '✓ KAYDEDİLDİ',
   },
 };
 let currentLang = 'en';
@@ -3604,7 +3718,13 @@ function applyLang(lang) {
     b.classList.toggle('active', b.getAttribute('data-lang') === currentLang));
 }
 document.querySelectorAll('#lang-toggle button').forEach((b) =>
-  b.addEventListener('click', () => applyLang(b.getAttribute('data-lang'))));
+  b.addEventListener('click', () => { applyLang(b.getAttribute('data-lang')); if (typeof refreshWalletUi === 'function') refreshWalletUi(); }));
+// Translate a dynamic key with {placeholder} substitution.
+function t(key, vars) {
+  let s = (I18N[currentLang] && I18N[currentLang][key]) || I18N.en[key] || key;
+  if (vars) for (const k in vars) s = s.replace(new RegExp('\\{' + k + '\\}', 'g'), vars[k]);
+  return s;
+}
 applyLang(localStorage.getItem('zebraLang') || 'en');
 
 async function startGame() {
@@ -4065,8 +4185,8 @@ function activatePowerup(key, pos) {
     const w = currentWeapon >= 0 ? WEAPONS[currentWeapon] : WEAPONS[0];
     balloons.filter(b => b.alive).forEach((b, i) => setTimeout(() => { if (b.alive) { popBalloon(b, w); addScore(w.pts); } }, i * 25));
   }
-  showPrompt(p.icon + ' ' + p.label + '!', 2200);
-  addKillFeed(p.icon + ' POWER-UP: ' + p.label);
+  showPrompt(t('dyn_powerup', {icon: p.icon, label: p.label}), 2200);
+  addKillFeed(t('dyn_powerup_kf', {icon: p.icon, label: p.label}));
   updatePowerupHud();
 }
 function updatePowerupHud() {
@@ -4118,8 +4238,8 @@ function updateLevelHud() {
 function unlockLevel2() {
   if (level2Unlocked) return;
   level2Unlocked = true;
-  addKillFeed('⚡ Level 1 cleared — Balloon Frenzy incoming!');
-  showPrompt('⚡ LEVEL 1 CLEARED! Get ready for BALLOON FRENZY…', 2600);
+  addKillFeed(t('dyn_l1_cleared_kf'));
+  showPrompt(t('dyn_l1_cleared'), 2600);
   flashScreen(0xff2d55, 0.3);
   updateLevelHud();
   setTimeout(() => { if (gameActive && !level2Active) startLevel2(); }, 2600); // auto-advance
@@ -4136,7 +4256,7 @@ function startLevel2() {
   });
   closePause();
   flashScreen(0xff2d55, 0.3);
-  showPrompt('⚡ GO! Pop ' + LEVEL2_TARGET + ' balloons in ' + LEVEL2_SECONDS + 's!', 3000);
+  showPrompt(t('dyn_l2_go', {n: LEVEL2_TARGET, s: LEVEL2_SECONDS}), 3000);
   updateLevelHud();
   LunaAnalytics.track('level2_start', {});
 }
@@ -4157,8 +4277,8 @@ function endLevel2() {
   LunaAnalytics.track('level2_end', { popped: level2Score, won });
   if (won) { for (let k=0;k<6;k++) spawnConfetti(new THREE.Vector3((Math.random()-0.5)*14,5+Math.random()*4,(Math.random()-0.5)*14),28,0.3); cheerCrowd(); }
   level3Unlocked = true;
-  showBigMessage(won ? '⚡ FRENZY CLEARED!' : '⏱ TIME! ' + level2Score + ' POPPED',
-    won ? 'You popped ' + level2Score + ' balloons! 👑 Next up: the BIG TOP BOSS.' : 'You popped ' + level2Score + ' of ' + LEVEL2_TARGET + '. On to the BIG TOP BOSS!',
+  showBigMessage(won ? t('dyn_frenzy_cleared') : t('dyn_time_up', {n: level2Score}),
+    won ? t('dyn_frenzy_cleared_sub', {n: level2Score}) : t('dyn_time_up_sub', {n: level2Score, t: LEVEL2_TARGET}),
     () => { updateLevelHud(); startLevel3(); }); // auto-advance to Level 3
 }
 
@@ -4180,7 +4300,7 @@ function startLevel3() {
     vel: new THREE.Vector3((Math.random()-0.5)*0.1, 0, (Math.random()-0.5)*0.1), spawnAt: performance.now() + 3000 };
   closePause();
   flashScreen(0xff2d55, 0.35);
-  showPrompt('👑 THE BIG TOP BOSS APPEARS! Shoot it — ' + BOSS_HP + ' hits to pop it!', 3500);
+  showPrompt(t('dyn_boss_appear', {n: BOSS_HP}), 3500);
   updateLevelHud(); updateBossHud();
   LunaAnalytics.track('level3_start', {});
 }
@@ -4222,7 +4342,7 @@ function defeatBoss() {
   saveWallet(); refreshWalletUi();
   LunaAnalytics.track('level3_win', {});
   updateBossHud();
-  showBigMessage('👑 BOSS DEFEATED!', 'You popped the Big Top Boss — +500 points AND +500 balloons! You are the Zebra Circus champion. 🎉',
+  showBigMessage(t('dyn_boss_defeated'), t('dyn_boss_defeated_sub'),
     () => { currentLevel = 1; updateLevelHud(); });
 }
 
@@ -5298,8 +5418,8 @@ function popBalloon(bo, weapon) {
   if (comboCount === 6 && performance.now() >= goldenRushUntil) {
     goldenRushUntil = performance.now() + 12000;
     flashScreen(0xffd200, 0.35); cheerCrowd(); Sound.sfx.golden();
-    showPrompt('✨✨ GOLDEN RUSH! Everything pays 5× — pop fast! ✨✨', 3500);
-    addKillFeed('✨ GOLDEN RUSH activated!');
+    showPrompt(t('dyn_golden_rush'), 3500);
+    addKillFeed(t('dyn_golden_rush_kf'));
   }
 
   // Golden balloon bonus (or during Golden Rush): 5x points + extra sparkle.
@@ -5308,7 +5428,7 @@ function popBalloon(bo, weapon) {
     addScore(gb);
     spawnConfetti(pos, 22, 0.28);
     showFloatingScore(gb);
-    addKillFeed('★ GOLDEN BALLOON +' + gb + '!');
+    addKillFeed(t('dyn_golden_balloon_kf', {n: gb}));
     Sound.sfx.golden();
   }
 
@@ -5664,7 +5784,7 @@ function pickupWeapon(obj) {
 
   trySwitch(idx); // grabbing a device always equips it
   flashScreen(obj.w.accent, 0.35);
-  showPrompt('Picked up '+obj.w.name+'!', 2200);
+  showPrompt(t('dyn_picked_up', {name: obj.w.name}), 2200);
   addKillFeed(obj.w.name + ' equipped');
 }
 
@@ -5715,7 +5835,7 @@ function dropWeapon() {
     rebuildHeldMesh();
     document.getElementById('weapon-info').style.display = 'none';
   }
-  showPrompt('Dropped ' + obj.w.name, 1600);
+  showPrompt(t('dyn_dropped', {name: obj.w.name}), 1600);
   addKillFeed(obj.w.name + ' dropped');
 }
 
@@ -5739,8 +5859,8 @@ function trySwitch(idx) {
   weaponFlipStart = performance.now();
   // Update weapon info HUD
   const wi = document.getElementById('weapon-info');
-  document.getElementById('wi-name').textContent = WEAPONS[idx].name + ' — ' + WEAPONS[idx].effectName;
-  document.getElementById('wi-effect').textContent = WEAPONS[idx].effectDesc;
+  document.getElementById('wi-name').textContent = WEAPONS[idx].name + ' — ' + t('eff_' + WEAPONS[idx].effect);
+  document.getElementById('wi-effect').textContent = t('eff_' + WEAPONS[idx].effect + '_d');
   wi.style.display = 'block';
 }
 
@@ -5760,7 +5880,7 @@ function rebuildHeldMesh() {
 //  SHOOTING
 // ═══════════════════════════════════════════════
 function shoot() {
-  if (currentWeapon<0) { showPrompt('Press E near a weapon to pick it up!',1800); return; }
+  if (currentWeapon<0) { showPrompt(t('dyn_press_e_weapon'),1800); return; }
   const w = WEAPONS[currentWeapon];
   const now = Date.now();
   const rate = (performance.now() < fireRapidUntil) ? w.fireRate * 0.4 : w.fireRate;
@@ -5880,7 +6000,7 @@ function fireRing(w) {
     if (hitQ) scanQR(hitQ);
   }
   createRingWave(center, w.areaR, w.projColor);
-  addKillFeed('RING SHOCKWAVE' + (closest ? ' +'+w.pts+'pts!' : ''));
+  addKillFeed(t('dyn_ring_shockwave') + (closest ? ' +'+w.pts+'pts!' : ''));
 }
 
 function fireCryo(w) {
@@ -5922,7 +6042,7 @@ function explodeCryo(pos, w) {
     if(pos.distanceTo(b.mesh.position)<w.areaR){ popBalloon(b,w); popped++; }
   });
   if(popped>0) addScore(popped*w.pts);
-  if(popped>1) addKillFeed('CRYO BLAST — '+popped+' balloons frozen!');
+  if(popped>1) addKillFeed(t('dyn_cryo_blast', {n: popped}));
 }
 
 function rayHit(origin, dir, w) {
@@ -5998,7 +6118,7 @@ function scanQR(qObj) {
     qObj.scanned=true;
     addScore(50);
     if (MP.enabled) MP.noteLocalBonus(50); // QR bonus is personal, not part of the shared plaza score
-    addKillFeed('QR SCANNED: '+w.name+' +50pts!');
+    addKillFeed(t('dyn_qr_scanned', {name: w.name}));
     LunaAnalytics.track('product_scanned', { product: w.name });
     maybeUnlockRfid();
   }
@@ -6011,8 +6131,8 @@ function maybeUnlockRfid() {
   if (rfidUnlocked) return;
   if (qrObjs.length && qrObjs.every(o => o.scanned)) {
     rfidUnlocked = true;
-    showPrompt('ALL ZEBRA PRODUCTS SCANNED — RFID BULK READ UNLOCKED! Press R', 5000);
-    addKillFeed('★ RFID BULK READ UNLOCKED — press R');
+    showPrompt(t('dyn_rfid_unlocked'), 5000);
+    addKillFeed(t('dyn_rfid_unlocked_kf'));
     updateRfidHud();
     LunaAnalytics.track('rfid_unlocked', {});
   }
@@ -6062,7 +6182,7 @@ function rfidBulkRead() {
     const p = new THREE.Vector3((Math.random() - 0.5) * 12, 4 + Math.random() * 3, (Math.random() - 0.5) * 12);
     spawnConfetti(p, 16);
   }
-  addKillFeed('📡 RFID BULK READ — ' + alive.length + ' tags read (+' + scored + ')');
+  addKillFeed(t('dyn_rfid_bulk', {n: alive.length, s: scored}));
 }
 
 function closeInfo({ resumeGame = false } = {}) {
@@ -6141,8 +6261,8 @@ function awardPrize(key) {
   LunaAnalytics.track('prize_won', { prize: p.label });
   cheerCrowd();
   spawnConfetti(camera.position.clone().add(new THREE.Vector3(0, 0.5, -2)), 24, 0.25);
-  showPrompt('🎉 YOU WON A ' + p.emoji + ' ' + p.label.toUpperCase() + '! Voucher ' + rec.coupon + ' — Pause (P) → CLAIM', 6500);
-  addKillFeed('🎉 ' + p.label + ' won! Voucher ' + rec.coupon);
+  showPrompt(t('dyn_prize_won', {emoji: p.emoji, label: p.label.toUpperCase(), coupon: rec.coupon}), 6500);
+  addKillFeed(t('dyn_prize_won_kf', {label: p.label, coupon: rec.coupon}));
   saveWallet();
 }
 // Back-compat alias.
@@ -6178,7 +6298,7 @@ function equipPlushie() {
     if (i === 4) { s.classList.remove('empty', 'has-it'); s.classList.add('active'); }
     else s.classList.toggle('active', false);
   }
-  showPrompt('🦓 Holding your Zebra Plushie', 1400);
+  showPrompt(t('dyn_holding_plushie'), 1400);
 }
 function redemptionCode(prefix) {
   const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -6196,17 +6316,17 @@ function refreshWalletUi() {
   const bb = document.getElementById('buy-balloons-btn');
   const bbs = document.getElementById('buy-balloons-sub');
   if (bb) {
-    if (score >= 1000) { bb.disabled = false; bb.textContent = 'BUY ▸ +50 🎈'; if (bbs) bbs.textContent = 'Spend 1000 points → +50 balloons in the bank.'; }
-    else { bb.disabled = true; bb.textContent = `NEED ${1000 - score}`; if (bbs) bbs.textContent = 'Reach 1000 points to convert into balloons.'; }
+    if (score >= 1000) { bb.disabled = false; bb.textContent = t('buy_ready'); if (bbs) bbs.textContent = t('buy_ready_sub'); }
+    else { bb.disabled = true; bb.textContent = `NEED ${1000 - score}`; if (bbs) bbs.textContent = t('buy_need_sub'); }
   }
   for (const p of Object.values(PRIZES)) {
     const rec = wallet.prizes[p.key];
     const btn = document.querySelector('.claim-prize-btn[data-prize="' + p.key + '"]');
     const sub = document.getElementById('prize-sub-' + p.key);
     if (!btn) continue;
-    if (rec.claimed) { btn.disabled = true; btn.textContent = 'CLAIMED ✓'; if (sub) sub.textContent = 'On its way! Voucher ' + (rec.coupon || ''); }
-    else if (rec.won) { btn.disabled = false; btn.textContent = '🎁 CLAIM'; if (sub) sub.textContent = 'You won! Voucher ' + (rec.coupon || '') + ' — click to enter your address.'; }
-    else { btn.disabled = true; btn.textContent = `${Math.min(wallet.earned, p.goal)}/${p.goal}`; if (sub) sub.textContent = 'Win a real ' + p.label.toLowerCase() + ' at ' + p.goal + ' balloons.'; }
+    if (rec.claimed) { btn.disabled = true; btn.textContent = t('prize_claimed_btn'); if (sub) sub.textContent = t('prize_claimed_sub', {coupon: rec.coupon || ''}); }
+    else if (rec.won) { btn.disabled = false; btn.textContent = t('prize_claim_btn'); if (sub) sub.textContent = t('prize_won_sub', {coupon: rec.coupon || ''}); }
+    else { btn.disabled = true; btn.textContent = `${Math.min(wallet.earned, p.goal)}/${p.goal}`; if (sub) sub.textContent = t('prize_locked_sub', {label: p.label.toLowerCase(), goal: p.goal}); }
   }
 }
 function armThenRedeem(key) {
@@ -6252,7 +6372,7 @@ document.getElementById('resume-btn').addEventListener('click', closePause);
 document.getElementById('save-progress-btn').addEventListener('click', () => {
   saveProgress();
   const b = document.getElementById('save-progress-btn');
-  b.textContent = '✓ SAVED'; setTimeout(() => { b.textContent = '💾 SAVE PROGRESS'; }, 1500);
+  b.textContent = t('saved_btn'); setTimeout(() => { b.textContent = t('save_progress'); }, 1500);
   if (typeof Sound !== 'undefined') Sound.sfx.click();
 });
 document.getElementById('exit-btn').addEventListener('click', () => {
@@ -6266,7 +6386,7 @@ function buyBalloons() {
   if (score < BUY_COST) return;
   addScore(-BUY_COST);                 // spend points (updates score box)
   for (let i = 0; i < BUY_AMOUNT; i++) earnBalloon(); // +50 balloons, with prize checks
-  addKillFeed('🎈 Bought +' + BUY_AMOUNT + ' balloons for ' + BUY_COST + ' pts!');
+  addKillFeed(t('dyn_bought_balloons', {n: BUY_AMOUNT, c: BUY_COST}));
   refreshWalletUi();
 }
 document.getElementById('buy-balloons-btn').addEventListener('click', buyBalloons);
@@ -6329,7 +6449,7 @@ document.getElementById('prize-form').addEventListener('submit', async (e) => {
   };
   const err = document.getElementById('pm-error');
   if (!claim.fullName || !claim.address || !claim.city || !claim.postcode || !claim.country) {
-    err.textContent = 'Please fill in all address fields.'; return;
+    err.textContent = t('v_address'); return;
   }
   err.textContent = '';
   const btn = document.getElementById('pm-submit');
@@ -6339,11 +6459,13 @@ document.getElementById('prize-form').addEventListener('submit', async (e) => {
   } catch (_) { /* best-effort */ }
   rec.claimed = true; saveWallet(); refreshWalletUi();
   LunaAnalytics.track('prize_claimed', { prize: claim.prize });
-  btn.disabled = false; btn.textContent = 'SHIP MY PRIZE →';
+  btn.disabled = false; btn.textContent = t('pm_submit');
   document.getElementById('prize-form').style.display = 'none';
-  document.getElementById('pm-done-sub').innerHTML =
-    'Your <b>' + claim.prize + '</b> will ship to:<br>' + claim.address + ', ' + claim.city + ' ' + claim.postcode + ', ' + claim.country
-    + '<br><br>Voucher <b>' + claim.coupon + '</b>';
+  document.getElementById('pm-done-sub').innerHTML = t('pm_done_ship', {
+    prize: claim.prize,
+    addr: claim.address + ', ' + claim.city + ' ' + claim.postcode + ', ' + claim.country,
+    coupon: claim.coupon,
+  });
   document.getElementById('pm-done').style.display = 'block';
 });
 
@@ -6536,7 +6658,7 @@ function updateGame(delta, t) {
     o.mesh.position.y = o.baseY+Math.sin(t*1.6+o.bob)*0.1;
     o.mesh.rotation.y += 0.018;
     o.pl.intensity = 0.6+Math.sin(t*2.5+o.bob)*0.35;
-    if(camera.position.distanceTo(o.mesh.position)<2.6) showPrompt('Press E — pick up '+o.w.name,80);
+    if(camera.position.distanceTo(o.mesh.position)<2.6) showPrompt(t('dyn_press_e_pickup', {name: o.w.name}),80);
   });
 
   if (gameActive) balloons.forEach(b=>{
