@@ -4305,7 +4305,7 @@ function updateLevelHud() {
 }
 
 function unlockLevel2() {
-  if (level2Unlocked) return;
+  if (level2Active || currentLevel !== 1) return; // advance only once, from L1
   level2Unlocked = true;
   addKillFeed(t('dyn_l1_cleared_kf'));
   showPrompt(t('dyn_l1_cleared'), 2600);
@@ -6684,7 +6684,10 @@ function addScore(pts) {
   score += pts;
   document.getElementById('score-value').textContent = score;
   document.getElementById('progress-fill').style.width = Math.min(100,score/WIN_SCORE*100)+'%';
-  if(score>=WIN_SCORE && !level2Unlocked) { milestoneShown = true; unlockLevel2(); } // clear L1 → auto-advance to L2
+  // Auto-advance L1 → L2 once per run. Gate on the per-run milestoneShown flag
+  // (reset each game), NOT the persisted level2Unlocked — otherwise returning
+  // players start with the flag set and never leave Level 1.
+  if(score>=WIN_SCORE && !milestoneShown && currentLevel === 1) { milestoneShown = true; unlockLevel2(); }
 }
 
 function showMilestone() {
