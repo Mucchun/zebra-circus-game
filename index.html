@@ -4033,6 +4033,7 @@ function dismissTutorial() {
   LunaAnalytics.startSession();
   if (wallet.plushAwarded) markPlushieSlot(); // restore owned plushie in inventory
   loadProgress(); // restore saved score + level unlocks
+  flushPendingClaims(); // resend any prize claims that failed to reach the API
   updateLevelHud();
   Sound.resume(); Sound.startMusic();
 }
@@ -4577,10 +4578,17 @@ function endLevel2() {
   if (won) { for (let k=0;k<6;k++) spawnConfetti(new THREE.Vector3((Math.random()-0.5)*14,5+Math.random()*4,(Math.random()-0.5)*14),28,0.3); cheerCrowd(); }
   level3Unlocked = true;
   updateLevelHud();
-  // Clearing Level 2 wins a real Zebra Barcode Reader — it auto-ships to the
-  // address given after Level 1 (no form again), recorded under their name,
-  // shown as a single congrats, then on to Level 3.
-  awardPrizeAndAutoShip('terminal', () => startLevel3());
+  if (won) {
+    // Beating the 60-balloon target wins a real Zebra Barcode Reader — it
+    // auto-ships to the address given after Level 1 (no form again), recorded
+    // under their name, shown as a single congrats, then on to Level 3.
+    awardPrizeAndAutoShip('terminal', () => startLevel3());
+  } else {
+    // Missed the target: no prize — time-up message, then continue to Level 3.
+    showBigMessage(t('dyn_time_up', {n: level2Score}),
+      t('dyn_time_up_sub', {n: level2Score, t: LEVEL2_TARGET}),
+      () => startLevel3());
+  }
 }
 
 // ── Level 3: Big Top Boss battle ──────────────────────────────────────────
@@ -6703,6 +6711,10 @@ try {
   if (Number.isFinite(stored.spent)) wallet.spent = Math.max(0, Math.floor(stored.spent));
   if (Array.isArray(stored.codes)) wallet.codes = stored.codes.slice(0, 40);
   if (stored.prizes) for (const k of Object.keys(PRIZES)) if (stored.prizes[k]) wallet.prizes[k] = stored.prizes[k];
+  // Saved shipping address (so Level 2 doesn't ask again) + the claim retry
+  // queue (so a claim that failed to reach the API resends on next start).
+  if (stored.shipInfo && typeof stored.shipInfo === 'object') wallet.shipInfo = stored.shipInfo;
+  if (Array.isArray(stored.pendingClaims)) wallet.pendingClaims = stored.pendingClaims.slice(0, 20);
   // Back-compat with the earlier single-plush fields.
   if (stored.plushAwarded && !wallet.prizes.plush.won) { wallet.prizes.plush.won = true; wallet.prizes.plush.coupon = stored.coupon || null; wallet.prizes.plush.claimed = !!stored.claimed; }
   wallet.plushAwarded = wallet.prizes.plush.won;
@@ -6926,6 +6938,25 @@ function awardPrizeAndClaim(key, cb) {
   }
 }
 
+// Send a claim to the API. On failure (offline / server error) the claim is
+// queued in the wallet and retried on the next game start, so a win is never
+// lost silently.
+function sendClaim(claim) {
+  return fetch('/api/claim', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(claim) })
+    .then((r) => { if (!r.ok) throw new Error('claim http ' + r.status); })
+    .catch(() => {
+      (wallet.pendingClaims = wallet.pendingClaims || []).push(claim);
+      saveWallet();
+    });
+}
+function flushPendingClaims() {
+  const q = wallet.pendingClaims || [];
+  if (!q.length) return;
+  wallet.pendingClaims = [];
+  saveWallet();
+  q.forEach((c) => sendClaim(c)); // failures re-queue themselves
+}
+
 // Award a prize and ship it to the address the player already gave (Level 1),
 // WITHOUT asking again — just a congrats message. The win + saved address are
 // recorded in the DB under their name. Falls back to the address form if we
@@ -6942,8 +6973,8 @@ function awardPrizeAndAutoShip(key, cb) {
       postcode: ship.postcode, country: ship.country,
       email: (window.__zebraPlayer && window.__zebraPlayer.email) || '',
     };
-    // Record the win + address under their name (best-effort).
-    fetch('/api/claim', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(claim) }).catch(() => {});
+    // Record the win + address under their name (queued + retried on failure).
+    sendClaim(claim);
     rec.claimed = true; saveWallet(); refreshWalletUi();
     LunaAnalytics.track('prize_claimed', { prize: PRIZES[key].label, auto: true });
     const addr = [ship.address, ship.city, ship.postcode, ship.country].filter(Boolean).join(', ');
@@ -6982,9 +7013,7 @@ document.getElementById('prize-form').addEventListener('submit', async (e) => {
   wallet.shipInfo = { fullName: claim.fullName, address: claim.address, city: claim.city, postcode: claim.postcode, country: claim.country };
   const btn = document.getElementById('pm-submit');
   btn.disabled = true; btn.textContent = 'SHIPPING…';
-  try {
-    await fetch('/api/claim', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(claim) });
-  } catch (_) { /* best-effort */ }
+  await sendClaim(claim); // queued + retried automatically if the API is down
   rec.claimed = true; saveWallet(); refreshWalletUi();
   LunaAnalytics.track('prize_claimed', { prize: claim.prize });
   btn.disabled = false; btn.textContent = t('pm_submit');

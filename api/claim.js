@@ -21,9 +21,20 @@ async function ensureTable(sql) {
       shipped    BOOLEAN NOT NULL DEFAULT FALSE,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )`;
-  // The leads table (created by /api/register) needs these columns so the
-  // UPDATE below can attach the win + address to the player row.
-  await sql`CREATE TABLE IF NOT EXISTS leads (id BIGSERIAL PRIMARY KEY, email TEXT)`;
+  // Keep the leads schema identical to /api/register's so whichever function
+  // runs first creates the same table (a minimal CREATE here used to leave
+  // register's INSERT failing when a claim arrived on a fresh database).
+  await sql`
+    CREATE TABLE IF NOT EXISTS leads (
+      id          BIGSERIAL PRIMARY KEY,
+      first_name  TEXT NOT NULL,
+      last_name   TEXT NOT NULL,
+      email       TEXT NOT NULL,
+      phone       TEXT NOT NULL,
+      consent     BOOLEAN NOT NULL DEFAULT TRUE,
+      user_agent  TEXT,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )`;
   await sql`ALTER TABLE leads ADD COLUMN IF NOT EXISTS won_prize    TEXT`;
   await sql`ALTER TABLE leads ADD COLUMN IF NOT EXISTS won_coupon   TEXT`;
   await sql`ALTER TABLE leads ADD COLUMN IF NOT EXISTS ship_address TEXT`;
@@ -52,22 +63,36 @@ export default async function handler(req, res) {
     if (!fullName || !address || !city || !postcode || !country) {
       return res.status(400).json({ error: 'invalid_fields' });
     }
+    // Basic abuse guards: claims must come from a registered player and carry
+    // a coupon in the game's ZC- voucher format.
+    if (!email) return res.status(403).json({ error: 'missing_email' });
+    if (coupon && !/^ZC-[A-Z0-9-]{3,36}$/.test(coupon)) {
+      return res.status(400).json({ error: 'invalid_coupon' });
+    }
     const sql = neon(url);
     await ensureTable(sql);
+    const player = await sql`SELECT id FROM leads WHERE lower(email) = lower(${email}) LIMIT 1`;
+    if (!player.length) return res.status(403).json({ error: 'unregistered_player' });
     const rows = await sql`
       INSERT INTO claims (coupon, prize, full_name, address, city, postcode, country, email)
       VALUES (${coupon}, ${prize}, ${fullName}, ${address}, ${city}, ${postcode}, ${country}, ${email})
       RETURNING id`;
-    // Enrich the matching registration row so the win sits next to the player.
-    if (email) {
-      const fullAddress = [address, city, postcode, country].filter(Boolean).join(', ');
-      try {
-        await sql`
-          UPDATE leads
-          SET won_prize = ${prize}, won_coupon = ${coupon}, ship_address = ${fullAddress}
-          WHERE lower(email) = lower(${email})`;
-      } catch (_) { /* leads columns may be missing on older DBs */ }
-    }
+    // Enrich the registration row so the win sits next to the player. Append
+    // additional prizes (Level 1 plushie + Level 2 barcode reader) instead of
+    // overwriting, skipping duplicates on repeat submissions.
+    const fullAddress = [address, city, postcode, country].filter(Boolean).join(', ');
+    await sql`
+      UPDATE leads SET
+        won_prize = CASE
+          WHEN won_prize IS NULL OR won_prize = '' THEN ${prize}
+          WHEN POSITION(${prize} IN won_prize) > 0 THEN won_prize
+          ELSE won_prize || ' + ' || ${prize} END,
+        won_coupon = CASE
+          WHEN won_coupon IS NULL OR won_coupon = '' THEN ${coupon}
+          WHEN POSITION(${coupon} IN won_coupon) > 0 THEN won_coupon
+          ELSE won_coupon || ' + ' || ${coupon} END,
+        ship_address = ${fullAddress}
+      WHERE lower(email) = lower(${email})`;
     return res.status(200).json({ ok: true, id: rows[0]?.id });
   } catch (e) {
     return res.status(500).json({ error: 'server_error' });
