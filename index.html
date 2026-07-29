@@ -286,21 +286,47 @@ body { background: #000; overflow: hidden; font-family: 'Source Sans 3', 'Barlow
 
 /* ── START SCREEN ── */
 #start-screen {
-  background: repeating-linear-gradient(
-    -55deg,
-    #000000 0px, #000000 38px,
-    #1a1a1a 38px, #1a1a1a 40px,
-    #ffffff 40px, #ffffff 78px,
-    #e8e8e8 78px, #e8e8e8 80px
-  );
+  background:
+    /* faint zebra-stripe texture underneath everything */
+    repeating-linear-gradient(-55deg,
+      #060606 0px, #060606 38px, #151515 38px, #151515 40px,
+      #f4f4f4 40px, #f4f4f4 78px, #e4e4e4 78px, #e4e4e4 80px);
   position: relative; overflow: hidden;
 }
+/* Warm big-top stage spotlight + vignette, laid over the stripes. */
 #start-screen::before {
-  content: ''; position: absolute; inset: 0;
-  background: rgba(0,0,0,0.82);
-  pointer-events: none; z-index: 0;
+  content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 58% 46% at 50% 38%, rgba(255,150,54,0.22), rgba(0,0,0,0) 60%),
+    radial-gradient(ellipse 130% 120% at 50% 42%, rgba(6,6,15,0.78) 34%, rgba(4,4,11,0.97) 100%);
 }
+/* Soft rotating spotlight cones behind the logo for subtle motion. */
+#start-screen::after {
+  content: ''; position: absolute; z-index: 0; pointer-events: none;
+  top: -30%; left: 50%; width: 120%; height: 120%; transform: translateX(-50%);
+  background:
+    conic-gradient(from 200deg at 50% 0%,
+      rgba(255,178,80,0.00) 0deg, rgba(255,178,80,0.07) 18deg, rgba(255,178,80,0.00) 36deg,
+      rgba(0,166,81,0.00) 60deg, rgba(0,166,81,0.06) 78deg, rgba(0,166,81,0.00) 96deg);
+  animation: ssSweep 14s ease-in-out infinite alternate;
+}
+@keyframes ssSweep { from { transform: translateX(-50%) rotate(-7deg); } to { transform: translateX(-50%) rotate(7deg); } }
 #start-screen > * { position: relative; z-index: 1; }
+
+/* Marquee bulb lights (top + bottom) — classic circus/theatre. */
+.ss-lights {
+  position: absolute; left: 24px; right: 24px; height: 16px; z-index: 4; pointer-events: none;
+  background-image: radial-gradient(circle at 9px 8px, #fff6d5 0, #ffd155 3.4px, rgba(255,190,70,0.45) 5px, rgba(255,190,70,0) 8.5px);
+  background-size: 34px 16px; background-repeat: repeat-x;
+  filter: drop-shadow(0 0 6px rgba(255,205,90,0.95));
+  animation: ssBulbs 1.5s ease-in-out infinite;
+}
+.ss-lights.top { top: 16px; }
+.ss-lights.bottom { bottom: 16px; }
+/* Alternate bulbs twinkle out of phase for a lively marquee. */
+.ss-lights.bottom { animation-delay: 0.75s; }
+@keyframes ssBulbs { 0%,100% { opacity: 1; filter: drop-shadow(0 0 7px rgba(255,205,90,1)); } 50% { opacity: 0.5; filter: drop-shadow(0 0 3px rgba(255,205,90,0.5)); } }
+#start-screen > .ss-lights { z-index: 6; } /* beat the generic `#start-screen > *` z-index:1 */
 
 /* Language toggle (top-right) */
 #lang-toggle { position: fixed; top: 14px; right: 16px; z-index: 200; display: flex; gap: 0;
@@ -395,8 +421,8 @@ body { background: #000; overflow: hidden; font-family: 'Source Sans 3', 'Barlow
 
 .ss-presenter {
   font-family: 'Space Mono', monospace; font-size: 11px;
-  letter-spacing: 7px; color: var(--c-accent); opacity: 0.72;
-  text-transform: uppercase; margin-bottom: 26px;
+  letter-spacing: 6px; color: #ffcf7a; opacity: 0.85;
+  text-transform: uppercase; margin-bottom: 16px;
 }
 
 .ss-title-block { text-align: center; margin-bottom: 28px; }
@@ -412,10 +438,12 @@ body { background: #000; overflow: hidden; font-family: 'Source Sans 3', 'Barlow
 }
 
 .ss-game-title {
-  font-size: 38px; font-weight: 800; color: #fff;
-  letter-spacing: 14px; font-family: 'Barlow Condensed', sans-serif;
-  text-transform: uppercase;
-  text-shadow: 0 0 28px rgba(0,166,81,0.45);
+  font-size: 40px; font-weight: 800; letter-spacing: 13px;
+  font-family: 'Barlow Condensed', sans-serif; text-transform: uppercase;
+  background: linear-gradient(180deg, #ffffff 0%, #ffe9c2 58%, #ffc768 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+  filter: drop-shadow(0 0 16px rgba(255,160,50,0.45)) drop-shadow(0 0 32px rgba(0,166,81,0.28));
 }
 
 .ss-qr-banner {
@@ -429,6 +457,19 @@ body { background: #000; overflow: hidden; font-family: 'Source Sans 3', 'Barlow
 .ss-qr-icon { color: var(--c-accent); font-size: 20px; line-height: 1; }
 
 .btn-lg { padding: 18px 80px; font-size: 18px; letter-spacing: 7px; }
+
+/* Headline PLAY NOW button — filled, glowing, gently pulsing. */
+#play-btn {
+  background: linear-gradient(180deg, #ff9436 0%, #ff6a00 55%, #f24e00 100%);
+  color: #fff; border: none; margin-top: 4px;
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.14), 0 10px 34px rgba(255,106,0,0.42);
+  animation: ssPlayPulse 2.4s ease-in-out infinite;
+}
+#play-btn:hover { color: #fff; filter: brightness(1.08); box-shadow: 0 0 0 2px rgba(255,255,255,0.28), 0 12px 46px rgba(255,106,0,0.6); }
+@keyframes ssPlayPulse {
+  0%,100% { box-shadow: 0 0 0 2px rgba(255,255,255,0.12), 0 10px 30px rgba(255,106,0,0.38); }
+  50%     { box-shadow: 0 0 0 2px rgba(255,255,255,0.24), 0 12px 46px rgba(255,106,0,0.62); }
+}
 
 .controls-grid {
   display: grid; grid-template-columns: 1fr 1fr; gap: 4px 24px;
@@ -561,6 +602,8 @@ body.touch #weapon-slots .wslot { cursor: pointer; }
   /* ── Start screen ── */
   .zebra-logo svg { width: 190px !important; }
   .ss-game-title { font-size: 21px; letter-spacing: 6px; }
+  .ss-presenter { font-size: 8px; letter-spacing: 2.5px; margin-bottom: 10px; }
+  .ss-lights { left: 14px; right: 14px; background-size: 24px 10px; height: 10px; }
   .ss-hline { max-width: 200px; }
   .ss-qr-banner { font-size: 8.5px; letter-spacing: 1px; padding: 8px 12px; margin-bottom: 22px; gap: 6px; }
   .btn-lg { padding: 12px 38px; font-size: 14px; letter-spacing: 4px; }
@@ -649,7 +692,10 @@ body.touch #weapon-slots .wslot { cursor: pointer; }
   <div class="ss-corner ss-tr"></div>
   <div class="ss-corner ss-bl"></div>
   <div class="ss-corner ss-br"></div>
+  <div class="ss-lights top"></div>
+  <div class="ss-lights bottom"></div>
   <div class="ss-title-block">
+    <div class="ss-presenter" data-i18n="ss_presents">★ ZEBRA TECHNOLOGIES PRESENTS ★</div>
     <div class="zebra-logo">
       <svg width="127" height="42" viewBox="0 0 127 42" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Zebra Technologies" style="width:320px;height:auto;">
         <g clip-path="url(#clip0_ss)">
@@ -3717,6 +3763,7 @@ const I18N = {
   en: {
     loading: 'LOADING ZEBRA CIRCUS...',
     game_title: 'CIRCUS BLASTER',
+    ss_presents: '★ ZEBRA TECHNOLOGIES PRESENTS ★',
     ss_banner: 'SCAN THE QR CODES &nbsp;·&nbsp; LEARN MORE ABOUT THE PRODUCTS',
     play_now: 'PLAY NOW',
     reg_title: 'PLAYER SIGN-IN',
@@ -3807,6 +3854,7 @@ const I18N = {
   tr: {
     loading: 'ZEBRA SİRKİ YÜKLENİYOR...',
     game_title: 'SİRK NİŞANCISI',
+    ss_presents: '★ ZEBRA TECHNOLOGIES SUNAR ★',
     ss_banner: 'QR KODLARINI TARAYIN &nbsp;·&nbsp; ÜRÜNLER HAKKINDA BİLGİ EDİNİN',
     play_now: 'OYNA',
     reg_title: 'OYUNCU GİRİŞİ',
