@@ -1,5 +1,5 @@
 // Zebra Circus Blaster — service worker (offline + installability)
-const CACHE = 'zcb-v25-l2-autoship';
+const CACHE = 'zcb-v26-circus-music';
 const CORE = [
   './',
   './index.html',
