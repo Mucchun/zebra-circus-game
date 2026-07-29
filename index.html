@@ -1057,6 +1057,12 @@ let mouseDown = false;
 const IS_TOUCH = (typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches)
   || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 const touchMove = { x: 0, y: 0 };
+// The desktop app / localhost has no local API, so send DB writes (logins +
+// prize claims) to the deployed backend — that way every login is captured
+// regardless of where the game runs. On the live site this stays same-origin.
+const API_BASE = (location.protocol === 'file:'
+  || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname))
+  ? 'https://zebra-circus-game.vercel.app' : '';
 let isLocked = false;
 let pointerLockFallback = false;
 let infoOpen = false;
@@ -2007,7 +2013,7 @@ function savePendingRegs(q) {
   try { localStorage.setItem('zebraPendingRegs', JSON.stringify(q.slice(-100))); } catch (_) {}
 }
 function sendRegistration(player) {
-  return fetch('/api/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(player) })
+  return fetch(API_BASE + '/api/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(player) })
     .then((r) => { if (!r.ok) throw new Error('register http ' + r.status); })
     .catch(() => { const q = loadPendingRegs(); q.push(player); savePendingRegs(q); });
 }
@@ -6958,7 +6964,7 @@ function awardPrizeAndClaim(key, cb) {
 // queued in the wallet and retried on the next game start, so a win is never
 // lost silently.
 function sendClaim(claim) {
-  return fetch('/api/claim', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(claim) })
+  return fetch(API_BASE + '/api/claim', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(claim) })
     .then((r) => { if (!r.ok) throw new Error('claim http ' + r.status); })
     .catch(() => {
       (wallet.pendingClaims = wallet.pendingClaims || []).push(claim);
