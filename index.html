@@ -4548,11 +4548,12 @@ function defeatBoss() {
   saveWallet(); refreshWalletUi();
   LunaAnalytics.track('level3_win', {});
   updateBossHud();
-  // After the boss, if the player has 1000+ balloons, unlock the Poligon (Level 4).
-  const toPoligon = wallet.earned >= L4_UNLOCK_BALLOONS;
-  if (toPoligon) level4Unlocked = true;
-  showBigMessage(t('dyn_boss_defeated'), t('dyn_boss_defeated_sub') + (toPoligon ? ' 🎯 ' + t('l4_unlocked_note') : ''),
-    () => { if (toPoligon) startLevel4(); else { currentLevel = 1; updateLevelHud(); } });
+  // Beating the boss always advances to the Poligon (Level 4) — the finale.
+  // (Previously gated on a persistent 1000-balloon wallet, which meant fresh
+  // sessions/phones looped back to Level 1 instead of progressing.)
+  level4Unlocked = true;
+  showBigMessage(t('dyn_boss_defeated'), t('dyn_boss_defeated_sub') + ' 🎯 ' + t('l4_unlocked_note'),
+    () => startLevel4());
 }
 
 function tickLevel3() {
@@ -4643,7 +4644,13 @@ function showBigMessage(title, sub, onClose) {
     + '<button id="__bigmsg-btn" style="width:100%;background:#ff6a00;color:#fff;border:none;padding:12px;'
     + 'font-family:\'Barlow Condensed\',sans-serif;font-weight:800;font-size:16px;letter-spacing:2px;cursor:pointer">CONTINUE</button></div>';
   el.style.display = 'flex';
-  document.getElementById('__bigmsg-btn').onclick = () => { el.style.display = 'none'; if (onClose) onClose(); };
+  // Robust for both mouse (click) and touch (touchend) — guard against the
+  // touchend + synthesized-click firing onClose twice.
+  const btn = document.getElementById('__bigmsg-btn');
+  let fired = false;
+  const go = (e) => { if (e) e.preventDefault(); if (fired) return; fired = true; el.style.display = 'none'; if (onClose) onClose(); };
+  btn.addEventListener('click', go);
+  btn.addEventListener('touchend', go, { passive: false });
 }
 
 // Procedural idle animation for the static Meshy spectators: a gentle seated
