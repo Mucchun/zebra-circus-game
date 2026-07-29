@@ -4127,16 +4127,17 @@ function restartGame() {
 // ═══════════════════════════════════════════════
 function initRenderer() {
   const canvas = document.getElementById('game-canvas');
-  // Mobile GPUs choke on antialiasing + high pixel ratios + real-time shadows.
-  // Disable those on touch devices — the single biggest perf win (a retina
-  // phone renders ~4x fewer pixels at ratio 1 vs 2, plus no shadow pass).
-  renderer = new THREE.WebGLRenderer({ canvas, antialias: !IS_TOUCH, powerPreference: 'high-performance' });
+  // Real-time shadows are the big mobile cost, so they stay off on touch — but
+  // that frees the GPU to render at a crisp, near-native resolution with
+  // antialiasing (ratio 1 looked soft/jagged). Cap the ratio at ~2 so very
+  // high-DPI phones don't over-render.
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(IS_TOUCH ? 1 : Math.min(window.devicePixelRatio, 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, IS_TOUCH ? 1.75 : 2));
   renderer.shadowMap.enabled = !IS_TOUCH;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.outputEncoding = THREE.sRGBEncoding;
-  renderer.toneMapping = IS_TOUCH ? THREE.NoToneMapping : THREE.ACESFilmicToneMapping;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 0.72;
 
   scene = new THREE.Scene();
