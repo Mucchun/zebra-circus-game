@@ -6354,7 +6354,7 @@ function rebuildHeldMesh() {
   // The DS scanner models are exported turned 90° from the devices, so they end
   // up facing sideways when held — rotate them a quarter-turn to face forward.
   const wid = WEAPONS[currentWeapon].id;
-  if (wid === 'DS3678' || wid === 'DS2278') heldMesh.rotation.y += Math.PI / 2;
+  if (wid === 'DS3678' || wid === 'DS2278') heldMesh.rotation.y += 3 * Math.PI / 4;
   heldMesh.scale.setScalar(0.9);
   camera.add(heldMesh);
 }
