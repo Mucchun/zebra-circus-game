@@ -1,5 +1,5 @@
 // Zebra Circus Blaster — service worker (offline + installability)
-const CACHE = 'zcb-v17-mobile-ui-scale';
+const CACHE = 'zcb-v18-portrait-playable';
 const CORE = [
   './',
   './index.html',

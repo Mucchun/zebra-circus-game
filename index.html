@@ -606,14 +606,22 @@ body.touch #weapon-slots .wslot { cursor: pointer; }
   #tc-jump { width: 60px; height: 60px; right: 116px; bottom: 132px; }
   #tc-pickup { width: 60px; height: 60px; right: 112px; bottom: 60px; }
 }
-/* Landscape nudge for phones (gameplay is best in landscape) */
+/* Landscape nudge for phones (gameplay is best in landscape, but portrait is
+   still playable — the hint is dismissible so rotation-locked phones aren't
+   stuck). */
 #rotate-hint { display: none; }
 @media (max-width: 900px) and (orientation: portrait) {
-  body.touch.in-game #rotate-hint {
+  body.touch.in-game:not(.rotate-ok) #rotate-hint {
     display: flex; position: fixed; inset: 0; z-index: 3000; background: #05050d;
     color: #fff; flex-direction: column; align-items: center; justify-content: center;
     font-family: 'Barlow Condensed', sans-serif; text-align: center; gap: 10px; padding: 30px;
+    pointer-events: auto; cursor: pointer;
   }
+}
+#rotate-hint .rh-play {
+  margin-top: 18px; background: #ff6a00; color: #fff; border: none; padding: 12px 30px;
+  font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 16px;
+  letter-spacing: 2px; border-radius: 6px;
 }
 </style>
 </head>
@@ -763,7 +771,7 @@ body.touch #weapon-slots .wslot { cursor: pointer; }
   <div id="tc-pickup" class="tc-btn">PICK<br>UP</div>
 </div>
 <div class="tc-hint">Left: move · Right: look · buttons: fire / jump / pick up</div>
-<div id="rotate-hint"><div style="font-size:34px">📱↻</div><div style="font-size:20px;letter-spacing:1px">ROTATE YOUR DEVICE</div><div style="font-family:'Source Sans 3',sans-serif;font-size:13px;color:#9aa">Circus Blaster plays best in landscape.</div></div>
+<div id="rotate-hint"><div style="font-size:34px">📱↻</div><div style="font-size:20px;letter-spacing:1px">ROTATE YOUR DEVICE</div><div style="font-family:'Source Sans 3',sans-serif;font-size:13px;color:#9aa">Circus Blaster plays best in landscape.</div><button class="rh-play" id="rh-play" type="button">PLAY IN PORTRAIT →</button></div>
 
 <div id="hud">
   <div id="hint"></div>
@@ -6012,6 +6020,13 @@ function setupTouchControls() {
   if (!IS_TOUCH || __touchSetup) return;
   __touchSetup = true;
   document.body.classList.add('touch');
+
+  // Rotate hint is only a suggestion — tapping it (or the button) plays in
+  // portrait, so rotation-locked phones are never stuck.
+  const rotateHint = document.getElementById('rotate-hint');
+  const dismissRotate = (e) => { if (e) e.preventDefault(); document.body.classList.add('rotate-ok'); };
+  rotateHint.addEventListener('touchstart', dismissRotate, { passive: false });
+  rotateHint.addEventListener('click', dismissRotate);
 
   const joy = document.getElementById('tc-joy');
   const knob = document.getElementById('tc-knob');
