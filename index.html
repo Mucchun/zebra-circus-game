@@ -3674,11 +3674,11 @@ const LunaAnalytics = (() => {
 window.lunaAnalytics = LunaAnalytics;
 
 // ═══════════════════════════════════════════════
-//  AUDIO — synthesized SFX + looping circus music (Web Audio, no files)
+//  AUDIO — synthesized SFX + a recorded looping music bed, both on one Web Audio graph
 // ═══════════════════════════════════════════════
 const Sound = (() => {
   let ctx = null, master = null, musicGain = null, sfxGain = null;
-  let muted = false, musicTimer = null, step = 0;
+  let muted = false;
   try { muted = localStorage.getItem('zebraMuted') === '1'; } catch (_) {}
 
   function ensure() {
@@ -3687,7 +3687,9 @@ const Sound = (() => {
     if (!AC) return;
     ctx = new AC();
     master = ctx.createGain(); master.gain.value = muted ? 0 : 0.9; master.connect(ctx.destination);
-    musicGain = ctx.createGain(); musicGain.gain.value = 0.18; musicGain.connect(master);
+    // 0.38 through master (0.9) lands at ~0.35 effective, matching the level the old
+    // media element was set to, so the music/SFX balance is unchanged.
+    musicGain = ctx.createGain(); musicGain.gain.value = 0.38; musicGain.connect(master);
     sfxGain = ctx.createGain(); sfxGain.gain.value = 0.9; sfxGain.connect(master);
   }
   function resume() { ensure(); if (ctx && ctx.state === 'suspended') ctx.resume(); }
@@ -3716,25 +3718,58 @@ const Sound = (() => {
     powerup:() => { [523, 784, 1046].forEach((f, i) => setTimeout(() => blip(f, 0.14, 'triangle', sfxGain, 0.45), i * 70)); },
   };
 
-  // Looping background track (Zebra Tech.mp3).
-  let musicEl = null;
-  function startMusic() {
-    if (!musicEl) {
-      musicEl = new Audio('audio/zebra-tech.mp3');
-      musicEl.loop = true;
-      musicEl.volume = 0.35;
-      // Belt-and-suspenders: if `loop` doesn't fire (some cache/stream cases),
-      // restart from the top on end.
-      musicEl.addEventListener('ended', () => { musicEl.currentTime = 0; musicEl.play().catch(() => {}); });
-    }
-    musicEl.muted = muted;
-    musicEl.play().catch(() => {}); // needs a user gesture; called from Play/Go
+  // Looping background bed, decoded once and looped on the Web Audio graph.
+  //
+  // Deliberately not `new Audio()`: a media element hands playback to the OS media
+  // session (lock-screen transport, media keys) and several web-game platforms reject
+  // a build for it. A BufferSource also loops sample-accurately, where a media element
+  // leaves an audible gap at the seam.
+  const MUSIC_URL = './audio/bigtop_theme.mp3';
+  let musicSource = null, musicLoading = null, musicWanted = false;
+
+  function loadMusic() {
+    if (musicLoading) return musicLoading;
+    musicLoading = fetch(MUSIC_URL)
+      .then((r) => { if (!r.ok) throw new Error('music http ' + r.status); return r.arrayBuffer(); })
+      // Callback form: Safari still does not return a promise from decodeAudioData.
+      .then((raw) => new Promise((res, rej) => ctx.decodeAudioData(raw, res, rej)));
+    return musicLoading;
   }
-  function stopMusic() { if (musicEl) musicEl.pause(); }
+
+  function startMusic() {
+    if (!ctx) return;
+    musicWanted = true;
+    if (musicSource) return;
+    loadMusic().then((buf) => {
+      // stopMusic() may have run while the file was still downloading.
+      if (!musicWanted || musicSource || !ctx) return;
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.loop = true;
+      src.connect(musicGain);
+      src.start(0);
+      musicSource = src;
+    }).catch(() => {}); // same silent-failure behaviour as the old .play().catch()
+  }
+
+  function stopMusic() {
+    musicWanted = false;
+    if (!musicSource) return;
+    try { musicSource.stop(); } catch (_) {}
+    try { musicSource.disconnect(); } catch (_) {}
+    musicSource = null;   // a stopped BufferSource cannot restart; startMusic() makes a new one
+  }
+
+  // Do not keep playing over a backgrounded tab.
+  document.addEventListener('visibilitychange', () => {
+    if (!ctx) return;
+    if (document.hidden) ctx.suspend(); else ctx.resume();
+  });
   function toggleMute() {
     muted = !muted;
+    // The bed now runs through musicGain -> master, so the master gain mutes it too.
+    // No separate media-element mute to keep in sync.
     if (master) master.gain.value = muted ? 0 : 0.9;
-    if (musicEl) musicEl.muted = muted;
     try { localStorage.setItem('zebraMuted', muted ? '1' : '0'); } catch (_) {}
     updateMuteHud();
     return muted;
