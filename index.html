@@ -3814,6 +3814,8 @@ const I18N = {
     dyn_rfid_bulk: '📡 RFID BULK READ — {n} tags read (+{s})',
     dyn_prize_won: '🎉 YOU WON A {emoji} {label}! Voucher {coupon} — Pause (P) → CLAIM',
     dyn_prize_won_kf: '🎉 {label} won! Voucher {coupon}',
+    autoship_title: '{emoji} YOU WON A {label}!',
+    autoship_sub: 'Congratulations! Your {label} ships to the address you already gave us — nothing else to do. 🎁 ({addr})',
     dyn_holding_plushie: '🦓 Holding your Zebra Plushie',
     dyn_bought_balloons: '🎈 Bought +{n} balloons for {c} pts!',
     dyn_press_e_pickup: 'Press E — pick up {name}',
@@ -3904,6 +3906,8 @@ const I18N = {
     dyn_rfid_unlocked_kf: '★ RFID TOPLU OKUMA AÇILDI — R tuşuna bas',
     dyn_rfid_bulk: '📡 RFID TOPLU OKUMA — {n} etiket okundu (+{s})',
     dyn_prize_won: '🎉 BİR {emoji} {label} KAZANDIN! Kupon {coupon} — Duraklat (P) → AL',
+    autoship_title: '{emoji} BİR {label} KAZANDIN!',
+    autoship_sub: 'Tebrikler! {label} ürünün daha önce verdiğin adrese gönderilecek — başka bir şey yapmana gerek yok. 🎁 ({addr})',
     dyn_prize_won_kf: '🎉 {label} kazanıldı! Kupon {coupon}',
     dyn_holding_plushie: '🦓 Zebra Peluşunu tutuyorsun',
     dyn_bought_balloons: '🎈 {c} puana +{n} balon alındı!',
@@ -4537,11 +4541,11 @@ function endLevel2() {
   LunaAnalytics.track('level2_end', { popped: level2Score, won });
   if (won) { for (let k=0;k<6;k++) spawnConfetti(new THREE.Vector3((Math.random()-0.5)*14,5+Math.random()*4,(Math.random()-0.5)*14),28,0.3); cheerCrowd(); }
   level3Unlocked = true;
-  // Clearing Level 2 wins a real Zebra barcode reader — collect the address,
-  // then continue to Level 3.
-  showBigMessage(won ? t('dyn_frenzy_cleared') : t('dyn_time_up', {n: level2Score}),
-    won ? t('dyn_frenzy_cleared_sub', {n: level2Score}) : t('dyn_time_up_sub', {n: level2Score, t: LEVEL2_TARGET}),
-    () => { updateLevelHud(); awardPrizeAndClaim('terminal', () => startLevel3()); });
+  updateLevelHud();
+  // Clearing Level 2 wins a real Zebra Barcode Reader — it auto-ships to the
+  // address given after Level 1 (no form again), recorded under their name,
+  // shown as a single congrats, then on to Level 3.
+  awardPrizeAndAutoShip('terminal', () => startLevel3());
 }
 
 // ── Level 3: Big Top Boss battle ──────────────────────────────────────────
@@ -6883,6 +6887,35 @@ function awardPrizeAndClaim(key, cb) {
   }
 }
 
+// Award a prize and ship it to the address the player already gave (Level 1),
+// WITHOUT asking again — just a congrats message. The win + saved address are
+// recorded in the DB under their name. Falls back to the address form if we
+// somehow don't have an address yet.
+function awardPrizeAndAutoShip(key, cb) {
+  awardPrize(key);
+  const rec = wallet.prizes[key];
+  const ship = wallet.shipInfo;
+  if (rec.claimed) { if (cb) cb(); return; }
+  if (ship && ship.address) {
+    const claim = {
+      coupon: rec.coupon, prize: PRIZES[key].label,
+      fullName: ship.fullName, address: ship.address, city: ship.city,
+      postcode: ship.postcode, country: ship.country,
+      email: (window.__zebraPlayer && window.__zebraPlayer.email) || '',
+    };
+    // Record the win + address under their name (best-effort).
+    fetch('/api/claim', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(claim) }).catch(() => {});
+    rec.claimed = true; saveWallet(); refreshWalletUi();
+    LunaAnalytics.track('prize_claimed', { prize: PRIZES[key].label, auto: true });
+    const addr = [ship.address, ship.city, ship.postcode, ship.country].filter(Boolean).join(', ');
+    showBigMessage(t('autoship_title', { emoji: PRIZES[key].emoji, label: PRIZES[key].label.toUpperCase() }),
+      t('autoship_sub', { label: PRIZES[key].label, addr }), () => { if (cb) cb(); });
+  } else {
+    // No address on file yet — collect it once, then continue.
+    awardPrizeAndClaim(key, cb);
+  }
+}
+
 document.querySelectorAll('.claim-prize-btn').forEach((b) =>
   b.addEventListener('click', () => openPrizeMachine(b.getAttribute('data-prize'))));
 document.getElementById('prize-close').addEventListener('click', closePrizeMachine);
@@ -6905,6 +6938,9 @@ document.getElementById('prize-form').addEventListener('submit', async (e) => {
     err.textContent = t('v_address'); return;
   }
   err.textContent = '';
+  // Remember the shipping address so later prizes (the Level-2 barcode reader)
+  // can be shipped to it automatically without asking again.
+  wallet.shipInfo = { fullName: claim.fullName, address: claim.address, city: claim.city, postcode: claim.postcode, country: claim.country };
   const btn = document.getElementById('pm-submit');
   btn.disabled = true; btn.textContent = 'SHIPPING…';
   try {
