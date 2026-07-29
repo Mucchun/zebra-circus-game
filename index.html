@@ -557,12 +557,54 @@ body.touch #weapon-slots { pointer-events: auto; }
 body.touch #weapon-slots .wslot { cursor: pointer; }
 
 /* ── Small-screen / portrait responsive layout ── */
-@media (max-width: 820px) {
-  #weapon-slots { bottom: 8px; gap: 3px; transform: translateX(-50%) scale(0.82); }
+@media (max-width: 720px), (max-height: 500px) {
+  /* ── Start screen ── */
+  .zebra-logo svg { width: 190px !important; }
+  .ss-game-title { font-size: 21px; letter-spacing: 6px; }
+  .ss-hline { max-width: 200px; }
+  .ss-qr-banner { font-size: 8.5px; letter-spacing: 1px; padding: 8px 12px; margin-bottom: 22px; gap: 6px; }
+  .btn-lg { padding: 12px 38px; font-size: 14px; letter-spacing: 4px; }
+  .btn { padding: 9px 24px; font-size: 12px; letter-spacing: 2px; }
+  #lang-toggle { top: 10px; right: 10px; }
+  #lang-toggle button { font-size: 11px; padding: 4px 9px; }
+
+  /* ── Sign-in ── */
+  .reg-card { width: 340px; max-width: 90vw; padding: 18px 18px; }
+  .reg-title { font-size: 19px; letter-spacing: 2px; }
+  .reg-sub { font-size: 12px; margin: 5px 0 14px; }
+  #reg-form input[type=text], #reg-form input[type=email], #reg-form input[type=tel] { font-size: 14px; padding: 9px 10px; }
+
+  /* ── Tutorial ── */
+  #tutorial-overlay .tut-title { font-size: 20px; }
+  #tutorial-overlay .tut-cards { gap: 8px; flex-wrap: wrap; max-width: 94vw; }
+  .tut-card { padding: 9px 10px; min-width: 130px; flex: 1 1 130px; }
+  .tut-card .tut-body { font-size: 11px; }
+  #tutorial-overlay .tut-controls { font-size: 12px; }
+
+  /* ── HUD ── */
+  #score-box { padding: 5px 11px; top: 10px; right: 10px; }
+  #score-value { font-size: 24px; }
+  #balloon-bank { font-size: 12px; top: 58px; right: 10px; padding: 4px 9px; }
+  #pause-btn { font-size: 12px; padding: 6px 10px; letter-spacing: 1px; top: 10px; left: 10px; }
+  #__level { font-size: 11px !important; padding: 4px 9px !important; top: 8px !important; }
+  #__boss { transform: translateX(-50%) scale(0.8); }
+  #prompt { font-size: 15px; }
+  #weapon-info { transform: scale(0.82); transform-origin: bottom left; }
+  #kill-feed { font-size: 11px; }
+
+  /* ── Weapon slots ── */
+  #weapon-slots { bottom: 6px; gap: 3px; transform: translateX(-50%) scale(0.68); }
   #weapon-slots .wslot { width: 52px; height: 52px; }
+
+  /* ── Modals (shop / prize) ── */
+  .shop-card { max-width: 92vw; }
+  #pm-printer3d { height: 160px; }
   .screen .panel, #register-screen form, .modal-card { max-width: 94vw !important; }
-  #start-screen h1 { font-size: 30px; }
-  #score-box, #balloon-bank { transform: scale(0.9); transform-origin: top right; }
+
+  /* Slightly smaller touch buttons on phones */
+  #tc-fire { width: 84px; height: 84px; right: 18px; bottom: 84px; }
+  #tc-jump { width: 60px; height: 60px; right: 116px; bottom: 132px; }
+  #tc-pickup { width: 60px; height: 60px; right: 112px; bottom: 60px; }
 }
 /* Landscape nudge for phones (gameplay is best in landscape) */
 #rotate-hint { display: none; }
