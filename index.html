@@ -6351,6 +6351,10 @@ function rebuildHeldMesh() {
   // Meshy image-to-3D models face +Z (screen toward viewer), grip down. Orient
   // for a first-person aim: screen toward player, tilted forward like scanning.
   heldMesh.rotation.set(-0.45, 0.15, 0.0);
+  // The DS scanner models are exported turned 90° from the devices, so they end
+  // up facing sideways when held — rotate them a quarter-turn to face forward.
+  const wid = WEAPONS[currentWeapon].id;
+  if (wid === 'DS3678' || wid === 'DS2278') heldMesh.rotation.y += Math.PI / 2;
   heldMesh.scale.setScalar(0.9);
   camera.add(heldMesh);
 }
