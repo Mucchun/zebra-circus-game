@@ -1,5 +1,5 @@
 // Zebra Circus Blaster — service worker (offline + installability)
-const CACHE = 'zcb-v22-startscreen-polish';
+const CACHE = 'zcb-v23-fullheight-fix';
 const CORE = [
   './',
   './index.html',
