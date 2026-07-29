@@ -21,6 +21,12 @@ async function ensureTable(sql) {
       shipped    BOOLEAN NOT NULL DEFAULT FALSE,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )`;
+  // The leads table (created by /api/register) needs these columns so the
+  // UPDATE below can attach the win + address to the player row.
+  await sql`CREATE TABLE IF NOT EXISTS leads (id BIGSERIAL PRIMARY KEY, email TEXT)`;
+  await sql`ALTER TABLE leads ADD COLUMN IF NOT EXISTS won_prize    TEXT`;
+  await sql`ALTER TABLE leads ADD COLUMN IF NOT EXISTS won_coupon   TEXT`;
+  await sql`ALTER TABLE leads ADD COLUMN IF NOT EXISTS ship_address TEXT`;
   ensured = true;
 }
 

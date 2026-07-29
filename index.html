@@ -930,7 +930,7 @@ body.touch #weapon-slots .wslot { cursor: pointer; }
         <label><span data-i18n="pm_prize">Prize</span>
           <select id="pm-prize" name="prize">
             <option value="Zebra Plushie">🦓 Zebra Plushie</option>
-            <option value="Zebra Hand Terminal">📟 Zebra Hand Terminal</option>
+            <option value="Zebra Barcode Reader">📟 Zebra Barcode Reader</option>
           </select>
         </label>
       </div>
@@ -4494,10 +4494,15 @@ function unlockLevel2() {
   if (level2Active || currentLevel !== 1) return; // advance only once, from L1
   level2Unlocked = true;
   addKillFeed(t('dyn_l1_cleared_kf'));
-  showPrompt(t('dyn_l1_cleared'), 2600);
+  showPrompt(t('dyn_l1_cleared'), 2400);
   flashScreen(0xff2d55, 0.3);
   updateLevelHud();
-  setTimeout(() => { if (gameActive && !level2Active) startLevel2(); }, 2600); // auto-advance
+  // Clearing Level 1 wins a real Zebra Plushie — collect the shipping address,
+  // then advance to Level 2 once the claim is done.
+  setTimeout(() => {
+    if (!gameActive || level2Active) return;
+    awardPrizeAndClaim('plush', () => { if (gameActive && !level2Active) startLevel2(); });
+  }, 2400);
 }
 
 function startLevel2() {
@@ -4532,9 +4537,11 @@ function endLevel2() {
   LunaAnalytics.track('level2_end', { popped: level2Score, won });
   if (won) { for (let k=0;k<6;k++) spawnConfetti(new THREE.Vector3((Math.random()-0.5)*14,5+Math.random()*4,(Math.random()-0.5)*14),28,0.3); cheerCrowd(); }
   level3Unlocked = true;
+  // Clearing Level 2 wins a real Zebra barcode reader — collect the address,
+  // then continue to Level 3.
   showBigMessage(won ? t('dyn_frenzy_cleared') : t('dyn_time_up', {n: level2Score}),
     won ? t('dyn_frenzy_cleared_sub', {n: level2Score}) : t('dyn_time_up_sub', {n: level2Score, t: LEVEL2_TARGET}),
-    () => { updateLevelHud(); startLevel3(); }); // auto-advance to Level 3
+    () => { updateLevelHud(); awardPrizeAndClaim('terminal', () => startLevel3()); });
 }
 
 // ── Level 3: Big Top Boss battle ──────────────────────────────────────────
@@ -6641,8 +6648,8 @@ const PLUSH_GOAL = 200;
 // Two real prizes, each won at a balloon goal, each claimed via the ZD421
 // machine (its own voucher + shipping address).
 const PRIZES = {
-  plush:    { key: 'plush',    goal: 30000, label: 'Zebra Plushie',       emoji: '🦓' },
-  terminal: { key: 'terminal', goal: 50000, label: 'Zebra Hand Terminal', emoji: '📟' },
+  plush:    { key: 'plush',    goal: 30000, label: 'Zebra Plushie',        emoji: '🦓' },
+  terminal: { key: 'terminal', goal: 50000, label: 'Zebra Barcode Reader', emoji: '📟' },
 };
 const ZEBRA_PLUSH_URL = 'https://www.zebra.com';
 const wallet = { earned: 0, spent: 0, codes: [], prizes: {}, plushAwarded: false, coupon: null, claimed: false };
@@ -6858,9 +6865,22 @@ function openPrizeMachine(key) {
   startPrinterScene(rec.coupon); // 3D ZD421 prints the voucher
   LunaAnalytics.track('prize_machine_opened', { prize: p.label });
 }
+let _afterPrizeClaim = null;
 function closePrizeMachine() {
   document.getElementById('prize-overlay').style.display = 'none';
   stopPrinterScene();
+  const cb = _afterPrizeClaim; _afterPrizeClaim = null;
+  if (cb) cb();
+}
+// Award a prize, open its claim (address) modal, then run `cb` once the player
+// closes/submits it. If the prize can't be opened (already claimed), run cb now.
+function awardPrizeAndClaim(key, cb) {
+  awardPrize(key);
+  _afterPrizeClaim = cb || null;
+  openPrizeMachine(key);
+  if (document.getElementById('prize-overlay').style.display !== 'flex') {
+    const f = _afterPrizeClaim; _afterPrizeClaim = null; if (f) f();
+  }
 }
 
 document.querySelectorAll('.claim-prize-btn').forEach((b) =>

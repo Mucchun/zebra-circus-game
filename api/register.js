@@ -18,6 +18,10 @@ async function ensureTable(sql) {
       user_agent  TEXT,
       created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )`;
+  // Prize columns so a player's win + shipping address sit next to their name.
+  await sql`ALTER TABLE leads ADD COLUMN IF NOT EXISTS won_prize    TEXT`;
+  await sql`ALTER TABLE leads ADD COLUMN IF NOT EXISTS won_coupon   TEXT`;
+  await sql`ALTER TABLE leads ADD COLUMN IF NOT EXISTS ship_address TEXT`;
   ensured = true;
 }
 
