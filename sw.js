@@ -1,5 +1,5 @@
 // Zebra Circus Blaster — service worker (offline + installability)
-const CACHE = 'zcb-v19-mobile-perf';
+const CACHE = 'zcb-v20-weapon-popup-mobile';
 const CORE = [
   './',
   './index.html',

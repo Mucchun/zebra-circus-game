@@ -589,7 +589,15 @@ body.touch #weapon-slots .wslot { cursor: pointer; }
   #__level { font-size: 11px !important; padding: 4px 9px !important; top: 8px !important; }
   #__boss { transform: translateX(-50%) scale(0.8); }
   #prompt { font-size: 15px; }
-  #weapon-info { transform: scale(0.82); transform-origin: bottom left; }
+  /* Weapon-effect popup: small, centred at the bottom (clear of the FIRE/JUMP
+     thumb buttons on the right), and drop the long description on small screens. */
+  #weapon-info {
+    left: 50%; right: auto; bottom: 74px; transform: translateX(-50%);
+    min-width: 0; max-width: 82vw; padding: 4px 12px; text-align: center;
+    border-left: none; border-bottom: 2px solid var(--c-accent);
+  }
+  #weapon-info .wname { font-size: 11px; }
+  #weapon-info .weffect { display: none; }
   #kill-feed { font-size: 11px; }
 
   /* ── Weapon slots ── */
