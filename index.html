@@ -1908,6 +1908,7 @@ window.addEventListener('load', async () => {
   document.getElementById('loading-screen').style.display = 'none';
   if (STUDIO_AUTHORING_MODE) startStudioAuthoring();
   else document.getElementById('start-screen').style.display = 'flex';
+  try { flushPendingRegs(); } catch (_) {} // resend any logins that failed earlier
 });
 
 function loadDeviceModels() {
@@ -1997,6 +1998,26 @@ document.getElementById('play-btn').addEventListener('click', () => {
   setTimeout(() => document.getElementById('reg-first').focus(), 60);
 });
 
+// Persist a player sign-in to the leads DB, with a retry queue so NO login is
+// ever lost if the network blips or the API is briefly down.
+function loadPendingRegs() {
+  try { return JSON.parse(localStorage.getItem('zebraPendingRegs') || '[]'); } catch (_) { return []; }
+}
+function savePendingRegs(q) {
+  try { localStorage.setItem('zebraPendingRegs', JSON.stringify(q.slice(-100))); } catch (_) {}
+}
+function sendRegistration(player) {
+  return fetch('/api/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(player) })
+    .then((r) => { if (!r.ok) throw new Error('register http ' + r.status); })
+    .catch(() => { const q = loadPendingRegs(); q.push(player); savePendingRegs(q); });
+}
+function flushPendingRegs() {
+  const q = loadPendingRegs();
+  if (!q.length) return;
+  savePendingRegs([]);       // clear; any that fail re-queue themselves
+  q.forEach((p) => sendRegistration(p));
+}
+
 document.getElementById('reg-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const firstName = document.getElementById('reg-first').value.trim();
@@ -2020,15 +2041,10 @@ document.getElementById('reg-form').addEventListener('submit', async (e) => {
   const btn = document.getElementById('reg-submit');
   btn.disabled = true; btn.textContent = 'STARTING…';
 
-  // Persist to the leads database (best-effort; never blocks play).
-  try {
-    const res = await fetch('/api/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(player),
-    });
-    if (res.ok) localStorage.setItem('zebraPlayerRegistered', '1');
-  } catch (_) { /* offline / no backend: continue anyway */ }
+  // Save this login to the leads DB, and resend any earlier logins that failed
+  // to reach the API — so every sign-in is captured (never blocks play).
+  flushPendingRegs();
+  await sendRegistration(player);
 
   if (typeof LunaAnalytics !== 'undefined') LunaAnalytics.track('player_registered', {});
   document.getElementById('register-screen').style.display = 'none';
