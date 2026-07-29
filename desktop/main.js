@@ -1,5 +1,5 @@
 'use strict';
-const { app, BrowserWindow, shell } = require('electron');
+const { app, BrowserWindow, shell, session } = require('electron');
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
@@ -68,6 +68,13 @@ function createWindow() {
 
 app.whenReady().then(async () => {
   await startServer();
+  // Always serve the freshest local build: the page registers a service worker,
+  // so wipe the SW + cache storage on launch or edits won't show until the cache
+  // happens to expire. (Everything is served from localhost, so no offline need.)
+  try {
+    await session.defaultSession.clearCache();
+    await session.defaultSession.clearStorageData({ storages: ['serviceworkers', 'cachestorage'] });
+  } catch (e) { console.warn('cache clear failed:', e.message); }
   createWindow();
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });
