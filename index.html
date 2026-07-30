@@ -327,6 +327,18 @@ body { background: #05050d; overflow: hidden; font-family: 'Source Sans 3', 'Bar
 /* Alternate bulbs twinkle out of phase for a lively marquee. */
 .ss-lights.bottom { animation-delay: 0.75s; }
 @keyframes ssBulbs { 0%,100% { opacity: 1; filter: drop-shadow(0 0 7px rgba(255,205,90,1)); } 50% { opacity: 0.5; filter: drop-shadow(0 0 3px rgba(255,205,90,0.5)); } }
+/* iOS Add-to-Home-Screen tip (shown only on iOS Safari, not standalone) */
+#ios-tip { display: none; }
+#ios-tip.show {
+  display: flex; align-items: center; gap: 10px;
+  position: fixed; left: 10px; right: 10px; bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+  z-index: 2500; background: rgba(11,11,22,0.96); border: 1px solid #00a651; border-radius: 12px;
+  padding: 11px 13px; box-shadow: 0 6px 24px rgba(0,0,0,0.5);
+  font-family: 'Source Sans 3', sans-serif; font-size: 13px; color: #eef1fa; line-height: 1.35;
+}
+#ios-tip b { color: #ffd24d; }
+#ios-tip-x { flex: none; margin-left: auto; background: transparent; border: none; color: #8090b0;
+  font-size: 18px; padding: 2px 6px; cursor: pointer; }
 #start-screen > .ss-lights { z-index: 6; } /* beat the generic `#start-screen > *` z-index:1 */
 
 /* Language toggle (top-right) */
@@ -827,6 +839,9 @@ body.touch #weapon-slots .wslot { cursor: pointer; }
 </div>
 <div class="tc-hint">Left: move · Right: look · buttons: fire / jump / pick up</div>
 <div id="rotate-hint"><div style="font-size:34px">📱↻</div><div style="font-size:20px;letter-spacing:1px">ROTATE YOUR DEVICE</div><div style="font-family:'Source Sans 3',sans-serif;font-size:13px;color:#9aa">Circus Blaster plays best in landscape.</div><button class="rh-play" id="rh-play" type="button">PLAY IN PORTRAIT →</button></div>
+<!-- iOS-only tip: Safari can't hide its tab/address bar from a web page, so
+     suggest Add-to-Home-Screen for a true fullscreen (no-tabs) experience. -->
+<div id="ios-tip"><span>📲 <b>For fullscreen with no tabs:</b> tap Share <b>⬆</b> → “Add to Home Screen”.<br><span style="color:#dac493;font-style:italic">Sekmesiz tam ekran için: Paylaş ⬆ → “Ana Ekrana Ekle”.</span></span><button id="ios-tip-x" type="button" aria-label="close">✕</button></div>
 
 <div id="hud">
   <div id="hint"></div>
@@ -1994,7 +2009,39 @@ function loadDeviceModels() {
 
 // PLAY → always show the player sign-in panel so every player is captured
 // (important on shared/kiosk browsers). The form submit starts the game.
+// On touch devices, enter the Fullscreen API on a user gesture so the browser
+// chrome (tabs / address bar) hides — especially when the phone is rotated to
+// landscape. No-op where the browser blocks it (e.g. iPhone Safari, which needs
+// Add-to-Home-Screen for a chrome-free experience).
+function goFullscreen() {
+  if (!IS_TOUCH) return;
+  const el = document.documentElement;
+  const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+  const active = document.fullscreenElement || document.webkitFullscreenElement;
+  if (req && !active) {
+    try { const p = req.call(el); if (p && p.catch) p.catch(() => {}); } catch (_) {}
+  }
+}
+
+// iOS Safari can't hide its tab/address bar from a web page, so nudge the user
+// to Add-to-Home-Screen for a true no-chrome fullscreen. Shown once, iOS only.
+(function () {
+  const ua = navigator.userAgent || '';
+  const isIOS = /iP(hone|od|ad)/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const standalone = window.navigator.standalone === true
+    || (window.matchMedia && (window.matchMedia('(display-mode: standalone)').matches || window.matchMedia('(display-mode: fullscreen)').matches));
+  let dismissed = false; try { dismissed = localStorage.getItem('zebraIosTip') === '1'; } catch (_) {}
+  const tip = document.getElementById('ios-tip');
+  if (tip && isIOS && !standalone && !dismissed) {
+    tip.classList.add('show');
+    document.getElementById('ios-tip-x').addEventListener('click', () => {
+      tip.classList.remove('show'); try { localStorage.setItem('zebraIosTip', '1'); } catch (_) {}
+    });
+  }
+})();
+
 document.getElementById('play-btn').addEventListener('click', () => {
+  goFullscreen();
   document.getElementById('start-screen').style.display = 'none';
   document.getElementById('register-screen').style.display = 'flex';
   // Clear the previous player's typed details for a fresh capture.
@@ -2055,10 +2102,11 @@ document.getElementById('reg-form').addEventListener('submit', async (e) => {
   if (typeof LunaAnalytics !== 'undefined') LunaAnalytics.track('player_registered', {});
   document.getElementById('register-screen').style.display = 'none';
   btn.disabled = false; btn.textContent = t('reg_submit');
+  goFullscreen();
   startGame();
 });
 document.getElementById('restart-btn').addEventListener('click', restartGame);
-document.getElementById('tut-go-btn').addEventListener('click', dismissTutorial);
+document.getElementById('tut-go-btn').addEventListener('click', () => { goFullscreen(); dismissTutorial(); });
 document.getElementById('ip-close').addEventListener('click', () => closeInfo({ resumeGame: true }));
 document.getElementById('open-zebra-btn').addEventListener('click', () => window.open('https://www.zebra.com/us/en/products.html','_blank','noopener,noreferrer'));
 document.getElementById('mp-explore-btn').addEventListener('click', () => window.open('https://www.zebra.com/us/en/products.html','_blank','noopener,noreferrer'));
@@ -6164,6 +6212,11 @@ function setupTouchControls() {
   if (!IS_TOUCH || __touchSetup) return;
   __touchSetup = true;
   document.body.classList.add('touch');
+
+  // If the browser ever drops fullscreen (e.g. on a rotation), the next tap
+  // during play re-enters it, hiding the tab/address bar again. No-op once
+  // already fullscreen or where unsupported.
+  document.addEventListener('touchend', () => { if (gameActive) goFullscreen(); }, { passive: true });
 
   // Rotate hint is only a suggestion — tapping it (or the button) plays in
   // portrait, so rotation-locked phones are never stuck.
