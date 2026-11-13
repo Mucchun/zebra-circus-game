@@ -1,5 +1,5 @@
 // Zebra Circus Blaster — service worker (offline + installability)
-const CACHE = 'zcb-v30-fullscreen'
+const CACHE = 'zcb-v35-intro'
 const CORE = [
   './',
   './index.html',
@@ -27,7 +27,7 @@ self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
   // Let the browser stream audio natively (range requests) so it loops cleanly.
-  if (url.pathname.endsWith('.mp3')) return;
+  if (url.pathname.endsWith('.mp3') || url.pathname.endsWith('.mp4')) return;
   const needsFreshAuthoredSource = e.request.mode === 'navigate'
     || url.pathname.endsWith('/index.html')
     || url.pathname.endsWith('/zebra-circus.scene.json')

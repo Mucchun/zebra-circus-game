@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-title" content="Circus Blaster">
 <script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,600;0,700;0,800;1,400&family=Barlow+Condensed:wght@500;600;700;800&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@600;700;800;900&family=Barlow+Condensed:wght@600;700;800&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
   --c-bg:      #05050d;
@@ -366,6 +366,9 @@ body { background: #05050d; overflow: hidden; font-family: 'Source Sans 3', 'Bar
   font-family:'Source Sans 3',sans-serif; font-size:14px; outline:none; width:100%;
 }
 #reg-form input:focus { border-color:#00a651; }
+#reg-welcome .reg-sub { font-size:15px; margin:8px 0 4px; }
+#wb-switch { display:block; margin:14px auto 0; background:none; border:none; color:#8090b0;
+  font-size:13px; text-decoration:underline; cursor:pointer; font-family:'Source Sans 3',sans-serif; }
 .reg-consent { display:flex; align-items:flex-start; gap:9px; font-family:'Source Sans 3',sans-serif;
   font-size:12px; color:#b9c0d8; line-height:1.45; cursor:pointer; margin-top:3px; }
 .reg-consent input { margin-top:2px; accent-color:#00a651; flex-shrink:0; }
@@ -687,6 +690,606 @@ body.touch #weapon-slots .wslot { cursor: pointer; }
   font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 16px;
   letter-spacing: 2px; border-radius: 6px;
 }
+
+/* ═══ SHOWTIME UPGRADE — start screen, HUD juice, goals, finale ═══ */
+/* The generic `#start-screen > *` rule forced these decorations into the
+   flow (stacked at the top-centre); pin them back to the edges. */
+#start-screen > .ss-corner, #start-screen > .ss-lights { position: absolute; }
+.ss-chips { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin: -22px 0 26px; }
+.ss-chip { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 14px; letter-spacing: 2.5px;
+  color: #fff; padding: 7px 16px; border: 1px solid rgba(255,255,255,0.16); background: rgba(10,10,22,0.72);
+  text-transform: uppercase; white-space: nowrap; }
+.ss-chip b { color: #ffd76a; font-weight: 800; }
+.ss-chip.prize { border-color: rgba(0,166,81,0.75); background: rgba(0,166,81,0.16); }
+#ss-best { margin-top: 18px; min-height: 18px; font-family: 'Barlow Condensed', sans-serif; font-weight: 700;
+  font-size: 15px; letter-spacing: 3px; color: #ffd76a; text-transform: uppercase; }
+#ss-best span { color: #8090b0; }
+body.zc-playing #lang-toggle { display: none; }
+body.zc-playing.zc-menu-open #lang-toggle { display: flex; z-index: 1001; }
+/* The pause menu must sit above the touch look/move zones and the HUD's
+   tappable weapon slots (z 940-945) or its buttons can't be tapped on phones. */
+#pause-overlay { z-index: 1000 !important; }
+#__power { top: 128px !important; }
+
+/* Hit marker (four diagonal ticks that snap in around the crosshair). */
+#zc-hit { position: absolute; inset: -6px; opacity: 0; pointer-events: none;
+  background:
+    linear-gradient(45deg, transparent 46%, #fff 46%, #fff 54%, transparent 54%) 0 0 / 12px 12px no-repeat,
+    linear-gradient(-45deg, transparent 46%, #fff 46%, #fff 54%, transparent 54%) 100% 0 / 12px 12px no-repeat,
+    linear-gradient(-45deg, transparent 46%, #fff 46%, #fff 54%, transparent 54%) 0 100% / 12px 12px no-repeat,
+    linear-gradient(45deg, transparent 46%, #fff 46%, #fff 54%, transparent 54%) 100% 100% / 12px 12px no-repeat; }
+#zc-hit.on { animation: zcHit 0.22s ease-out; }
+#zc-hit.bad { filter: drop-shadow(0 0 4px #ff1030) hue-rotate(0deg); }
+@keyframes zcHit { 0% { opacity: 1; transform: scale(1.5); } 100% { opacity: 0; transform: scale(0.9); } }
+
+/* World-anchored score pop-ups. */
+.zc-pop { position: absolute; transform: translate(-50%, -50%); pointer-events: none; white-space: nowrap;
+  font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 24px; letter-spacing: 1px;
+  text-shadow: 0 2px 0 rgba(0,0,0,0.55), 0 0 12px rgba(0,0,0,0.6); animation: zcPop 0.9s ease-out forwards; }
+.zc-pop.big { font-size: 38px; }
+@keyframes zcPop { 0% { opacity: 0; margin-top: 6px; transform: translate(-50%,-50%) scale(0.6); }
+  18% { opacity: 1; transform: translate(-50%,-50%) scale(1.15); }
+  100% { opacity: 0; margin-top: -64px; transform: translate(-50%,-50%) scale(1); } }
+
+/* Live combo meter beside the crosshair. */
+#zc-combo { position: absolute; left: calc(50% + 46px); top: 50%; transform: translateY(-50%); display: none;
+  font-family: 'Barlow Condensed', sans-serif; font-weight: 800; color: #ffd200; letter-spacing: 1px;
+  text-shadow: 0 2px 10px rgba(255,106,0,0.75); line-height: 1; }
+#zc-combo .n { font-size: 30px; }
+#zc-combo .bar { width: 54px; height: 3px; margin-top: 5px; background: rgba(255,255,255,0.18); }
+#zc-combo .bar i { display: block; height: 100%; width: 100%; background: #ffd200; }
+
+/* Show goals (mission checklist). */
+#zc-goals { position: absolute; top: 64px; left: 16px; width: 250px; display: none;
+  background: rgba(5,5,15,0.78); border: 1px solid rgba(255,106,0,0.4); border-left: 3px solid var(--c-accent);
+  padding: 9px 12px 8px; font-family: 'Barlow Condensed', sans-serif; color: #dfe3f3; }
+#zc-goals .hd { font-size: 11px; letter-spacing: 3px; font-weight: 800; color: var(--c-accent); margin-bottom: 5px; }
+#zc-goals .row { display: flex; align-items: baseline; gap: 7px; font-size: 14px; font-weight: 600; letter-spacing: 0.5px;
+  padding: 2px 0; }
+#zc-goals .row .bx { flex: none; width: 11px; height: 11px; border: 1.5px solid #8090b0; transform: translateY(1px); }
+#zc-goals .row .tx { flex: 1; }
+#zc-goals .row .pr { flex: none; color: #ffd76a; font-weight: 800; font-size: 13px; }
+#zc-goals .row.done { color: #38d66b; }
+#zc-goals .row.done .bx { background: #38d66b; border-color: #38d66b; }
+#zc-goals .row.done .tx { text-decoration: line-through; text-decoration-color: rgba(56,214,107,0.6); }
+#zc-goals .row.done .pr { color: #38d66b; }
+#zc-goals .row.flash { animation: zcGoal 0.9s ease-out; }
+@keyframes zcGoal { 0% { background: rgba(56,214,107,0.55); } 100% { background: transparent; } }
+
+/* Waypoint to the nearest scanner while the player is unarmed. */
+#zc-way { position: absolute; display: none; transform: translate(-50%, -50%); text-align: center; pointer-events: none;
+  font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 13px; letter-spacing: 2px; color: #fff;
+  text-shadow: 0 1px 6px rgba(0,0,0,0.9); }
+#zc-way .ar { display: block; width: 0; height: 0; margin: 0 auto 5px; border-left: 7px solid transparent;
+  border-right: 7px solid transparent; border-top: 20px solid #00e676; filter: drop-shadow(0 0 6px rgba(0,230,118,0.9));
+  animation: zcWay 0.9s ease-in-out infinite; }
+#zc-way .lb { background: rgba(5,5,15,0.82); border: 1px solid #00e676; padding: 2px 8px; white-space: nowrap; }
+@keyframes zcWay { 0%,100% { opacity: 1; } 50% { opacity: 0.45; } }
+
+/* Finale / results. */
+#zc-finale { position: fixed; inset: 0; z-index: 1260; display: none; align-items: center; justify-content: center;
+  background: radial-gradient(ellipse 70% 60% at 50% 30%, rgba(255,150,54,0.2), rgba(4,4,11,0) 62%), rgba(4,4,11,0.93);
+  font-family: 'Barlow Condensed', sans-serif; color: #fff; pointer-events: auto; overflow-y: auto; padding: 16px; }
+.zf-card { width: min(640px, 96vw); margin: auto; background: #0b0b16; border: 1px solid #ffd200;
+  border-top: 6px solid #ffd200; padding: 24px 28px 20px; text-align: center; box-shadow: 0 0 80px rgba(255,210,0,0.18); }
+.zf-kicker { font-size: 13px; letter-spacing: 6px; color: #ffcf7a; font-weight: 700; }
+.zf-rank { font-size: 46px; font-weight: 800; letter-spacing: 5px; line-height: 1.05; margin: 4px 0 2px;
+  background: linear-gradient(180deg, #fff 0%, #ffe9c2 55%, #ffc768 100%); -webkit-background-clip: text;
+  background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
+.zf-score { font-size: 20px; letter-spacing: 3px; color: #cdd3ea; font-weight: 700; }
+.zf-score b { color: #fff; font-size: 34px; letter-spacing: 1px; }
+#zf-best { display: inline-block; margin-top: 6px; padding: 3px 12px; font-size: 13px; letter-spacing: 3px;
+  font-weight: 800; background: #00a651; color: #fff; }
+.zf-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 16px 0 14px; }
+.zf-stat { background: #05050d; border: 1px solid #23233c; padding: 9px 4px 7px; }
+.zf-stat b { display: block; font-size: 26px; line-height: 1; color: #ffd76a; }
+.zf-stat span { display: block; font-size: 11px; letter-spacing: 2px; color: #8090b0; margin-top: 4px; font-weight: 700; }
+.zf-sub { font-size: 12px; letter-spacing: 4px; color: #00c060; font-weight: 800; margin: 2px 0 8px; }
+.zf-prods { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px; }
+.zf-prod { display: block; text-decoration: none; background: rgba(0,166,81,0.08); border: 1px solid rgba(0,166,81,0.45);
+  padding: 8px 4px; color: #fff; cursor: pointer; transition: background 0.15s; }
+.zf-prod:hover { background: rgba(0,166,81,0.24); }
+.zf-prod b { display: block; font-size: 17px; letter-spacing: 1px; }
+.zf-prod span { display: block; font-size: 10.5px; letter-spacing: 1.5px; color: #9fe8c0; font-weight: 700; margin-top: 2px; }
+.zf-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.zf-btns button { flex: 1 1 150px; border: none; cursor: pointer; padding: 13px 10px; font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 800; font-size: 16px; letter-spacing: 2.5px; color: #fff; }
+#zf-explore { background: #00a651; flex-basis: 100%; font-size: 18px; padding: 15px 10px; }
+#zf-explore:hover { background: #00c060; }
+#zf-share { background: #1b1b30; border: 1px solid #ffd200; color: #ffd76a; }
+#zf-again { background: #ff6a00; }
+#zf-keep { display: block; margin: 12px auto 0; background: none; border: none; color: #8090b0; cursor: pointer;
+  font-family: 'Source Sans 3', sans-serif; font-size: 13px; text-decoration: underline; }
+#finish-btn { width: 100%; margin-top: 10px; padding: 11px; background: #101022; border: 1px solid #ffd200; color: #ffd76a;
+  cursor: pointer; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 14px; letter-spacing: 2px; }
+#finish-btn:hover { background: #1b1b30; }
+
+@media (max-width: 720px), (max-height: 500px) {
+  .ss-chips { gap: 5px; margin: -12px 0 14px; }
+  .ss-chip { font-size: 10px; letter-spacing: 1.2px; padding: 4px 8px; }
+  #ss-best { font-size: 11px; letter-spacing: 2px; margin-top: 10px; }
+  #zc-goals { top: 42px; left: 10px; width: 186px; padding: 5px 8px; }
+  #zc-goals .hd { font-size: 9px; letter-spacing: 2px; margin-bottom: 2px; }
+  #zc-goals .row { font-size: 10.5px; padding: 0; gap: 5px; }
+  #zc-goals .row .pr { font-size: 10px; }
+  #zc-goals .row .bx { width: 8px; height: 8px; }
+  #zc-goals .row.done { display: none; }
+  .zc-pop { font-size: 18px; } .zc-pop.big { font-size: 26px; }
+  #zc-combo .n { font-size: 22px; }
+  #__power { top: 92px !important; font-size: 12px !important; }
+  .zf-card { padding: 14px 14px 12px; }
+  .zf-rank { font-size: 28px; letter-spacing: 3px; }
+  .zf-score b { font-size: 24px; } .zf-score { font-size: 14px; }
+  .zf-stats { margin: 10px 0 8px; gap: 5px; } .zf-stat b { font-size: 18px; } .zf-stat span { font-size: 9px; letter-spacing: 1px; }
+  .zf-prods { gap: 5px; margin-bottom: 10px; } .zf-prod b { font-size: 13px; } .zf-prod span { font-size: 8.5px; letter-spacing: 0.5px; }
+  .zf-btns button { padding: 9px 6px; font-size: 13px; letter-spacing: 1.5px; flex-basis: 110px; }
+  #zf-explore { font-size: 14px; padding: 11px 6px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   CARNIVAL SKIN — one chunky, tactile look for every screen: cream paper
+   panels with thick ink outlines, striped awning tops, big 3D-lipped
+   buttons and a rounded display face. Overrides the earlier thin dark
+   "tech HUD" styling (incl. inline styles set from JS, hence !important).
+   ═══════════════════════════════════════════════════════════════════════ */
+:root {
+  --k-ink: #1d0f2b; --k-plum: #321a4a; --k-plum-2: #47256a;
+  --k-red: #e63b2e; --k-red-d: #a52018; --k-gold: #ffc83d; --k-gold-d: #c98600;
+  --k-cream: #fff4da; --k-cream-d: #ead6a6; --k-teal: #18b7a6; --k-teal-d: #0c7f74;
+  --k-green: #1fb65c; --k-green-d: #0d7a3b; --k-mute: #7a6888;
+  --k-display: 'Lilita One', 'Nunito', 'Arial Rounded MT Bold', Arial, sans-serif;
+  --k-body: 'Nunito', 'Arial Rounded MT Bold', Arial, sans-serif;
+  --k-stroke-2: -2px -2px 0 var(--k-ink), 2px -2px 0 var(--k-ink), -2px 2px 0 var(--k-ink), 2px 2px 0 var(--k-ink),
+    0 -2px 0 var(--k-ink), 0 2px 0 var(--k-ink), -2px 0 0 var(--k-ink), 2px 0 0 var(--k-ink);
+  --k-stroke-3: -3px -3px 0 var(--k-ink), 3px -3px 0 var(--k-ink), -3px 3px 0 var(--k-ink), 3px 3px 0 var(--k-ink),
+    0 -3px 0 var(--k-ink), 0 3px 0 var(--k-ink), -3px 0 0 var(--k-ink), 3px 0 0 var(--k-ink);
+  --k-awning: repeating-linear-gradient(90deg, var(--k-red) 0 28px, #fff 28px 56px);
+}
+body { font-family: var(--k-body); background: var(--k-ink); }
+
+/* ── Buttons: one chunky family ── */
+.btn, .shop-btn, #resume-btn, #pause-actions button, #finish-btn, .zf-btns button, #prod-visit-btn,
+#__bigmsg-btn, #pause-btn, #rotate-hint .rh-play {
+  font-family: var(--k-display) !important; font-weight: 400 !important; letter-spacing: 0.6px !important;
+  text-transform: uppercase; line-height: 1.1;
+  background: var(--k-gold) !important; color: var(--k-ink) !important;
+  border: 3px solid var(--k-ink) !important; border-radius: 14px !important; clip-path: none !important;
+  box-shadow: 0 5px 0 var(--k-gold-d), 0 5px 0 3px var(--k-ink) !important;
+  transition: transform 0.06s ease-out, box-shadow 0.06s ease-out, filter 0.12s !important;
+  cursor: pointer; animation: none;
+}
+.btn:hover, .shop-btn:not(:disabled):hover, #resume-btn:hover, #pause-actions button:hover, #finish-btn:hover,
+.zf-btns button:hover, #prod-visit-btn:hover, #__bigmsg-btn:hover, #pause-btn:hover {
+  filter: brightness(1.07); color: var(--k-ink) !important; background: var(--k-gold) !important;
+}
+.btn:active, .shop-btn:not(:disabled):active, #resume-btn:active, #pause-actions button:active, #finish-btn:active,
+.zf-btns button:active, #prod-visit-btn:active, #__bigmsg-btn:active, #pause-btn:active {
+  transform: translateY(4px); box-shadow: 0 1px 0 var(--k-gold-d), 0 1px 0 3px var(--k-ink) !important;
+}
+.btn:focus-visible, .shop-btn:focus-visible, #resume-btn:focus-visible, .zf-btns button:focus-visible {
+  outline: 3px solid #fff; outline-offset: 3px;
+}
+.btn { padding: 12px 34px; font-size: 18px; }
+.btn-lg { padding: 16px 56px; font-size: 26px; border-radius: 18px !important; }
+/* colour variants */
+#exit-btn, #zf-again, #__bigmsg-btn { background: var(--k-red) !important; color: #fff !important;
+  box-shadow: 0 5px 0 var(--k-red-d), 0 5px 0 3px var(--k-ink) !important; }
+#exit-btn:hover, #zf-again:hover, #__bigmsg-btn:hover { background: var(--k-red) !important; color: #fff !important; }
+#exit-btn:active, #zf-again:active, #__bigmsg-btn:active { box-shadow: 0 1px 0 var(--k-red-d), 0 1px 0 3px var(--k-ink) !important; }
+#zf-explore, #prod-visit-btn, .claim-prize-btn:not(:disabled), #reg-submit, #wb-play, #pm-submit, #pm-done-close, #tut-go-btn {
+  background: var(--k-green) !important; color: #fff !important;
+  box-shadow: 0 5px 0 var(--k-green-d), 0 5px 0 3px var(--k-ink) !important; }
+#zf-explore:hover, #prod-visit-btn:hover, .claim-prize-btn:not(:disabled):hover, #reg-submit:hover, #wb-play:hover,
+#pm-submit:hover, #pm-done-close:hover, #tut-go-btn:hover { background: var(--k-green) !important; color: #fff !important; }
+#zf-explore:active, #prod-visit-btn:active, .claim-prize-btn:not(:disabled):active, #reg-submit:active, #wb-play:active,
+#pm-submit:active, #pm-done-close:active, #tut-go-btn:active { box-shadow: 0 1px 0 var(--k-green-d), 0 1px 0 3px var(--k-ink) !important; }
+#save-progress-btn, #zf-share, #finish-btn { background: var(--k-teal) !important; color: #fff !important;
+  box-shadow: 0 5px 0 var(--k-teal-d), 0 5px 0 3px var(--k-ink) !important; }
+#save-progress-btn:hover, #zf-share:hover, #finish-btn:hover { background: var(--k-teal) !important; color: #fff !important; }
+#save-progress-btn:active, #zf-share:active, #finish-btn:active { box-shadow: 0 1px 0 var(--k-teal-d), 0 1px 0 3px var(--k-ink) !important; }
+.shop-btn:disabled { background: var(--k-cream-d) !important; color: #9b8aa6 !important; box-shadow: none !important;
+  opacity: 1 !important; cursor: default; border-color: #b9a5c4 !important; }
+#wb-switch, #zf-keep { font-family: var(--k-body) !important; font-weight: 800; color: var(--k-plum-2) !important; font-size: 14px !important; }
+
+/* ── Panels: cream paper, ink outline, striped awning top ── */
+.reg-card, #pause-panel, #prize-machine, .zf-card, #__bigmsg > div, #info-panel {
+  background: var(--k-awning) top left / 100% 18px no-repeat,
+              linear-gradient(var(--k-ink), var(--k-ink)) 0 18px / 100% 4px no-repeat, var(--k-cream) !important;
+  color: var(--k-ink) !important; border: 4px solid var(--k-ink) !important; border-radius: 22px !important;
+  clip-path: none !important; font-family: var(--k-body) !important;
+  box-shadow: 0 8px 0 rgba(0,0,0,0.55), 0 26px 60px rgba(0,0,0,0.5) !important;
+}
+.reg-card, #pause-panel, #prize-machine, .zf-card, #__bigmsg > div { padding-top: 40px !important; }
+#pause-overlay, #prize-overlay, #zc-finale, #__bigmsg, #register-screen {
+  background: radial-gradient(ellipse 80% 70% at 50% 40%, rgba(71,37,106,0.82), rgba(20,9,31,0.94)) !important; }
+#register-screen { background: repeating-conic-gradient(from 0deg at 50% 60%, #2a1440 0 10deg, #341b4e 10deg 20deg) !important; }
+
+/* ── Start screen: a circus poster ── */
+#start-screen { background: var(--k-red-d) !important; }
+#start-screen::before { content: ''; position: absolute; z-index: 0; pointer-events: none; inset: auto;
+  left: 50%; top: 58%; width: 240vmax; height: 240vmax; margin: -120vmax 0 0 -120vmax;
+  background: repeating-conic-gradient(from 0deg, #c92a20 0 9deg, #e9463a 9deg 18deg) !important;
+  animation: kRays 140s linear infinite; }
+#start-screen::after { content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none; top: 0; left: 0;
+  width: auto; height: auto; transform: none; animation: none;
+  background: radial-gradient(ellipse 60% 55% at 50% 52%, rgba(255,214,120,0.42), rgba(255,214,120,0) 60%),
+              radial-gradient(ellipse 120% 110% at 50% 50%, rgba(29,15,43,0) 48%, rgba(29,15,43,0.78) 100%) !important; }
+@keyframes kRays { to { transform: rotate(360deg); } }
+#start-screen > .ss-corner { display: none; }
+.ss-title-block { margin-bottom: 18px; }
+.ss-presenter { display: inline-flex; align-items: center; gap: 12px; margin: 0 0 6px; padding: 9px 20px 9px 16px;
+  background: var(--k-ink); border: 3px solid var(--k-ink); border-radius: 999px; opacity: 1;
+  font-family: var(--k-display); font-size: 17px; letter-spacing: 0.5px; color: var(--k-gold); text-transform: lowercase;
+  box-shadow: 0 5px 0 rgba(0,0,0,0.35); }
+.ss-presenter svg { height: 26px; width: auto; display: block; }
+.zebra-logo, .ss-hline { display: none; }
+.ss-game-title { font-family: var(--k-display); font-weight: 400; font-size: clamp(58px, 12.5vw, 148px); line-height: 0.86;
+  letter-spacing: 1px; text-transform: uppercase; margin: 6px 0 0; transform: rotate(-3deg);
+  background: none; -webkit-text-fill-color: var(--k-cream); color: var(--k-cream); filter: none;
+  text-shadow: -5px -5px 0 var(--k-ink), 5px -5px 0 var(--k-ink), -5px 5px 0 var(--k-ink), 5px 5px 0 var(--k-ink),
+    0 -5px 0 var(--k-ink), 0 5px 0 var(--k-ink), -5px 0 0 var(--k-ink), 5px 0 0 var(--k-ink),
+    0 13px 0 var(--k-ink), 5px 13px 0 var(--k-ink), -5px 13px 0 var(--k-ink), 0 22px 0 rgba(0,0,0,0.25); }
+.ss-qr-banner { display: block; font-family: var(--k-body); font-weight: 800; font-size: 18px; letter-spacing: 0; text-transform: none;
+  color: var(--k-cream); background: none; border: 0; padding: 0; margin: 26px 0 16px; text-shadow: var(--k-stroke-2); max-width: 92vw; text-align: center; }
+.ss-chips { margin: 0 0 26px; gap: 12px; }
+.ss-chip { font-family: var(--k-display); font-weight: 400; font-size: 16px; letter-spacing: 0.4px; color: var(--k-ink);
+  background: var(--k-cream); border: 3px solid var(--k-ink); border-radius: 10px; padding: 7px 14px 7px 20px; position: relative;
+  box-shadow: 0 4px 0 rgba(0,0,0,0.35); }
+.ss-chip::before { content: ''; position: absolute; left: 9px; top: 5px; bottom: 5px; border-left: 2px dashed rgba(29,15,43,0.45); }
+.ss-chip b { color: var(--k-red); font-weight: 400; }
+.ss-chip.prize { background: var(--k-gold); border-color: var(--k-ink); }
+.ss-chip.prize b { color: var(--k-ink); }
+#play-btn { background: var(--k-gold) !important; color: var(--k-ink) !important; margin-top: 0; padding: 18px 70px; font-size: 34px;
+  border-radius: 22px !important; border-width: 4px !important;
+  box-shadow: 0 8px 0 var(--k-gold-d), 0 8px 0 4px var(--k-ink), 0 22px 30px rgba(0,0,0,0.35) !important;
+  animation: kPlay 1.6s ease-in-out infinite !important; }
+#play-btn:active { transform: translateY(6px); animation: none !important;
+  box-shadow: 0 2px 0 var(--k-gold-d), 0 2px 0 4px var(--k-ink) !important; }
+/* Pulse a glow ring, not the button's box: a moving hit-target breaks automated
+   clicks (the CI gate clicks #play-btn) and is harder to tap. */
+@keyframes kPlay {
+  0%,100% { box-shadow: 0 8px 0 var(--k-gold-d), 0 8px 0 4px var(--k-ink), 0 22px 30px rgba(0,0,0,0.35), 0 0 0 0 rgba(255,244,218,0.0); }
+  50%     { box-shadow: 0 8px 0 var(--k-gold-d), 0 8px 0 4px var(--k-ink), 0 22px 30px rgba(0,0,0,0.35), 0 4px 0 16px rgba(255,244,218,0.28); } }
+#ss-best { font-family: var(--k-display); font-weight: 400; font-size: 18px; letter-spacing: 0.4px; color: var(--k-gold);
+  text-shadow: var(--k-stroke-2); margin-top: 26px; }
+#ss-best span { color: var(--k-cream); }
+.ss-balloons { position: absolute !important; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
+.ss-bal { position: absolute; bottom: -180px; width: 92px; height: 112px; border-radius: 50% 50% 48% 48% / 46% 46% 54% 54%;
+  border: 4px solid var(--k-ink); background: radial-gradient(circle at 32% 28%, rgba(255,255,255,0.75) 0 9%, rgba(255,255,255,0) 22%), var(--bal, #ffc83d);
+  animation: kFloat var(--dur, 15s) linear infinite; animation-delay: var(--delay, 0s); }
+.ss-bal::after { content: ''; position: absolute; left: 50%; top: 100%; width: 3px; height: 120px; margin-left: -1.5px;
+  background: var(--k-ink); border-radius: 2px; transform-origin: top; transform: rotate(4deg); }
+.ss-bal::before { content: ''; position: absolute; left: 50%; top: 46%; width: 44px; height: 30px; margin: -15px 0 0 -22px;
+  border: 3px solid var(--k-ink); border-radius: 4px;
+  background: repeating-linear-gradient(90deg, var(--k-ink) 0 3px, #fff 3px 5px, var(--k-ink) 5px 6px, #fff 6px 10px, var(--k-ink) 10px 13px, #fff 13px 15px) center / 100% 100%; }
+@keyframes kFloat { 0% { transform: translate(0, 0) rotate(-5deg); } 50% { transform: translate(26px, -62vh) rotate(5deg); }
+  100% { transform: translate(-8px, -130vh) rotate(-4deg); } }
+#lang-toggle { border: 3px solid var(--k-ink) !important; border-radius: 999px; background: var(--k-cream) !important; overflow: hidden;
+  box-shadow: 0 4px 0 rgba(0,0,0,0.35); }
+#lang-toggle button { font-family: var(--k-display); font-weight: 400; font-size: 15px; color: var(--k-ink); padding: 6px 13px; letter-spacing: 0.3px; }
+#lang-toggle button.active { background: var(--k-red); color: #fff; }
+#loading-screen { background: repeating-conic-gradient(from 0deg at 50% 60%, #2a1440 0 10deg, #341b4e 10deg 20deg) !important; }
+#loading-screen p { font-family: var(--k-display); font-weight: 400; font-size: 28px; letter-spacing: 0.5px; color: var(--k-cream);
+  text-shadow: var(--k-stroke-3); text-transform: none; }
+
+/* ── Sign-in ── */
+.reg-card { width: 420px; }
+.reg-title { font-family: var(--k-display); font-weight: 400; font-size: 34px; letter-spacing: 0.5px; color: var(--k-red); text-transform: uppercase; line-height: 1; }
+.reg-sub { font-family: var(--k-body); font-weight: 700; font-size: 15px; color: var(--k-plum-2); }
+#reg-welcome { text-align: center; }
+#reg-welcome .reg-sub b { color: var(--k-ink) !important; }
+#reg-form input[type=text], #reg-form input[type=email], #reg-form input[type=tel], #prize-form input, #prize-form select {
+  background: #fff !important; color: var(--k-ink) !important; border: 3px solid var(--k-ink) !important; border-radius: 12px;
+  font-family: var(--k-body) !important; font-weight: 700; font-size: 15px; padding: 11px 13px; }
+#reg-form input::placeholder, #prize-form input::placeholder { color: #a393ae; font-weight: 700; }
+#reg-form input:focus, #prize-form input:focus, #prize-form select:focus { border-color: var(--k-red) !important; box-shadow: 0 0 0 3px rgba(230,59,46,0.25); }
+.reg-consent { font-family: var(--k-body); font-weight: 700; font-size: 13px; color: var(--k-plum-2); }
+.reg-consent input { accent-color: var(--k-red); width: 18px; height: 18px; }
+.reg-error, .pm-error { font-family: var(--k-body); font-weight: 800; color: var(--k-red); }
+.reg-fine, .pm-fine { font-family: var(--k-body); font-weight: 700; color: var(--k-mute); font-size: 11.5px; }
+#reg-submit, #wb-play, #pm-submit, #pm-done-close { width: 100%; padding: 14px 20px; font-size: 22px; margin-bottom: 5px; }
+
+/* ── How to play ── */
+#tutorial-overlay { background: radial-gradient(ellipse 80% 70% at 50% 45%, rgba(50,26,74,0.82), rgba(20,9,31,0.93)) !important; }
+#tutorial-overlay .tut-title { font-family: var(--k-display); font-weight: 400; font-size: 44px; letter-spacing: 0.5px; color: var(--k-cream);
+  text-shadow: var(--k-stroke-3), 0 8px 0 var(--k-ink); text-transform: uppercase; margin-bottom: 24px; transform: rotate(-2deg); }
+#tutorial-overlay .tut-cards { gap: 16px; margin-bottom: 26px; }
+.tut-card { width: 196px; padding: 16px 16px 18px; background: var(--k-cream); border: 4px solid var(--k-ink); border-radius: 18px;
+  clip-path: none; gap: 8px; box-shadow: 0 7px 0 rgba(0,0,0,0.5); color: var(--k-ink); }
+.tut-card::before { font-size: 40px; line-height: 1; }
+.tut-card:nth-child(1)::before { content: '🏆'; } .tut-card:nth-child(2)::before { content: '🔳'; }
+.tut-card:nth-child(3)::before { content: '🎈'; } .tut-card:nth-child(4)::before { content: '📟'; }
+.tut-card:nth-child(odd) { transform: rotate(-1.5deg); } .tut-card:nth-child(even) { transform: rotate(1.5deg); }
+.tut-card .tut-head { font-family: var(--k-display); font-weight: 400; font-size: 20px; letter-spacing: 0.3px; color: var(--k-red); line-height: 1.05; }
+.tut-card .tut-body { font-family: var(--k-body); font-weight: 700; font-size: 13.5px; line-height: 1.4; color: var(--k-plum-2); letter-spacing: 0; }
+.tut-card .tut-body strong { color: var(--k-ink) !important; font-weight: 900; }
+#tutorial-overlay .tut-controls { font-family: var(--k-body); font-weight: 800; font-size: 14px; color: var(--k-cream); letter-spacing: 0;
+  border-left: 0; padding-left: 0; gap: 9px 30px; margin-bottom: 26px; }
+#tutorial-overlay .tut-controls .k { display: inline-block; min-width: 30px; text-align: center; padding: 3px 9px; margin-right: 4px;
+  background: var(--k-cream); color: var(--k-ink); border: 2px solid var(--k-ink); border-radius: 8px; font-family: var(--k-display);
+  font-weight: 400; font-size: 13px; box-shadow: 0 3px 0 var(--k-cream-d), 0 3px 0 2px var(--k-ink); }
+#tut-go-btn { padding: 15px 60px; font-size: 26px; }
+
+/* ── HUD ── */
+#score-box { background: var(--k-plum) !important; border: 3px solid var(--k-ink) !important; border-radius: 16px; clip-path: none;
+  padding: 6px 18px 8px; box-shadow: 0 5px 0 rgba(0,0,0,0.5); min-width: 108px; }
+#score-box .lbl { font-family: var(--k-display); font-weight: 400; font-size: 12px; letter-spacing: 1px; color: var(--k-gold); }
+#score-value { font-family: var(--k-display) !important; font-weight: 400; font-size: 40px; color: #fff; text-shadow: var(--k-stroke-2), 0 4px 0 var(--k-ink); letter-spacing: 0.5px; }
+#balloon-bank { background: var(--k-gold) !important; color: var(--k-ink) !important; border: 3px solid var(--k-ink) !important; border-radius: 999px;
+  font-family: var(--k-display); font-weight: 400; font-size: 17px; letter-spacing: 0.3px; padding: 3px 13px; top: 96px; box-shadow: 0 4px 0 rgba(0,0,0,0.5); }
+#pause-btn { font-size: 15px !important; padding: 8px 14px !important; border-radius: 12px !important; }
+#__level { background: var(--k-plum) !important; border: 3px solid var(--k-ink) !important; border-radius: 14px; color: var(--k-cream) !important;
+  font-family: var(--k-display) !important; font-weight: 400 !important; font-size: 17px !important; letter-spacing: 0.5px !important;
+  padding: 7px 18px !important; box-shadow: 0 5px 0 rgba(0,0,0,0.5); top: 14px !important; white-space: nowrap; }
+#__boss > div:first-child { font-family: var(--k-display) !important; font-weight: 400 !important; font-size: 18px !important; letter-spacing: 0.5px !important;
+  color: #fff !important; text-shadow: var(--k-stroke-2); }
+#__boss > div:last-child { height: 20px !important; background: var(--k-plum) !important; border: 3px solid var(--k-ink) !important; border-radius: 999px; overflow: hidden; }
+#__bosshp { background: linear-gradient(180deg, #ff7a6e, var(--k-red)) !important; border-radius: 999px; }
+#__boss { top: 62px !important; }
+#__power > div { background: var(--k-plum) !important; border: 3px solid var(--k-ink) !important; border-radius: 999px; padding: 4px 12px !important;
+  font-family: var(--k-display); font-weight: 400; letter-spacing: 0.3px; box-shadow: 0 4px 0 rgba(0,0,0,0.45); }
+#__power { top: 140px !important; font-size: 15px !important; }
+#__combo { font-family: var(--k-display) !important; font-weight: 400 !important; color: var(--k-gold) !important; letter-spacing: 0.5px !important;
+  text-shadow: var(--k-stroke-3), 0 7px 0 var(--k-ink) !important; }
+#__combo > div { color: #fff !important; }
+#__rfid { background: var(--k-plum) !important; border: 3px solid var(--k-ink) !important; border-radius: 999px; font-family: var(--k-display) !important;
+  font-weight: 400 !important; letter-spacing: 0.4px !important; box-shadow: 0 4px 0 rgba(0,0,0,0.45); }
+#__mute { border: 3px solid var(--k-ink) !important; border-radius: 12px !important; background: var(--k-cream) !important; box-shadow: 0 4px 0 rgba(0,0,0,0.45); }
+#prompt { background: var(--k-cream) !important; color: var(--k-ink) !important; border: 3px solid var(--k-ink) !important; border-radius: 999px;
+  font-family: var(--k-display); font-weight: 400; font-size: 17px; letter-spacing: 0.3px; padding: 8px 22px; text-transform: none;
+  box-shadow: 0 5px 0 rgba(0,0,0,0.5); max-width: 92vw; white-space: normal; text-align: center; }
+#kill-feed { top: 180px; gap: 5px; }
+.kill-msg { background: var(--k-plum) !important; color: #fff; border: 2px solid var(--k-ink); border-radius: 999px; font-family: var(--k-body);
+  font-weight: 800; font-size: 12.5px; padding: 3px 12px; letter-spacing: 0; }
+#weapon-slots { gap: 8px; bottom: 46px; }
+.wslot { width: 62px; height: 62px; background: var(--k-plum); border: 3px solid var(--k-ink); border-radius: 14px; color: #fff;
+  font-family: var(--k-display); font-weight: 400; font-size: 10px; box-shadow: 0 4px 0 rgba(0,0,0,0.5); transition: transform 0.12s, background 0.12s; }
+.wslot::before { top: -8px; left: -8px; width: 20px; height: 20px; line-height: 17px; text-align: center; border-radius: 50%;
+  background: var(--k-cream); color: var(--k-ink); border: 2px solid var(--k-ink); font-family: var(--k-display); font-size: 11px; }
+.wslot .ico { font-size: 11.5px; color: #fff; margin: 0; letter-spacing: 0.2px; }
+.wslot.has-it { border-color: var(--k-ink); background: var(--k-plum-2); }
+.wslot.active { background: var(--k-gold); border: 3px solid var(--k-ink); border-top: 3px solid var(--k-ink); transform: translateY(-8px); }
+.wslot.active .ico { color: var(--k-ink); }
+.wslot.empty { opacity: 0.4; }
+#weapon-info { background: var(--k-plum) !important; border: 3px solid var(--k-ink) !important; border-radius: 14px; padding: 8px 14px;
+  box-shadow: 0 4px 0 rgba(0,0,0,0.5); max-width: 300px; }
+#weapon-info .wname { font-family: var(--k-display); font-weight: 400; font-size: 15px; color: var(--k-gold); letter-spacing: 0.3px; }
+#weapon-info .weffect { font-family: var(--k-body); font-weight: 700; font-size: 12px; color: #e7dcf0; }
+#progress-wrap { width: 340px; bottom: 12px; }
+#progress-lbl { font-family: var(--k-body); font-weight: 800; font-size: 11.5px; letter-spacing: 0.2px; color: #fff; text-shadow: var(--k-stroke-2);
+  text-transform: none; margin-bottom: 4px; }
+#progress-track { height: 14px; background: var(--k-plum); border: 3px solid var(--k-ink); border-radius: 999px; }
+#progress-fill { border-radius: 999px; box-shadow: none; background: repeating-linear-gradient(-45deg, var(--k-gold) 0 8px, #ffdd7d 8px 16px); }
+#zc-goals { background: var(--k-cream); border: 3px solid var(--k-ink); border-left: 3px solid var(--k-ink); border-radius: 14px; color: var(--k-ink);
+  font-family: var(--k-body); padding: 0 0 7px; width: 262px; top: 66px; overflow: hidden; box-shadow: 0 5px 0 rgba(0,0,0,0.5); }
+#zc-goals .hd { font-family: var(--k-display); font-weight: 400; font-size: 14px; letter-spacing: 0.4px; color: #fff; background: var(--k-red);
+  padding: 5px 12px; margin: 0 0 5px; border-bottom: 3px solid var(--k-ink); }
+#zc-goals .row { font-weight: 800; font-size: 13.5px; letter-spacing: 0; padding: 2px 11px; }
+#zc-goals .row .bx { width: 13px; height: 13px; border: 2px solid var(--k-ink); border-radius: 4px; transform: translateY(2px); background: #fff; }
+#zc-goals .row .pr { font-family: var(--k-display); font-weight: 400; color: var(--k-red); font-size: 13px; }
+#zc-goals .row.done { color: var(--k-green-d); }
+#zc-goals .row.done .bx { background: var(--k-green); border-color: var(--k-ink); }
+#zc-goals .row.done .pr { color: var(--k-green-d); }
+#zc-combo { font-family: var(--k-display); font-weight: 400; color: var(--k-gold); text-shadow: var(--k-stroke-2), 0 4px 0 var(--k-ink); }
+#zc-combo .n { font-size: 34px; }
+#zc-combo .bar { height: 7px; width: 58px; border: 2px solid var(--k-ink); border-radius: 999px; background: var(--k-plum); overflow: hidden; }
+#zc-combo .bar i { background: var(--k-gold); }
+.zc-pop { font-family: var(--k-display); font-weight: 400; font-size: 30px; text-shadow: var(--k-stroke-2), 0 4px 0 var(--k-ink); letter-spacing: 0.3px; }
+.zc-pop.big { font-size: 46px; text-shadow: var(--k-stroke-3), 0 6px 0 var(--k-ink); }
+#zc-way { font-family: var(--k-display); font-weight: 400; font-size: 14px; letter-spacing: 0.3px; text-shadow: none; }
+#zc-way .ar { border-top-color: var(--k-gold); filter: drop-shadow(0 0 0 var(--k-ink)) drop-shadow(0 2px 0 var(--k-ink)); }
+#zc-way .lb { background: var(--k-gold); color: var(--k-ink); border: 3px solid var(--k-ink); border-radius: 999px; padding: 2px 10px; }
+#info-panel { background: linear-gradient(var(--k-ink), var(--k-ink)) 0 46px / 100% 4px no-repeat,
+    linear-gradient(var(--k-green), var(--k-green)) top / 100% 46px no-repeat, var(--k-cream) !important; width: 310px; }
+#info-panel-header { border-bottom: 0; padding: 11px 14px 13px; }
+#info-panel-header .prod-title { font-family: var(--k-display); font-weight: 400; font-size: 16px; color: #fff; letter-spacing: 0.3px; }
+#info-panel .close-btn, #prize-close { background: var(--k-cream); color: var(--k-ink); border: 3px solid var(--k-ink); border-radius: 50%;
+  width: 30px; height: 30px; font-weight: 900; font-size: 14px; }
+#prod-body { padding: 14px 16px 16px; }
+#prod-desc { font-family: var(--k-body); font-weight: 700; font-size: 13.5px; color: var(--k-plum-2); }
+#prod-specs li { font-family: var(--k-body); font-weight: 800; font-size: 12.5px; color: var(--k-ink); border-bottom: 2px dashed rgba(29,15,43,0.18); padding: 5px 0; }
+#prod-specs li::before { content: '✓'; color: var(--k-green-d); font-family: var(--k-body); font-size: 13px; font-weight: 900; }
+#prod-effect { font-family: var(--k-body); font-weight: 800; font-size: 12.5px; color: var(--k-ink); background: var(--k-gold); border: 2px solid var(--k-ink);
+  border-left: 2px solid var(--k-ink); border-radius: 10px; }
+#prod-visit-btn { width: 100%; padding: 11px; font-size: 16px; margin-bottom: 5px; }
+.tc-btn { font-family: var(--k-display) !important; font-weight: 400 !important; border: 3px solid var(--k-ink) !important; letter-spacing: 0.3px; }
+
+/* ── Pause menu & shop ── */
+#pause-panel .pp-title { font-family: var(--k-display); font-weight: 400; font-size: 40px; letter-spacing: 0.5px; color: var(--k-red); line-height: 1; }
+#pause-panel .pp-balance { font-family: var(--k-body); font-weight: 800; font-size: 15px; letter-spacing: 0; color: var(--k-plum-2); margin: 8px 0 16px; }
+#pause-panel .pp-balance b { font-family: var(--k-display); font-weight: 400; color: var(--k-ink); font-size: 22px; }
+.shop-card { background: #fff; border: 3px solid var(--k-ink); border-radius: 16px; padding: 11px 13px; margin-bottom: 10px; }
+.shop-card .sc-name { font-family: var(--k-display); font-weight: 400; font-size: 18px; letter-spacing: 0.3px; color: var(--k-ink); }
+.shop-card .sc-sub { font-family: var(--k-body); font-weight: 700; font-size: 12.5px; letter-spacing: 0; color: var(--k-mute); }
+.shop-card .sc-cost { font-family: var(--k-display); font-weight: 400; font-size: 16px; color: var(--k-red); }
+.shop-btn { font-size: 14px !important; padding: 9px 13px !important; border-radius: 12px !important; margin-bottom: 4px; }
+#pause-actions { gap: 12px; margin: 16px 0 6px; }
+#pause-actions button { font-size: 15px !important; padding: 11px 8px !important; }
+#finish-btn { margin-top: 12px; font-size: 15px !important; padding: 12px !important; }
+#resume-btn { margin-top: 16px; font-size: 24px !important; padding: 13px !important; margin-bottom: 6px; }
+#wallet-codes .code-row { color: var(--k-green-d); background: #fff; border: 2px solid var(--k-ink); border-radius: 8px; font-weight: 700; }
+#wallet-codes .code-hint { color: var(--k-mute); font-family: var(--k-body); font-weight: 700; }
+
+/* ── Prize machine ── */
+#pm-printer3d { border: 3px solid var(--k-ink); border-radius: 14px; overflow: hidden; }
+.pm-title { font-family: var(--k-display); font-weight: 400; font-size: 26px; color: var(--k-red); letter-spacing: 0.3px; }
+.pm-sub { font-family: var(--k-body); font-weight: 700; font-size: 13.5px; color: var(--k-plum-2); }
+.pm-coupon { color: var(--k-green-d); font-weight: 700; } .pm-coupon b { color: var(--k-ink); }
+.pm-row label { font-family: var(--k-body); font-weight: 800; color: var(--k-plum-2); }
+.pm-done-title { font-family: var(--k-display); font-weight: 400; font-size: 30px; color: var(--k-green-d); letter-spacing: 0.3px; }
+.pm-done-sub { font-family: var(--k-body); font-weight: 700; color: var(--k-plum-2); }
+#prize-close { top: 30px; right: 12px; z-index: 2; }
+
+/* ── Result banner (level clear / time up / boss down) ── */
+#__bigmsg > div { max-width: 480px !important; padding: 44px 30px 30px !important; border-top: 4px solid var(--k-ink) !important; }
+#__bigmsg > div > div:first-child { font-family: var(--k-display) !important; font-weight: 400 !important; font-size: 38px !important;
+  letter-spacing: 0.4px !important; color: var(--k-red) !important; line-height: 1.02; }
+#__bigmsg > div > div:nth-child(2) { font-family: var(--k-body) !important; font-weight: 700; font-size: 15.5px !important; color: var(--k-plum-2) !important; }
+#__bigmsg-btn { font-size: 22px !important; padding: 14px !important; margin-bottom: 6px; }
+
+/* ── Finale ── */
+.zf-card { width: min(660px, 96vw); padding: 44px 28px 22px !important; }
+.zf-kicker { font-family: var(--k-body); font-weight: 900; font-size: 15px; letter-spacing: 0; color: var(--k-plum-2); }
+.zf-rank { font-family: var(--k-display); font-weight: 400; font-size: 62px; letter-spacing: 0.5px; line-height: 0.95; margin: 6px 0 8px;
+  background: none; -webkit-text-fill-color: var(--k-red); color: var(--k-red); transform: rotate(-2deg);
+  text-shadow: var(--k-stroke-3), 0 7px 0 var(--k-ink); }
+.zf-score { font-family: var(--k-body); font-weight: 800; font-size: 16px; letter-spacing: 0; color: var(--k-plum-2); }
+.zf-score b { font-family: var(--k-display); font-weight: 400; font-size: 38px; color: var(--k-ink); vertical-align: -4px; margin-left: 4px; }
+#zf-best { font-family: var(--k-display); font-weight: 400; font-size: 15px; letter-spacing: 0.3px; background: var(--k-gold); color: var(--k-ink);
+  border: 3px solid var(--k-ink); border-radius: 999px; padding: 3px 14px; transform: rotate(2deg); }
+.zf-stats { gap: 10px; }
+.zf-stat { background: #fff; border: 3px solid var(--k-ink); border-radius: 14px; }
+.zf-stat b { font-family: var(--k-display); font-weight: 400; font-size: 30px; color: var(--k-red); }
+.zf-stat span { font-family: var(--k-body); font-weight: 800; font-size: 11.5px; letter-spacing: 0; color: var(--k-mute); text-transform: none; }
+.zf-sub { font-family: var(--k-body); font-weight: 900; font-size: 14px; letter-spacing: 0; color: var(--k-green-d); margin: 4px 0 8px; }
+.zf-prods { gap: 10px; }
+.zf-prod { background: #e6f7ec; border: 3px solid var(--k-ink); border-radius: 14px; color: var(--k-ink); box-shadow: 0 4px 0 var(--k-green-d), 0 4px 0 3px var(--k-ink);
+  margin-bottom: 6px; transition: transform 0.06s, box-shadow 0.06s; }
+.zf-prod:hover { background: #d3f1de; }
+.zf-prod:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--k-green-d), 0 1px 0 3px var(--k-ink); }
+.zf-prod b { font-family: var(--k-display); font-weight: 400; font-size: 19px; letter-spacing: 0.3px; }
+.zf-prod span { font-family: var(--k-body); font-weight: 800; font-size: 11px; letter-spacing: 0; color: var(--k-green-d); }
+.zf-btns { gap: 12px; row-gap: 14px; }
+.zf-btns button { font-size: 18px !important; padding: 13px 10px !important; }
+#zf-explore { font-size: 22px !important; padding: 15px 10px !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  #start-screen::before, .ss-bal, #play-btn { animation: none !important; }
+  .ss-bal { bottom: 12vh; }
+}
+@media (max-width: 720px), (max-height: 500px) {
+  .ss-game-title { font-size: clamp(44px, 15vh, 78px); letter-spacing: 0.5px; margin: 0;
+    text-shadow: -3px -3px 0 var(--k-ink), 3px -3px 0 var(--k-ink), -3px 3px 0 var(--k-ink), 3px 3px 0 var(--k-ink), 0 -3px 0 var(--k-ink),
+      0 3px 0 var(--k-ink), -3px 0 0 var(--k-ink), 3px 0 0 var(--k-ink), 0 8px 0 var(--k-ink), 3px 8px 0 var(--k-ink), -3px 8px 0 var(--k-ink); }
+  .ss-presenter { font-size: 12px; padding: 5px 12px 5px 10px; gap: 8px; margin-bottom: 2px; }
+  .ss-presenter svg { height: 17px; }
+  .ss-title-block { margin-bottom: 8px; }
+  .ss-qr-banner { font-size: 12.5px; margin: 14px 0 9px; padding: 0; }
+  .ss-chips { gap: 6px; margin: 0 0 14px; }
+  .ss-chip { font-size: 11px; padding: 4px 8px 4px 14px; border-width: 2px; }
+  .ss-chip::before { left: 6px; }
+  #play-btn { font-size: 22px; padding: 11px 44px; border-radius: 16px !important; }
+  #ss-best { font-size: 12.5px; margin-top: 14px; }
+  .ss-bal { width: 54px; height: 66px; border-width: 3px; }
+  .ss-bal::before { width: 26px; height: 18px; margin: -9px 0 0 -13px; border-width: 2px; }
+  .btn-lg { font-size: 20px; padding: 11px 38px; }
+  .reg-card, #pause-panel, #prize-machine, .zf-card, #__bigmsg > div { border-radius: 16px !important; padding-top: 32px !important; }
+  .reg-title { font-size: 24px; } .reg-sub { font-size: 13px; }
+  #reg-submit, #wb-play, #pm-submit, #pm-done-close { font-size: 18px; padding: 11px; }
+  #tutorial-overlay .tut-title { font-size: 26px; margin-bottom: 12px; }
+  #tutorial-overlay .tut-cards { gap: 8px; margin-bottom: 12px; }
+  .tut-card { padding: 7px 9px 9px; gap: 3px; border-width: 3px; border-radius: 12px; }
+  .tut-card::before { font-size: 20px; }
+  .tut-card .tut-head { font-size: 14px; } .tut-card .tut-body { font-size: 10.5px; line-height: 1.3; }
+  #tutorial-overlay .tut-controls { font-size: 11px; gap: 5px 18px; margin-bottom: 12px; }
+  #tutorial-overlay .tut-controls .k { font-size: 10px; padding: 1px 6px; }
+  #tut-go-btn { font-size: 18px; padding: 10px 40px; }
+  #score-box { padding: 3px 11px 4px; min-width: 0; border-radius: 12px; }
+  #score-box .lbl { font-size: 9px; } #score-value { font-size: 24px; }
+  #balloon-bank { font-size: 12px; top: 58px; padding: 2px 9px; }
+  #pause-btn { font-size: 12px !important; padding: 6px 10px !important; }
+  #__level { font-size: 11.5px !important; padding: 4px 10px !important; top: 8px !important; border-width: 2px !important; }
+  #__boss { top: 40px !important; }
+  #__power { top: 92px !important; font-size: 11.5px !important; }
+  #prompt { font-size: 13px; padding: 5px 14px; }
+  /* keep the feed short on phones so it never runs down over the FIRE/JUMP buttons */
+  #kill-feed { top: 96px; max-height: 74px; overflow: hidden; justify-content: flex-end; } .kill-msg { font-size: 10.5px; padding: 2px 9px; }
+  #weapon-slots { gap: 6px; bottom: 6px; }
+  #weapon-info .wname { font-size: 11.5px; }
+  #progress-wrap { display: none; }
+  #zc-goals { top: 42px; left: 10px; width: 214px; padding-bottom: 4px; border-radius: 10px; }
+  #zc-goals .hd { font-size: 10.5px; padding: 3px 8px; margin-bottom: 3px; }
+  #zc-goals .row { font-size: 10.5px; padding: 0 7px; }
+  #zc-goals .row .pr { font-size: 10px; } #zc-goals .row .bx { width: 9px; height: 9px; border-width: 1.5px; }
+  .zc-pop { font-size: 22px; } .zc-pop.big { font-size: 32px; }
+  #zc-combo .n { font-size: 24px; }
+  #pause-panel .pp-title { font-size: 26px; }
+  .shop-card .sc-name { font-size: 15px; }
+  #resume-btn { font-size: 19px !important; padding: 10px !important; }
+  #__bigmsg > div > div:first-child { font-size: 26px !important; }
+  .zf-card { padding: 32px 14px 14px !important; }
+  .zf-rank { font-size: 36px; } .zf-score b { font-size: 26px; }
+  .zf-stat b { font-size: 20px; } .zf-stat span { font-size: 9.5px; }
+  .zf-prod b { font-size: 14px; } .zf-prod span { font-size: 9px; }
+  .zf-btns button { font-size: 14px !important; padding: 9px 6px !important; }
+  #zf-explore { font-size: 16px !important; padding: 11px 6px !important; }
+}
+
+/* ── Easy mobile play ── */
+#tc-look-zone { inset: 0; width: auto; height: auto; }          /* drag anywhere to look, tap anywhere to shoot */
+body.touch #tc-pickup, body.touch .tc-hint { display: none; }    /* scanners are picked up by walking into them */
+body.touch #rotate-hint { display: none !important; }            /* portrait is fully supported */
+#tc-fire { background: var(--k-red) !important; color: #fff; box-shadow: 0 5px 0 var(--k-red-d), 0 5px 0 3px var(--k-ink); opacity: 0.92; }
+#tc-jump { background: var(--k-plum) !important; color: #fff; box-shadow: 0 4px 0 rgba(0,0,0,0.5); opacity: 0.9; }
+#tc-joy { border: 3px solid var(--k-ink); background: rgba(50,26,74,0.45); }
+#tc-knob { background: var(--k-gold); border: 3px solid var(--k-ink); }
+body.touch #__rfid { pointer-events: auto !important; z-index: 946 !important; bottom: 190px !important; }
+.zc-tap { position: fixed; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%; border: 4px solid #fff;
+  pointer-events: none; z-index: 947; animation: zcTap 0.32s ease-out forwards; box-shadow: 0 0 0 2px var(--k-ink), inset 0 0 0 2px var(--k-ink); }
+@keyframes zcTap { 0% { transform: scale(0.35); opacity: 1; } 100% { transform: scale(1.15); opacity: 0; } }
+.tut-touch { display: none; }
+body.touch #tutorial-overlay .tut-controls { display: none; }
+body.touch .tut-touch { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 22px; margin-bottom: 22px; max-width: 92vw;
+  font-family: var(--k-body); font-weight: 800; font-size: 15px; color: var(--k-cream); }
+.tut-touch span { display: flex; align-items: center; gap: 8px; }
+.tut-touch i { font-style: normal; font-size: 22px; }
+@media (max-width: 720px), (max-height: 500px) {
+  body.touch .tut-touch { font-size: 12px; gap: 5px 14px; margin-bottom: 10px; }
+  .tut-touch i { font-size: 16px; }
+}
+/* Product panel must always fit the screen (short landscape phones especially). */
+#info-panel { max-height: calc(100dvh - 16px); overflow-y: auto; -webkit-overflow-scrolling: touch; }
+@media (max-width: 720px), (max-height: 500px) {
+  #info-panel { width: min(330px, 92vw); right: 8px; }
+  #info-panel-header { padding: 7px 12px 9px; } #info-panel-header .prod-title { font-size: 13.5px; }
+  #info-panel { background: linear-gradient(var(--k-ink), var(--k-ink)) 0 38px / 100% 4px no-repeat,
+      linear-gradient(var(--k-green), var(--k-green)) top / 100% 38px no-repeat, var(--k-cream) !important; }
+  #prod-body { padding: 9px 12px 12px; }
+  #prod-desc { font-size: 12px; margin-bottom: 6px; line-height: 1.35; }
+  #prod-specs { margin-bottom: 7px; } #prod-specs li { font-size: 11.5px; padding: 2px 0; }
+  #prod-effect { font-size: 11.5px; padding: 6px 9px; margin-bottom: 9px; }
+  #prod-visit-btn { font-size: 14px; padding: 9px; }
+  /* shop cards: text on its own line, price + button underneath */
+  .shop-card { flex-wrap: wrap; gap: 6px 12px; padding: 9px 11px; }
+  .shop-card > div:first-child { flex: 1 1 100%; }
+  .shop-card .sc-cost { margin-left: auto; }
+}
+@media (max-height: 500px) {
+  /* landscape phones: two columns of specs so the panel stays short */
+  #prod-specs { display: grid; grid-template-columns: 1fr 1fr; column-gap: 12px; }
+  #info-panel { width: min(430px, 60vw); }
+}
+/* Portrait phones: stack the how-to cards 2×2, keep everything on screen */
+@media (orientation: portrait) and (max-width: 720px) {
+  #tutorial-overlay .tut-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; padding: 0 12px; }
+  .tut-card { width: auto; min-width: 0; }
+  body.touch .tut-touch { grid-template-columns: 1fr; }
+  .ss-game-title { font-size: clamp(54px, 19vw, 96px); }
+  .ss-chips { max-width: 94vw; }
+  #tc-fire { width: 104px; height: 104px; right: 16px; bottom: 96px; font-size: 18px; }
+  #tc-jump { right: 26px; bottom: 214px; }
+  #zc-goals { width: 200px; }
+  #weapon-info { bottom: 66px; }
+  .zf-stats, .zf-prods { grid-template-columns: 1fr 1fr; }
+}
+/* pause-menu button colours (need the extra id to beat `#pause-actions button`) */
+#pause-actions #save-progress-btn { background: var(--k-teal) !important; color: #fff !important; box-shadow: 0 5px 0 var(--k-teal-d), 0 5px 0 3px var(--k-ink) !important; }
+#pause-actions #exit-btn { background: var(--k-red) !important; color: #fff !important; box-shadow: 0 5px 0 var(--k-red-d), 0 5px 0 3px var(--k-ink) !important; }
+/* ── INTRO CINEMATIC (plays over the scene build after sign-in) ── */
+#zc-intro { position: fixed; inset: 0; z-index: 5000; display: none; background: #120707; overflow: hidden;
+  opacity: 0; transition: opacity .45s ease; }
+#zc-intro.on { opacity: 1; }
+#zc-intro.out { opacity: 0; pointer-events: none; transition: opacity 1.25s cubic-bezier(.4,0,.2,1); }
+#zc-intro video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #120707;
+  transform: scale(1); filter: none; transition: transform 1.4s cubic-bezier(.4,0,.2,1), filter 1.25s ease; }
+#zc-intro.out video { transform: scale(1.09); filter: blur(7px) brightness(1.25); }
+#zc-intro-skip { position: absolute; right: max(18px, env(safe-area-inset-right)); bottom: max(18px, env(safe-area-inset-bottom));
+  font-family: var(--k-display, Arial, sans-serif); font-size: 15px; letter-spacing: 1px; color: #fff;
+  background: rgba(20,10,30,.55); border: 2px solid rgba(255,255,255,.75); border-radius: 999px; padding: 8px 18px;
+  cursor: pointer; opacity: 0; transition: opacity .4s ease .9s, background .15s; }
+#zc-intro.on #zc-intro-skip { opacity: .9; }
+#zc-intro-skip:hover { background: rgba(20,10,30,.85); }
+#zc-intro.out #zc-intro-skip { opacity: 0; transition: opacity .2s; }
 </style>
 </head>
 <body>
@@ -707,10 +1310,16 @@ body.touch #weapon-slots .wslot { cursor: pointer; }
   <div class="ss-corner ss-br"></div>
   <div class="ss-lights top"></div>
   <div class="ss-lights bottom"></div>
+  <div class="ss-balloons" aria-hidden="true">
+    <i class="ss-bal" style="left:6%;--bal:#ffc83d;--dur:17s;--delay:-3s"></i>
+    <i class="ss-bal" style="left:17%;--bal:#18b7a6;--dur:21s;--delay:-12s"></i>
+    <i class="ss-bal" style="left:79%;--bal:#2f6fde;--dur:19s;--delay:-7s"></i>
+    <i class="ss-bal" style="left:89%;--bal:#ff7ab8;--dur:16s;--delay:-1s"></i>
+    <i class="ss-bal" style="left:28%;--bal:#f4efe6;--dur:24s;--delay:-18s"></i>
+    <i class="ss-bal" style="left:68%;--bal:#ffc83d;--dur:23s;--delay:-15s"></i>
+  </div>
   <div class="ss-title-block">
-    <div class="ss-presenter" data-i18n="ss_presents">★ ZEBRA TECHNOLOGIES PRESENTS ★</div>
-    <div class="zebra-logo">
-      <svg width="127" height="42" viewBox="0 0 127 42" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Zebra Technologies" style="width:320px;height:auto;">
+    <div class="ss-presenter"><svg width="127" height="42" viewBox="0 0 127 42" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Zebra Technologies">
         <g clip-path="url(#clip0_ss)">
           <path d="M57.0251 26.1776L54.8677 30.2604H41.436L50.1817 13.4882H42.4568L44.6142 9.38215H58.0227L49.3002 26.1776H57.0251Z" fill="white"/>
           <path d="M64.8195 17.7564H71.7093V21.8624H64.8195V26.1773H71.7093V30.2601H59.7623V9.38186H71.7093V13.4879H64.8195V17.7564Z" fill="white"/>
@@ -722,19 +1331,29 @@ body.touch #weapon-slots .wslot { cursor: pointer; }
         <defs>
           <clipPath id="clip0_ss"><rect width="127" height="42" fill="white"/></clipPath>
         </defs>
-      </svg>
-    </div>
-    <div class="ss-hline" style="background:linear-gradient(90deg,transparent 0%,#00a651 20%,#00a651 80%,transparent 100%);"></div>
-    <div class="ss-game-title" data-i18n="game_title">CIRCUS BLASTER</div>
+      </svg><span data-i18n="ss_presents">presents</span></div>
+    <h1 class="ss-game-title" data-i18n="game_title">CIRCUS<br>BLASTER</h1>
   </div>
-  <div class="ss-qr-banner" data-i18n="ss_banner">
-    SCAN THE QR CODES &nbsp;·&nbsp; LEARN MORE ABOUT THE PRODUCTS
+  <div class="ss-qr-banner" data-i18n="ss_banner">Pop barcode balloons, scan the QR boards and meet the Zebra devices.</div>
+  <div class="ss-chips">
+    <div class="ss-chip" data-i18n="ss_chip1"><b>4</b> LEVELS</div>
+    <div class="ss-chip" data-i18n="ss_chip2">BIG TOP <b>BOSS</b></div>
+    <div class="ss-chip" data-i18n="ss_chip3"><b>6</b> ZEBRA SCANNERS</div>
+    <div class="ss-chip prize" data-i18n="ss_chip4">🎁 REAL ZEBRA <b>PRIZES</b></div>
   </div>
   <button class="btn btn-lg" id="play-btn" data-i18n="play_now">PLAY NOW</button>
+  <div id="ss-best"></div>
 </div>
 
 <div id="register-screen" class="screen" style="display:none;">
   <div class="reg-card">
+    <div id="reg-welcome" style="display:none;">
+      <div class="reg-title" data-i18n="wb_title">WELCOME BACK!</div>
+      <div class="reg-sub"><span data-i18n="wb_sub">Continue as</span> <b id="wb-name" style="color:#fff"></b></div>
+      <button class="btn btn-lg" id="wb-play" type="button" style="margin-top:14px" data-i18n="wb_play">▶ PLAY</button>
+      <button id="wb-switch" type="button" data-i18n="wb_switch">Not you? Sign in as someone else</button>
+    </div>
+    <div id="reg-form-wrap">
     <div class="reg-title" data-i18n="reg_title">PLAYER SIGN-IN</div>
     <div class="reg-sub" data-i18n="reg_sub">Enter your details to start — and to claim your Zebra reward.</div>
     <form id="reg-form" autocomplete="on" novalidate>
@@ -752,14 +1371,20 @@ body.touch #weapon-slots .wslot { cursor: pointer; }
       <button class="btn btn-lg" id="reg-submit" type="submit" data-i18n="reg_submit">START PLAYING →</button>
       <div class="reg-fine" data-i18n="reg_fine">Your details are stored securely. You can request removal at any time.</div>
     </form>
+    </div>
   </div>
 </div>
 
+<div id="zc-intro" aria-hidden="true">
+  <video id="zc-intro-video" playsinline webkit-playsinline preload="none" poster="video/intro-poster.jpg"></video>
+  <button type="button" id="zc-intro-skip" data-i18n="intro_skip">SKIP ▸▸</button>
+</div>
+
 <div id="tutorial-overlay" style="display:none;">
-  <div class="tut-title" data-i18n="tut_title">// HOW TO PLAY //</div>
+  <div class="tut-title" data-i18n="tut_title">How to play</div>
   <div class="tut-cards">
     <div class="tut-card">
-      <div class="tut-head" data-i18n="tut1_h">Reach 1000 Points</div>
+      <div class="tut-head" data-i18n="tut1_h">Clear 4 Levels</div>
       <div class="tut-body" data-i18n="tut1_b">Hit <strong style="color:var(--c-accent)">1000 points</strong> to unlock the full Zebra Technologies product catalogue!</div>
     </div>
     <div class="tut-card">
@@ -784,6 +1409,12 @@ body.touch #weapon-slots .wslot { cursor: pointer; }
     <span><span class="k">Q</span> &nbsp;<span data-i18n="ctrl_drop">Drop device</span></span>
     <span><span class="k">P</span> &nbsp;<span data-i18n="ctrl_pause">Pause &amp; balloon shop</span></span>
     <span><span class="k">QR board</span> &nbsp;<span data-i18n="ctrl_qr">Shoot to learn</span></span>
+  </div>
+  <div class="tut-touch">
+    <span><i>👆</i><b data-i18n="tt_tap">Tap a balloon to scan it</b></span>
+    <span><i>↔️</i><b data-i18n="tt_drag">Drag to look around</b></span>
+    <span><i>🕹️</i><b data-i18n="tt_walk">Left thumb to walk</b></span>
+    <span><i>📟</i><b data-i18n="tt_grab">Walk into a scanner to grab it</b></span>
   </div>
   <button class="btn" id="tut-go-btn" data-i18n="lets_go">LET'S GO</button>
 </div>
@@ -833,12 +1464,12 @@ body.touch #weapon-slots .wslot { cursor: pointer; }
   <div id="tc-look-zone"></div>
   <div id="tc-move-zone"></div>
   <div id="tc-joy"><div id="tc-knob"></div></div>
-  <div id="tc-fire" class="tc-btn">FIRE</div>
-  <div id="tc-jump" class="tc-btn">JUMP</div>
-  <div id="tc-pickup" class="tc-btn">PICK<br>UP</div>
+  <div id="tc-fire" class="tc-btn" data-i18n="tc_fire">FIRE</div>
+  <div id="tc-jump" class="tc-btn" data-i18n="tc_jump">JUMP</div>
+  <div id="tc-pickup" class="tc-btn" data-i18n="tc_pick">PICK<br>UP</div>
 </div>
-<div class="tc-hint">Left: move · Right: look · buttons: fire / jump / pick up</div>
-<div id="rotate-hint"><div style="font-size:34px">📱↻</div><div style="font-size:20px;letter-spacing:1px">ROTATE YOUR DEVICE</div><div style="font-family:'Source Sans 3',sans-serif;font-size:13px;color:#9aa">Circus Blaster plays best in landscape.</div><button class="rh-play" id="rh-play" type="button">PLAY IN PORTRAIT →</button></div>
+<div class="tc-hint" data-i18n="tc_hint">Left: move · Right: look · buttons: fire / jump / pick up</div>
+<div id="rotate-hint"><div style="font-size:34px">📱↻</div><div style="font-size:20px;letter-spacing:1px" data-i18n="rot_title">ROTATE YOUR DEVICE</div><div style="font-family:'Source Sans 3',sans-serif;font-size:13px;color:#9aa" data-i18n="rot_sub">Circus Blaster plays best in landscape.</div><button class="rh-play" id="rh-play" type="button" data-i18n="rot_play">PLAY IN PORTRAIT →</button></div>
 <!-- iOS-only tip: Safari can't hide its tab/address bar from a web page, so
      suggest Add-to-Home-Screen for a true fullscreen (no-tabs) experience. -->
 <div id="ios-tip"><span>📲 <b>For fullscreen with no tabs:</b> tap Share <b>⬆</b> → “Add to Home Screen”.<br><span style="color:#dac493;font-style:italic">Sekmesiz tam ekran için: Paylaş ⬆ → “Ana Ekrana Ekle”.</span></span><button id="ios-tip-x" type="button" aria-label="close">✕</button></div>
@@ -847,14 +1478,17 @@ body.touch #weapon-slots .wslot { cursor: pointer; }
   <div id="hint"></div>
 
   <div id="score-box">
-    <div class="lbl">SCORE</div>
+    <div class="lbl" data-i18n="score">SCORE</div>
     <div id="score-value">0</div>
   </div>
   <div id="balloon-bank">🎈 <span id="wallet-hud">0</span></div>
-  <button id="pause-btn" type="button">⏸ MENU</button>
+  <button id="pause-btn" type="button" data-i18n="menu_btn">⏸ MENU</button>
 
   <div id="kill-feed"></div>
-  <div id="crosshair"></div>
+  <div id="crosshair"><div id="zc-hit"></div></div>
+  <div id="zc-combo"><div class="n" id="zc-combo-n">×2</div><div class="bar"><i id="zc-combo-bar"></i></div></div>
+  <div id="zc-goals"></div>
+  <div id="zc-way"><span class="ar" id="zc-way-ar"></span><span class="lb" id="zc-way-lb"></span></div>
   <div id="prompt"></div>
 
   <div id="info-panel">
@@ -866,7 +1500,7 @@ body.touch #weapon-slots .wslot { cursor: pointer; }
       <div id="prod-desc"></div>
       <ul id="prod-specs"></ul>
       <div id="prod-effect"></div>
-      <button id="prod-visit-btn">VIEW ON ZEBRA.COM ↗</button>
+      <button id="prod-visit-btn" data-i18n="view_zebra">VIEW ON ZEBRA.COM ↗</button>
     </div>
   </div>
 
@@ -882,11 +1516,11 @@ body.touch #weapon-slots .wslot { cursor: pointer; }
     <div class="wslot empty" id="slot-3" data-num="4"><div class="ico">TC8300</div></div>
     <div class="wslot empty" id="slot-4" data-num="5"><div class="ico">DS3678</div></div>
     <div class="wslot empty" id="slot-5" data-num="6"><div class="ico">DS2278</div></div>
-    <div class="wslot empty" id="slot-6" data-num="7"><div class="ico">🦓 PLUSH</div></div>
+    <div class="wslot empty" id="slot-6" data-num="7"><div class="ico" data-i18n="slot_plush">🦓 PLUSH</div></div>
   </div>
 
   <div id="progress-wrap">
-    <div id="progress-lbl" data-i18n="progress_lbl">REACH 1000 PTS — EXPLORE ZEBRA PRODUCTS</div>
+    <div id="progress-lbl" data-i18n="progress_lbl">Reach 1000 points to clear Level 1</div>
     <div id="progress-track"><div id="progress-fill"></div></div>
   </div>
 
@@ -902,12 +1536,12 @@ body.touch #weapon-slots .wslot { cursor: pointer; }
         <div class="sc-name" data-i18n="buy_balloons_name">🎈 BUY +50 BALLOONS</div>
         <div class="sc-sub" id="buy-balloons-sub">Convert 1000 points into 50 balloons for the bank.</div>
       </div>
-      <div class="sc-cost">1000 pts</div>
-      <button class="shop-btn" id="buy-balloons-btn" type="button" disabled>NEED 1000</button>
+      <div class="sc-cost" data-i18n="cost_pts">1000 pts</div>
+      <button class="shop-btn" id="buy-balloons-btn" type="button" disabled>—</button>
     </div>
     <div class="shop-card" id="prize-card-plush">
       <div>
-        <div class="sc-name">🦓 ZEBRA PLUSHIE</div>
+        <div class="sc-name" data-i18n="prize_plush_name">🦓 ZEBRA PLUSHIE</div>
         <div class="sc-sub" id="prize-sub-plush">Win a real plushie at 30000 balloons.</div>
       </div>
       <div class="sc-cost">30000 🎈</div>
@@ -915,7 +1549,7 @@ body.touch #weapon-slots .wslot { cursor: pointer; }
     </div>
     <div class="shop-card" id="prize-card-terminal">
       <div>
-        <div class="sc-name">📟 ZEBRA HAND TERMINAL</div>
+        <div class="sc-name" data-i18n="prize_terminal_name">📟 ZEBRA HAND TERMINAL</div>
         <div class="sc-sub" id="prize-sub-terminal">Win a real hand terminal at 50000 balloons.</div>
       </div>
       <div class="sc-cost">50000 🎈</div>
@@ -926,10 +1560,34 @@ body.touch #weapon-slots .wslot { cursor: pointer; }
       <button id="save-progress-btn" type="button" data-i18n="save_progress">💾 SAVE PROGRESS</button>
       <button id="exit-btn" type="button" data-i18n="exit">🚪 EXIT</button>
     </div>
+    <button id="finish-btn" type="button" data-i18n="zc_finish">🏁 FINISH THE SHOW &amp; SEE MY RESULTS</button>
     <button id="resume-btn" type="button" data-i18n="resume">RESUME</button>
   </div>
 </div>
 
+
+<div id="zc-finale">
+  <div class="zf-card">
+    <div class="zf-kicker" data-i18n="zf_kicker">That's the show! You finished as</div>
+    <div class="zf-rank" id="zf-rank">RINGMASTER</div>
+    <div class="zf-score"><span data-i18n="zf_final">FINAL SCORE</span> <b id="zf-score">0</b></div>
+    <div><span id="zf-best" style="display:none" data-i18n="zf_newbest">NEW PERSONAL BEST!</span></div>
+    <div class="zf-stats">
+      <div class="zf-stat"><b id="zf-pops">0</b><span data-i18n="zf_pops">BALLOONS</span></div>
+      <div class="zf-stat"><b id="zf-combo">0</b><span data-i18n="zf_combo">BEST COMBO</span></div>
+      <div class="zf-stat"><b id="zf-acc">0%</b><span data-i18n="zf_acc">ACCURACY</span></div>
+      <div class="zf-stat"><b id="zf-qr">0/4</b><span data-i18n="zf_qr">PRODUCTS SCANNED</span></div>
+    </div>
+    <div class="zf-sub" data-i18n="zf_stars">MEET THE STARS OF THE SHOW</div>
+    <div class="zf-prods" id="zf-prods"></div>
+    <div class="zf-btns">
+      <button id="zf-explore" type="button" data-i18n="zf_explore">EXPLORE ZEBRA PRODUCTS ↗</button>
+      <button id="zf-share" type="button" data-i18n="zf_share">📣 SHARE MY SCORE</button>
+      <button id="zf-again" type="button" data-i18n="zf_again">↻ PLAY AGAIN</button>
+    </div>
+    <button id="zf-keep" type="button" data-i18n="zf_keep">Keep playing in free play</button>
+  </div>
+</div>
 
 <div id="prize-overlay" style="display:none;">
   <div id="prize-machine">
@@ -944,8 +1602,8 @@ body.touch #weapon-slots .wslot { cursor: pointer; }
       <div class="pm-row">
         <label><span data-i18n="pm_prize">Prize</span>
           <select id="pm-prize" name="prize">
-            <option value="Zebra Plushie">🦓 Zebra Plushie</option>
-            <option value="Zebra Barcode Reader">📟 Zebra Barcode Reader</option>
+            <option value="Zebra Plushie" data-i18n="opt_plush">🦓 Zebra Plushie</option>
+            <option value="Zebra Barcode Reader" data-i18n="opt_terminal">📟 Zebra Barcode Reader</option>
           </select>
         </label>
       </div>
@@ -2040,16 +2698,47 @@ function goFullscreen() {
   }
 })();
 
-document.getElementById('play-btn').addEventListener('click', () => {
-  goFullscreen();
-  document.getElementById('start-screen').style.display = 'none';
-  document.getElementById('register-screen').style.display = 'flex';
-  // Clear the previous player's typed details for a fresh capture.
+function loadSavedPlayer() {
+  try { return JSON.parse(localStorage.getItem('zebraPlayer') || 'null'); } catch (_) { return null; }
+}
+// Show the empty sign-in form (new / different player).
+function showSignInForm() {
+  document.getElementById('reg-welcome').style.display = 'none';
+  document.getElementById('reg-form-wrap').style.display = 'block';
   ['reg-first','reg-last','reg-email','reg-phone'].forEach((id) => { const el = document.getElementById(id); if (el) el.value = ''; });
   const c = document.getElementById('reg-consent'); if (c) c.checked = false;
   document.getElementById('reg-error').textContent = '';
-  setTimeout(() => document.getElementById('reg-first').focus(), 60);
+  setTimeout(() => { const f = document.getElementById('reg-first'); if (f) f.focus(); }, 60);
+}
+// Open the sign-in screen. If we remember a player, offer one-tap "welcome
+// back" instead of making them re-type; otherwise show the empty form.
+function openSignIn() {
+  document.getElementById('start-screen').style.display = 'none';
+  document.getElementById('register-screen').style.display = 'flex';
+  document.getElementById('reg-error').textContent = '';
+  const saved = loadSavedPlayer();
+  if (saved && saved.firstName && saved.email) {
+    document.getElementById('wb-name').textContent = ((saved.firstName || '') + ' ' + (saved.lastName || '')).trim();
+    document.getElementById('reg-welcome').style.display = 'block';
+    document.getElementById('reg-form-wrap').style.display = 'none';
+  } else {
+    showSignInForm();
+  }
+}
+document.getElementById('play-btn').addEventListener('click', () => { goFullscreen(); openSignIn(); });
+// Welcome-back "PLAY": reuse remembered details, no re-typing, no re-register
+// (already in the DB; any earlier failed registration is retried on start).
+document.getElementById('wb-play').addEventListener('click', () => {
+  goFullscreen();
+  const saved = loadSavedPlayer();
+  if (!saved || !saved.email) { showSignInForm(); return; }
+  window.__zebraPlayer = saved;
+  if (typeof LunaAnalytics !== 'undefined') LunaAnalytics.track('player_returning', {});
+  document.getElementById('register-screen').style.display = 'none';
+  zcIntroPlay();
+  startGame();
 });
+document.getElementById('wb-switch').addEventListener('click', () => showSignInForm());
 
 // Persist a player sign-in to the leads DB, with a retry queue so NO login is
 // ever lost if the network blips or the API is briefly down.
@@ -2093,6 +2782,7 @@ document.getElementById('reg-form').addEventListener('submit', async (e) => {
 
   const btn = document.getElementById('reg-submit');
   btn.disabled = true; btn.textContent = 'STARTING…';
+  zcIntroPlay(); // start inside the click so the clip may play with sound
 
   // Save this login to the leads DB, and resend any earlier logins that failed
   // to reach the API — so every sign-in is captured (never blocks play).
@@ -3785,6 +4475,8 @@ const Sound = (() => {
     bosshit:() => blip(140, 0.08, 'sawtooth', sfxGain, 0.35, 90),
     bossdie:() => { [200, 150, 100, 400, 800].forEach((f, i) => setTimeout(() => blip(f, 0.18, 'sawtooth', sfxGain, 0.5), i * 90)); },
     click:  () => blip(520, 0.06, 'square', sfxGain, 0.3),
+    jam:    () => { blip(190, 0.22, 'sawtooth', sfxGain, 0.5, 55); setTimeout(() => blip(120, 0.18, 'square', sfxGain, 0.35, 60), 70); },
+    star:   () => { [784, 988, 1174, 1568].forEach((f, i) => setTimeout(() => blip(f, 0.1, 'triangle', sfxGain, 0.4), i * 55)); },
     powerup:() => { [523, 784, 1046].forEach((f, i) => setTimeout(() => blip(f, 0.14, 'triangle', sfxGain, 0.45), i * 70)); },
   };
 
@@ -3868,29 +4560,34 @@ window.addEventListener('keydown', (e) => { if (e.code === 'KeyM' && !e.repeat) 
 const I18N = {
   en: {
     loading: 'LOADING ZEBRA CIRCUS...',
-    game_title: 'CIRCUS BLASTER',
-    ss_presents: '★ ZEBRA TECHNOLOGIES PRESENTS ★',
-    ss_banner: 'SCAN THE QR CODES &nbsp;·&nbsp; LEARN MORE ABOUT THE PRODUCTS',
+    game_title: 'CIRCUS<br>BLASTER',
+    ss_presents: 'presents',
+    ss_banner: 'Pop barcode balloons, scan the QR boards and meet the Zebra devices.',
     play_now: 'PLAY NOW',
+    intro_skip: 'SKIP ▸▸',
     reg_title: 'PLAYER SIGN-IN',
     reg_sub: 'Enter your details to start — and to claim your Zebra reward.',
+    wb_title: 'WELCOME BACK!',
+    wb_sub: 'Continue as',
+    wb_play: '▶ PLAY',
+    wb_switch: 'Not you? Sign in as someone else',
     ph_first: 'First name', ph_last: 'Surname', ph_email: 'Email address', ph_phone: 'Phone number',
     reg_consent: 'I agree to be contacted about Zebra products and to the storage of my details.',
     reg_submit: 'START PLAYING →',
     reg_fine: 'Your details are stored securely. You can request removal at any time.',
-    tut_title: '// HOW TO PLAY //',
-    tut1_h: 'Reach 1000 Points',
-    tut1_b: 'Hit <strong style="color:var(--c-accent)">1000 points</strong> to unlock the full Zebra Technologies product catalogue!',
+    tut_title: 'How to play',
+    tut1_h: 'Clear 4 Levels',
+    tut1_b: 'Score <strong style="color:var(--c-accent)">1000 points</strong> to clear Level 1 — then Balloon Frenzy, the Big Top Boss and the Range finale.',
     tut2_h: 'Scan QR Codes',
     tut2_b: 'Find the QR boards next to each device. Shoot them to scan and <strong style="color:#fff">learn more about Zebra products!</strong>',
     tut3_h: 'Blast Balloons',
-    tut3_b: 'Pick up Zebra hand terminals with <strong style="color:var(--c-accent)">E</strong> and use each device\'s special ability to pop balloons and score points.',
+    tut3_b: 'Pick up Zebra hand terminals with <strong style="color:var(--c-accent)">E</strong> and use each device\'s special ability to pop balloons. Chain pops for combos — and never scan the <strong style="color:#ff4060">black ✖ balloons</strong>.',
     tut4_h: '4 Zebra Devices',
     tut4_b: 'MC9400 · MC3400 · PS30 · TC8300 — each with a unique scanning super-power. Collect them all!',
     ctrl_move: 'Move', ctrl_look: 'Look', ctrl_pick: 'Pick up device', ctrl_shoot: 'Shoot / Scan',
     ctrl_switch: 'Switch device', ctrl_drop: 'Drop device', ctrl_pause: 'Pause &amp; balloon shop', ctrl_qr: 'Shoot to learn',
     lets_go: "LET'S GO",
-    progress_lbl: 'REACH 1000 PTS — EXPLORE ZEBRA PRODUCTS',
+    progress_lbl: 'Reach 1000 points to clear Level 1',
     paused: 'PAUSED', score: 'SCORE', pts: 'pts', balloon_bank: 'BALLOON BANK',
     buy_balloons_name: '🎈 BUY +50 BALLOONS',
     save_progress: '💾 SAVE PROGRESS', exit: '🚪 EXIT', resume: 'RESUME',
@@ -3958,32 +4655,77 @@ const I18N = {
     level_4: 'LEVEL 4 · POLIGON RANGE',
     l4_unlocked_note: 'POLIGON RANGE unlocked!',
     dyn_l4_go: '🎯 POLIGON! Scan the barcode balloons with the DS3678 — press 2 for the DS2278!',
+    // ── showtime upgrade ──
+    ss_chip1: '<b>4</b> LEVELS', ss_chip2: 'BIG TOP <b>BOSS</b>', ss_chip3: '<b>6</b> ZEBRA SCANNERS', ss_chip4: '🎁 REAL ZEBRA <b>PRIZES</b>',
+    zc_your_best: 'YOUR BEST',
+    zc_rank0: 'ROOKIE SCANNER', zc_rank1: 'SHARPSHOOTER', zc_rank2: 'RINGMASTER', zc_rank3: 'BIG TOP LEGEND',
+    zc_goals_hd: 'SHOW GOALS', zc_goals_all: '★ ALL GOALS COMPLETE',
+    zc_goal_arm: 'Grab a Zebra scanner', zc_goal_qr: 'Scan all product boards', zc_goal_kit: 'Try all 4 devices',
+    zc_goal_combo: 'Hit a ×{n} combo', zc_goal_star: 'Scan a Zebra Star balloon',
+    zc_goal_done: '✔ GOAL COMPLETE +{n}!',
+    zc_goals_all_prompt: '★ ALL SHOW GOALS COMPLETE — +{n} BONUS!',
+    zc_way: '{name} · {d}m',
+    zc_jam_kf: '✖ BAD BARCODE! −{n} — combo lost',
+    zc_star_in: '🦓 A ZEBRA STAR BALLOON IS CROSSING THE RING — SCAN IT FOR +{n}!',
+    zc_star_kf: '🦓 Zebra Star incoming!', zc_star_pop: 'ZEBRA STAR!', zc_star_got: '🦓 ZEBRA STAR SCANNED +{n}!',
+    zc_finish: '🏁 FINISH THE SHOW &amp; SEE MY RESULTS',
+    zf_kicker: 'That\'s the show! You finished as', zf_final: 'Final score', zf_newbest: 'NEW PERSONAL BEST!',
+    zf_pops: 'Balloons', zf_combo: 'Best combo', zf_acc: 'Accuracy', zf_qr: 'Products scanned',
+    zf_stars: 'Meet the stars of the show',
+    zf_explore: 'EXPLORE ZEBRA PRODUCTS ↗', zf_share: '📣 SHARE MY SCORE', zf_again: '↻ PLAY AGAIN',
+    zf_keep: 'Keep playing in free play',
+    zc_share_text: 'I scored {score} and made {rank} in Zebra Circus Blaster 🎪 Can you beat me?',
+    zc_share_copied: '✓ LINK COPIED',
+    // ── full-coverage pass: product panel, HUD, touch, prizes ──
+    view_zebra: 'VIEW ON ZEBRA.COM ↗', menu_btn: '⏸ MENU', slot_plush: '🦓 PLUSH', cost_pts: '1000 pts',
+    tc_fire: 'FIRE', tc_jump: 'JUMP', tc_pick: 'PICK<br>UP',
+    tc_hint: 'Left: move · Right: look · buttons: fire / jump / pick up',
+    rot_title: 'ROTATE YOUR DEVICE', rot_sub: 'Circus Blaster plays best in landscape.', rot_play: 'PLAY IN PORTRAIT →',
+    prize_plush_name: '🦓 ZEBRA PLUSHIE', prize_terminal_name: '📟 ZEBRA HAND TERMINAL',
+    prize_plush: 'Zebra Plushie', prize_terminal: 'Zebra Barcode Reader',
+    opt_plush: '🦓 Zebra Plushie', opt_terminal: '📟 Zebra Barcode Reader',
+    combo_title: 'COMBO ×{n}', combo_bonus: '+{n} BONUS',
+    pw_golden: 'GOLDEN RUSH', pw_slow: 'SLOW-MO', pw_rapid: 'RAPID',
+    pwl_slow: 'SLOW-MO', pwl_rapid: 'RAPID FIRE', pwl_clear: 'BALLOON BOMB', pwl_bonus: 'BONUS +300',
+    level_1: 'LEVEL 1 · CIRCUS BLASTER', l2_unlocked: '— L2 unlocked! Pause → Level 2',
+    level_2: '⚡ LEVEL 2 · BALLOON FRENZY', level_3: '👑 LEVEL 3 · BIG TOP BOSS', boss_name: '👑 BIG TOP BOSS',
+    continue_btn: 'CONTINUE', kf_equipped: '{name} equipped', kf_dropped: '{name} dropped',
+    pts_gain: ' +{n} pts!', precision: ' PRECISION!', need_n: 'NEED {n}',
+    rfid_ready: '📡 RFID BULK READ <span style="color:#38d66b">READY</span> — R',
+    rfid_charging: '📡 RFID <span style="color:#ff6a00">CHARGING…</span>',
+    zc_share_title: 'Zebra Circus Blaster',
+    tt_tap: 'Tap a balloon to scan it', tt_drag: 'Drag to look around', tt_walk: 'Left thumb to walk', tt_grab: 'Walk into a scanner to grab it',
   },
   tr: {
     loading: 'ZEBRA SİRKİ YÜKLENİYOR...',
-    game_title: 'SİRK NİŞANCISI',
-    ss_presents: '★ ZEBRA TECHNOLOGIES SUNAR ★',
-    ss_banner: 'QR KODLARINI TARAYIN &nbsp;·&nbsp; ÜRÜNLER HAKKINDA BİLGİ EDİNİN',
+    game_title: 'SİRK<br>NİŞANCISI',
+    ss_presents: 'sunar',
+    ss_banner: 'Barkodlu balonları patlat, QR panolarını tara ve Zebra cihazlarıyla tanış.',
     play_now: 'OYNA',
+    intro_skip: 'GEÇ ▸▸',
     reg_title: 'OYUNCU GİRİŞİ',
     reg_sub: 'Başlamak ve Zebra ödülünüzü almak için bilgilerinizi girin.',
+    wb_title: 'TEKRAR HOŞ GELDİN!',
+    wb_sub: 'Şu oyuncuyla devam et:',
+    wb_play: '▶ OYNA',
+    wb_switch: 'Sen değil misin? Farklı biriyle giriş yap',
     ph_first: 'Ad', ph_last: 'Soyad', ph_email: 'E-posta adresi', ph_phone: 'Telefon numarası',
     reg_consent: 'Zebra ürünleri hakkında benimle iletişime geçilmesini ve bilgilerimin saklanmasını kabul ediyorum.',
     reg_submit: 'OYUNA BAŞLA →',
     reg_fine: 'Bilgileriniz güvenle saklanır. İstediğiniz zaman silinmesini talep edebilirsiniz.',
-    tut_title: '// NASIL OYNANIR //',
-    tut1_h: '1000 Puana Ulaş',
-    tut1_b: 'Tüm Zebra Technologies ürün kataloğunu açmak için <strong style="color:var(--c-accent)">1000 puan</strong> yap!',
+    tut_title: 'Nasıl oynanır',
+    tut1_h: '4 Bölümü Tamamla',
+    tut1_b: '1. Bölümü geçmek için <strong style="color:var(--c-accent)">1000 puan</strong> yap — ardından Balon Çılgınlığı, Büyük Patron ve Poligon finali.',
     tut2_h: 'QR Kodları Tara',
     tut2_b: 'Her cihazın yanındaki QR panolarını bul. Taramak için ateş et ve <strong style="color:#fff">Zebra ürünleri hakkında bilgi edin!</strong>',
     tut3_h: 'Balonları Patlat',
-    tut3_b: 'Zebra el terminallerini <strong style="color:var(--c-accent)">E</strong> ile al ve her cihazın özel yeteneğini kullanarak balonları patlat, puan kazan.',
+    tut3_b: 'Zebra el terminallerini <strong style="color:var(--c-accent)">E</strong> ile al ve her cihazın özel yeteneğiyle balonları patlat. Art arda patlatıp kombo yap — <strong style="color:#ff4060">siyah ✖ balonları</strong> asla tarama.',
     tut4_h: '4 Zebra Cihazı',
     tut4_b: 'MC9400 · MC3400 · PS30 · TC8300 — her biri benzersiz bir tarama süper-gücüne sahip. Hepsini topla!',
     ctrl_move: 'Hareket', ctrl_look: 'Bak', ctrl_pick: 'Cihaz al', ctrl_shoot: 'Ateş / Tara',
     ctrl_switch: 'Cihaz değiştir', ctrl_drop: 'Cihazı bırak', ctrl_pause: 'Duraklat &amp; balon mağazası', ctrl_qr: 'Öğrenmek için ateş et',
     lets_go: 'HADİ BAŞLAYALIM',
-    progress_lbl: '1000 PUANA ULAŞ — ZEBRA ÜRÜNLERİNİ KEŞFET',
+    progress_lbl: '1. Bölümü geçmek için 1000 puana ulaş',
     paused: 'DURAKLATILDI', score: 'PUAN', pts: 'puan', balloon_bank: 'BALON BANKASI',
     buy_balloons_name: '🎈 +50 BALON AL',
     save_progress: '💾 İLERLEMEYİ KAYDET', exit: '🚪 ÇIKIŞ', resume: 'DEVAM ET',
@@ -4051,6 +4793,46 @@ const I18N = {
     level_4: 'BÖLÜM 4 · POLİGON',
     l4_unlocked_note: 'POLİGON açıldı!',
     dyn_l4_go: '🎯 POLİGON! DS3678 ile barkodlu balonları tara — DS2278 için 2 tuşuna bas!',
+    // ── showtime upgrade ──
+    ss_chip1: '<b>4</b> BÖLÜM', ss_chip2: 'BÜYÜK <b>PATRON</b>', ss_chip3: '<b>6</b> ZEBRA TARAYICI', ss_chip4: '🎁 GERÇEK ZEBRA <b>ÖDÜLLERİ</b>',
+    zc_your_best: 'EN İYİ SKORUN',
+    zc_rank0: 'ÇAYLAK TARAYICI', zc_rank1: 'KESKİN NİŞANCI', zc_rank2: 'SİRK ŞEFİ', zc_rank3: 'SİRK EFSANESİ',
+    zc_goals_hd: 'GÖSTERİ HEDEFLERİ', zc_goals_all: '★ TÜM HEDEFLER TAMAM',
+    zc_goal_arm: 'Bir Zebra tarayıcı al', zc_goal_qr: 'Tüm ürün panolarını tara', zc_goal_kit: '4 cihazın hepsini dene',
+    zc_goal_combo: '×{n} kombo yap', zc_goal_star: 'Bir Zebra Yıldız balonu tara',
+    zc_goal_done: '✔ HEDEF TAMAMLANDI +{n}!',
+    zc_goals_all_prompt: '★ TÜM GÖSTERİ HEDEFLERİ TAMAM — +{n} BONUS!',
+    zc_way: '{name} · {d} m',
+    zc_jam_kf: '✖ HATALI BARKOD! −{n} — kombo gitti',
+    zc_star_in: '🦓 ZEBRA YILDIZ BALONU ARENADAN GEÇİYOR — +{n} İÇİN TARA!',
+    zc_star_kf: '🦓 Zebra Yıldızı geliyor!', zc_star_pop: 'ZEBRA YILDIZI!', zc_star_got: '🦓 ZEBRA YILDIZI TARANDI +{n}!',
+    zc_finish: '🏁 GÖSTERİYİ BİTİR &amp; SONUÇLARIMI GÖR',
+    zf_kicker: 'Gösteri bitti! Unvanın:', zf_final: 'Final skoru', zf_newbest: 'YENİ KİŞİSEL REKOR!',
+    zf_pops: 'Balon', zf_combo: 'En iyi kombo', zf_acc: 'İsabet', zf_qr: 'Taranan ürün',
+    zf_stars: 'Gösterinin yıldızlarıyla tanışın',
+    zf_explore: 'ZEBRA ÜRÜNLERİNİ KEŞFET ↗', zf_share: '📣 SKORUMU PAYLAŞ', zf_again: '↻ TEKRAR OYNA',
+    zf_keep: 'Serbest oyunda devam et',
+    zc_share_text: 'Zebra Sirk Nişancısı\'nda {score} puan yaptım ve {rank} oldum 🎪 Beni geçebilir misin?',
+    zc_share_copied: '✓ BAĞLANTI KOPYALANDI',
+    // ── tam kapsama: ürün paneli, HUD, dokunmatik, ödüller ──
+    view_zebra: 'ZEBRA.COM\'DA İNCELE ↗', menu_btn: '⏸ MENÜ', slot_plush: '🦓 PELUŞ', cost_pts: '1000 puan',
+    tc_fire: 'ATEŞ', tc_jump: 'ZIPLA', tc_pick: 'AL',
+    tc_hint: 'Sol: hareket · Sağ: bakış · düğmeler: ateş / zıpla / al',
+    rot_title: 'CİHAZINI ÇEVİR', rot_sub: 'Sirk Nişancısı yatay modda en iyi oynanır.', rot_play: 'DİKEY OYNA →',
+    prize_plush_name: '🦓 ZEBRA PELUŞ', prize_terminal_name: '📟 ZEBRA EL TERMİNALİ',
+    prize_plush: 'Zebra Peluş', prize_terminal: 'Zebra Barkod Okuyucu',
+    opt_plush: '🦓 Zebra Peluş', opt_terminal: '📟 Zebra Barkod Okuyucu',
+    combo_title: 'KOMBO ×{n}', combo_bonus: '+{n} BONUS',
+    pw_golden: 'ALTIN YAĞMURU', pw_slow: 'AĞIR ÇEKİM', pw_rapid: 'SERİ ATIŞ',
+    pwl_slow: 'AĞIR ÇEKİM', pwl_rapid: 'SERİ ATIŞ', pwl_clear: 'BALON BOMBASI', pwl_bonus: 'BONUS +300',
+    level_1: 'BÖLÜM 1 · SİRK NİŞANCISI', l2_unlocked: '— 2. Bölüm açıldı! Duraklat → Bölüm 2',
+    level_2: '⚡ BÖLÜM 2 · BALON ÇILGINLIĞI', level_3: '👑 BÖLÜM 3 · BÜYÜK PATRON', boss_name: '👑 BÜYÜK PATRON',
+    continue_btn: 'DEVAM', kf_equipped: '{name} kuşanıldı', kf_dropped: '{name} bırakıldı',
+    pts_gain: ' +{n} puan!', precision: ' TAM İSABET!', need_n: '{n} PUAN GEREK',
+    rfid_ready: '📡 RFID TOPLU OKUMA <span style="color:#38d66b">HAZIR</span> — R',
+    rfid_charging: '📡 RFID <span style="color:#ff6a00">ŞARJ OLUYOR…</span>',
+    zc_share_title: 'Zebra Sirk Nişancısı',
+    tt_tap: 'Taramak için balona dokun', tt_drag: 'Etrafa bakmak için sürükle', tt_walk: 'Yürümek için sol başparmak', tt_grab: 'Almak için tarayıcının yanına yürü',
   },
 };
 let currentLang = 'en';
@@ -4071,14 +4853,890 @@ function applyLang(lang) {
     b.classList.toggle('active', b.getAttribute('data-lang') === currentLang));
 }
 document.querySelectorAll('#lang-toggle button').forEach((b) =>
-  b.addEventListener('click', () => { applyLang(b.getAttribute('data-lang')); if (typeof refreshWalletUi === 'function') refreshWalletUi(); }));
+  b.addEventListener('click', () => { applyLang(b.getAttribute('data-lang')); if (typeof refreshWalletUi === 'function') refreshWalletUi(); zcRenderStartBest(); zcRenderGoals(true); if (lastScannedProduct) fillProductPanel(lastScannedProduct); if (gameActive) { updateLevelHud(); updateBossHud(); if (currentWeapon >= 0) trySwitch(currentWeapon); } }));
 // Translate a dynamic key with {placeholder} substitution.
 function t(key, vars) {
   let s = (I18N[currentLang] && I18N[currentLang][key]) || I18N.en[key] || key;
   if (vars) for (const k in vars) s = s.replace(new RegExp('\\{' + k + '\\}', 'g'), vars[k]);
   return s;
 }
+
+// Turkish product copy for the scan panel (English lives on WEAPONS itself).
+const WEAPONS_TR = {
+  MC9400: { fullName: 'Zebra MC9400 Mobil Bilgisayar',
+    desc: 'En zorlu endüstriyel ortamlar için üretilmiş, ultra dayanıklı kurumsal mobil bilgisayar.',
+    specs: ['Android 11 işletim sistemi', '5G ve WiFi 6E', 'IP65/IP67 + MIL-STD-810H', '6" WVGA dokunmatik ekran', 'SE58 tarama motoru – SE4850 seçeneği', '8000 mAh, çalışırken değiştirilebilir batarya'] },
+  MC3400: { fullName: 'Zebra MC3400 Mobil Bilgisayar',
+    desc: 'Hız ve esnekliğe ihtiyaç duyan saha çalışanları için kompakt, ergonomik mobil bilgisayar.',
+    specs: ['Android 13 işletim sistemi', 'WiFi 6 (802.11ax)', 'IP54 koruma sınıfı', '4" HD dokunmatik ekran', 'SE4710 tarama motoru', '3000 mAh çıkarılabilir batarya'] },
+  PS30: { fullName: 'Zebra PS30 Giyilebilir Tarayıcı',
+    desc: 'Depo toplama işlerinde en yüksek verimlilik için parmağa takılan, eller serbest yüzük tarayıcı.',
+    specs: ['Bluetooth 5.0, yüzük formunda', 'IP42 koruma sınıfı', '1D ve 2D barkod desteği', '8 saat batarya ömrü', 'İşaret parmağıyla tetikleme', 'MC9400/TC5X/TC7X ile uyumlu'] },
+  TC8300: { fullName: 'Zebra TC8300 Dokunmatik Bilgisayar',
+    desc: 'Soğuk depolama için –30°C ile 50°C arasında çalışan, dondurucu ve soğutucuya hazır mobil bilgisayar.',
+    specs: ['Android 10 işletim sistemi', '–30°C ile +50°C arası çalışma', 'IP65 ve IP67 koruma sınıfı', '4,3" WVGA ekran', 'Isıtmalı ekran teknolojisi', 'Eldivenle kullanılabilen dokunmatik'] },
+  DS3678: { fullName: 'Zebra DS3678 Ultra Dayanıklı Tarayıcı',
+    desc: 'En zorlu koşullarda barkod okuyan, ultra dayanıklı kablosuz tarayıcı.',
+    specs: ['1D/2D barkod okuma', 'IP65 ve IP67 koruma sınıfı', 'Bluetooth kablosuz', '6.500 lüks ışıkta tarama', '2,4 m düşmeye dayanıklı', 'Uzun menzilli tarama'] },
+  DS2278: { fullName: 'Zebra DS2278 El Tipi Tarayıcı',
+    desc: 'Günlük tarama işleri için kablosuz 1D/2D el tipi görüntüleyici.',
+    specs: ['1D/2D barkod okuma', 'Bluetooth kablosuz', 'Hafif tasarım', '13 saat batarya ömrü', 'Eller serbest kullanım seçeneği', 'Genel amaçlı'] },
+};
+// Localised product field (fullName / desc / specs) for a WEAPONS entry.
+function wText(w, field) {
+  const tr = currentLang === 'tr' ? WEAPONS_TR[w.id] : null;
+  return (tr && tr[field]) || w[field];
+}
+// Display name of a prize in the current language (data/analytics keep the English label).
+function prizeName(key) { return t('prize_' + key); }
+function upperLocal(str) { return String(str).toLocaleUpperCase(currentLang === 'tr' ? 'tr-TR' : 'en-US'); }
+let lastScannedProduct = null;
+function fillProductPanel(w) {
+  document.getElementById('ip-title').textContent = wText(w, 'fullName');
+  document.getElementById('prod-desc').textContent = wText(w, 'desc');
+  const specEl = document.getElementById('prod-specs');
+  specEl.innerHTML = '';
+  wText(w, 'specs').forEach((line) => { const li = document.createElement('li'); li.textContent = line; specEl.appendChild(li); });
+  document.getElementById('prod-effect').textContent = t('weff_' + w.id + '_d');
+}
+// Phones have no keyboard: swap the key-based wording for touch wording.
+if (IS_TOUCH) {
+  Object.assign(I18N.en, {
+    tut3_b: 'Tap balloons to pop them with your scanner. Walk into other devices to collect them. Chain pops for combos — and never tap the <strong style="color:#ff4060">black ✖ balloons</strong>.',
+    dyn_press_e_weapon: 'Walk into a scanner to grab it!',
+    dyn_press_e_pickup: 'Grabbing {name}…',
+    dyn_rfid_unlocked: 'ALL ZEBRA PRODUCTS SCANNED — RFID BULK READ UNLOCKED! Tap the RFID button',
+    dyn_rfid_unlocked_kf: '★ RFID BULK READ UNLOCKED — tap the RFID button',
+    rfid_ready: '📡 RFID BULK READ <span style="color:#38d66b">TAP!</span>',
+    dyn_l4_go: '🎯 POLIGON! Tap the barcode balloons — tap a slot below to switch scanner!',
+    dyn_prize_won: '🎉 YOU WON A {emoji} {label}! Voucher {coupon} — Menu → CLAIM',
+    l2_unlocked: '— Level 2 unlocked!',
+  });
+  Object.assign(I18N.tr, {
+    tut3_b: 'Tarayıcınla patlatmak için balonlara dokun. Diğer cihazları toplamak için yanlarına yürü. Art arda patlatıp kombo yap — <strong style="color:#ff4060">siyah ✖ balonlara</strong> asla dokunma.',
+    dyn_press_e_weapon: 'Almak için bir tarayıcının yanına yürü!',
+    dyn_press_e_pickup: '{name} alınıyor…',
+    dyn_rfid_unlocked: 'TÜM ZEBRA ÜRÜNLERİ TARANDI — RFID TOPLU OKUMA AÇILDI! RFID düğmesine dokun',
+    dyn_rfid_unlocked_kf: '★ RFID TOPLU OKUMA AÇILDI — RFID düğmesine dokun',
+    rfid_ready: '📡 RFID TOPLU OKUMA <span style="color:#38d66b">DOKUN!</span>',
+    dyn_l4_go: '🎯 POLİGON! Barkodlu balonlara dokun — tarayıcı değiştirmek için alttaki kutulara dokun!',
+    dyn_prize_won: '🎉 BİR {emoji} {label} KAZANDIN! Kupon {coupon} — Menü → AL',
+    l2_unlocked: '— 2. Bölüm açıldı!',
+  });
+}
 applyLang(localStorage.getItem('zebraLang') || 'en');
+
+// ═══════════════════════════════════════════════
+//  SHOWTIME UPGRADE — game feel, show goals, special balloons, finale
+//  Gameplay-only: every entry point is a no-op inside the Studio editor
+//  (ZC_ON) and nothing here runs before gameActive, so Edit/Play parity holds.
+// ═══════════════════════════════════════════════
+const ZC_ON = !STUDIO_AUTHORING_MODE;
+const ZC_JAM_PENALTY = 50, ZC_MAX_JAMMERS = 3, ZC_JAM_MS = 13000;
+const ZC_STAR_PTS = 200, ZC_STAR_MS = 11000;
+const ZC_FINALE_SECONDS = 75;
+const ZC_GOAL_PTS = 100, ZC_ALL_GOALS_PTS = 200;
+const zc = {
+  begun: false, startedAt: 0, shots: 0, pops: 0, bestCombo: 0, jammed: 0, stars: 0,
+  devices: new Set(), goalsDone: new Set(), allGoals: false, goalsHideAt: 0,
+  shake: 0, popups: 0, lastUiAt: 0, jammers: 0, safePop: 0,
+  star: null, nextStarAt: 0, l4EndAt: 0, l4Pops: 0, finaleOpen: false, finaleSeen: false,
+};
+const ZC_GOALS = [
+  { id: 'arm',   pts: 0,           goal: () => 1, val: () => (zc.devices.size > 0 ? 1 : 0) },
+  { id: 'qr',    pts: ZC_GOAL_PTS, goal: () => Math.max(1, qrObjs.length), val: () => qrObjs.filter((q) => q.scanned).length },
+  { id: 'kit',   pts: ZC_GOAL_PTS, goal: () => 4, val: () => zc.devices.size },
+  { id: 'combo', pts: ZC_GOAL_PTS, goal: () => 8, val: () => zc.bestCombo },
+  { id: 'star',  pts: ZC_GOAL_PTS, goal: () => 1, val: () => zc.stars },
+];
+const ZC_RANKS = [[0, 'zc_rank0'], [1500, 'zc_rank1'], [3000, 'zc_rank2'], [5000, 'zc_rank3']];
+function zcRankKey(pts) {
+  let key = ZC_RANKS[0][1];
+  for (const [min, k] of ZC_RANKS) if (pts >= min) key = k;
+  return key;
+}
+function zcFmt(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+function zcLoadBest() {
+  try { const b = JSON.parse(localStorage.getItem('zebraBest') || 'null'); return (b && Number.isFinite(b.score)) ? b : null; } catch (_) { return null; }
+}
+// Returns true when this score beats the stored personal best.
+function zcSaveBest() {
+  const prev = zcLoadBest();
+  if (score <= 0 || (prev && prev.score >= score)) return false;
+  try { localStorage.setItem('zebraBest', JSON.stringify({ score, at: Date.now() })); } catch (_) {}
+  return true;
+}
+function zcRenderStartBest() {
+  const el = document.getElementById('ss-best');
+  if (!el) return;
+  const b = zcLoadBest();
+  el.innerHTML = b ? `<span>${t('zc_your_best')}</span> ${zcFmt(b.score)} · ${t(zcRankKey(b.score))}` : '';
+}
+
+// Called once when gameplay actually begins (tutorial dismissed).
+function zcBegin() {
+  if (!ZC_ON) return;
+  zc.begun = true;
+  zc.startedAt = performance.now();
+  zc.nextStarAt = zc.startedAt + 28000;
+  document.body.classList.add('zc-playing');
+  zcFitCamera();
+  zcRenderGoals(true);
+}
+function zcReset() {
+  balloons.forEach((b) => { if (b.jammer) zcSetJammer(b, false); });
+  if (zc.star) { scene.remove(zc.star.mesh); zc.star = null; }
+  Object.assign(zc, { shots: 0, pops: 0, bestCombo: 0, jammed: 0, stars: 0, allGoals: false, goalsHideAt: 0,
+    shake: 0, jammers: 0, safePop: 0, l4EndAt: 0, l4Pops: 0, finaleOpen: false, startedAt: performance.now(),
+    nextStarAt: performance.now() + 28000 });
+  zc.devices.clear(); zc.goalsDone.clear();
+  zcRenderGoals(true);
+}
+
+// ── Feedback: hit marker, score pop-ups, screen shake ──────────────────────
+function zcHitMarker(bad) {
+  const el = document.getElementById('zc-hit');
+  if (!el || !ZC_ON) return;
+  el.classList.remove('on'); el.classList.toggle('bad', !!bad);
+  void el.offsetWidth; // restart the CSS animation
+  el.classList.add('on');
+}
+function zcPopText(worldPos, text, color, big) {
+  if (!ZC_ON || zc.popups > 14 || !camera) return;
+  const v = worldPos.clone().project(camera);
+  if (v.z > 1 || Math.abs(v.x) > 1.1 || Math.abs(v.y) > 1.1) return; // behind / off-screen
+  const el = document.createElement('div');
+  el.className = 'zc-pop' + (big ? ' big' : '');
+  el.textContent = text;
+  el.style.color = color || '#fff';
+  el.style.left = ((v.x * 0.5 + 0.5) * 100) + '%';
+  el.style.top = ((-v.y * 0.5 + 0.5) * 100) + '%';
+  document.getElementById('hud').appendChild(el);
+  zc.popups++;
+  setTimeout(() => { el.remove(); zc.popups--; }, 900);
+}
+function zcShake(amount) { if (ZC_ON) zc.shake = Math.max(zc.shake, amount); }
+// A balloon was popped for `pts` total points (weapon + combo + golden).
+function zcOnPop(pos, pts, golden) {
+  if (!ZC_ON) return;
+  zc.pops++;
+  if (level4Active && zc.l4EndAt) zc.l4Pops++;
+  if (comboCount > zc.bestCombo) zc.bestCombo = comboCount;
+  zcHitMarker(false);
+  zcPopText(pos, '+' + pts, golden ? '#ffd200' : '#ffffff', golden || pts >= 40);
+}
+
+// ── Jammer balloons: black "bad barcode" balloons — scanning one costs points ──
+let zcJamTex = null, zcJamMat = null;
+function zcJammerAssets() {
+  if (!zcJamTex) {
+    const c = document.createElement('canvas'); c.width = c.height = 128;
+    const x = c.getContext('2d');
+    x.fillStyle = '#16060a'; x.fillRect(0, 0, 128, 128);
+    x.strokeStyle = '#ff1a3c'; x.lineWidth = 16; x.lineCap = 'round';
+    x.beginPath(); x.moveTo(30, 30); x.lineTo(98, 98); x.moveTo(98, 30); x.lineTo(30, 98); x.stroke();
+    x.lineWidth = 8; x.strokeRect(6, 6, 116, 116);
+    zcJamTex = new THREE.CanvasTexture(c);
+    zcJamMat = new THREE.MeshPhongMaterial({ color: 0x0c0c12, shininess: 110, specular: 0xff3355, emissive: 0x8a0018, emissiveIntensity: 0.3 });
+  }
+}
+function zcSetJammer(bo, on) {
+  const body = bo.mesh.children[0], tag = bo.mesh.userData.tag;
+  if (on && !bo.jammer) {
+    zcJammerAssets();
+    bo.jammer = { until: performance.now() + ZC_JAM_MS, mat: body.material, map: tag ? tag.material.map : null };
+    body.material = zcJamMat;
+    if (tag) { tag.material.map = zcJamTex; tag.material.needsUpdate = true; }
+    zc.jammers++;
+  } else if (!on && bo.jammer) {
+    body.material = bo.jammer.mat;
+    if (tag) { tag.material.map = bo.jammer.map; tag.material.needsUpdate = true; }
+    bo.jammer = null;
+    zc.jammers = Math.max(0, zc.jammers - 1);
+  }
+}
+// Roll a freshly respawned balloon into a jammer (never golden / power-up
+// balloons, never in multiplayer's shared pool, never during the boss fight).
+function zcOnRespawn(bo) {
+  if (!ZC_ON || !zc.begun || !gameActive) return;
+  if (bo.jammer) zcSetJammer(bo, false);
+  if (MP.enabled || level3Active || zc.pops < 10 || zc.jammers >= ZC_MAX_JAMMERS) return;
+  if (bo.mesh.userData.golden || bo.mesh.userData.power) return;
+  if (Math.random() < 0.16) zcSetJammer(bo, true);
+}
+// Returns true when the pop was fully handled as a jammer penalty.
+function zcPopJammer(bo, weapon) {
+  const pos = bo.mesh.position.clone();
+  zcSetJammer(bo, false);
+  if (zc.safePop > 0) return false; // a Balloon Bomb neutralises jammers: pops as normal
+  bo.alive = false;
+  bo.mesh.userData.runtimeStateVisible = false;
+  bo.mesh.visible = false;
+  const penalty = Math.min(ZC_JAM_PENALTY, Math.max(0, score));
+  addScore(-(penalty + weapon.pts)); // every caller adds weapon.pts right after popBalloon
+  comboCount = 0; comboExpireAt = 0;
+  zc.jammed++;
+  for (let i = 0; i < 12; i++) {
+    const pm = new THREE.Mesh(new THREE.SphereGeometry(0.05 + Math.random() * 0.07, 5, 5),
+      new THREE.MeshBasicMaterial({ color: i % 2 ? 0xff1a3c : 0x222230, transparent: true, opacity: 1 }));
+    pm.position.copy(pos);
+    scene.add(pm);
+    particles.push({ mesh: pm, mat: pm.material, vel: new THREE.Vector3((Math.random() - 0.5) * 0.2, Math.random() * 0.12, (Math.random() - 0.5) * 0.2), life: 1.0, alive: true });
+  }
+  flashScreen(0xff1030, 0.3); zcShake(0.05); zcHitMarker(true); Sound.sfx.jam();
+  zcCrowdReact('gasp', 0.6, 1.5);
+  zcPopText(pos, '−' + penalty, '#ff4060', true);
+  addKillFeed(t('zc_jam_kf', { n: penalty }));
+  const respawnMs = (level2Active || level4Active) ? (700 + Math.random() * 700) : (3500 + Math.random() * 2000);
+  setTimeout(() => { if (gameActive) respawnBalloon(bo); }, respawnMs);
+  return true;
+}
+
+// ── Zebra Star: a big striped bonus balloon that crosses the ring ──────────
+let zcStripeTex = null;
+function zcSpawnStar() {
+  if (zc.star) return;
+  if (!zcStripeTex) {
+    const c = document.createElement('canvas'); c.width = 256; c.height = 128;
+    const x = c.getContext('2d');
+    x.fillStyle = '#ffffff'; x.fillRect(0, 0, 256, 128);
+    x.fillStyle = '#0b0b0b';
+    for (let i = -2; i < 12; i++) {
+      x.beginPath();
+      x.moveTo(i * 32, 0); x.lineTo(i * 32 + 16, 0); x.lineTo(i * 32 + 44, 128); x.lineTo(i * 32 + 28, 128);
+      x.closePath(); x.fill();
+    }
+    zcStripeTex = new THREE.CanvasTexture(c);
+  }
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.8, 24, 20),
+    new THREE.MeshPhongMaterial({ map: zcStripeTex, shininess: 150, specular: 0xffffff, emissive: 0x555555, emissiveIntensity: 0.35 }));
+  body.scale.y = 1.22; g.add(body);
+  const halo = new THREE.Mesh(new THREE.TorusGeometry(1.25, 0.05, 8, 40), new THREE.MeshBasicMaterial({ color: 0xffd200 }));
+  halo.rotation.x = Math.PI / 2; g.add(halo);
+  const glow = new THREE.PointLight(0xffd200, 1.4, 9); g.add(glow);
+  const a = Math.random() * Math.PI * 2, b = a + Math.PI + (Math.random() - 0.5) * 1.2;
+  const from = new THREE.Vector3(Math.cos(a) * 17, 5 + Math.random() * 2.5, Math.sin(a) * 17);
+  const to = new THREE.Vector3(Math.cos(b) * 17, 5 + Math.random() * 2.5, Math.sin(b) * 17);
+  g.position.copy(from);
+  scene.add(g);
+  zc.star = { mesh: g, halo, from, to, born: performance.now() };
+  Sound.sfx.star();
+  showPrompt(t('zc_star_in', { n: ZC_STAR_PTS }), 3200);
+  addKillFeed(t('zc_star_kf'));
+}
+function zcHitStar() {
+  if (!zc.star) return;
+  const pos = zc.star.mesh.position.clone();
+  scene.remove(zc.star.mesh);
+  zc.star = null;
+  zc.stars++;
+  zc.nextStarAt = performance.now() + 42000 + Math.random() * 14000;
+  addScore(ZC_STAR_PTS);
+  for (let k = 0; k < 5; k++) spawnConfetti(pos.clone().add(new THREE.Vector3((Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2)), 22, 0.32);
+  cheerCrowd(); zcCrowdBig(); flashScreen(0xffd200, 0.3); zcShake(0.03); zcHitMarker(false); Sound.sfx.golden();
+  zcPopText(pos, '+' + ZC_STAR_PTS + ' ' + t('zc_star_pop'), '#ffd200', true);
+  addKillFeed(t('zc_star_got', { n: ZC_STAR_PTS }));
+  LunaAnalytics.track('zebra_star', {});
+}
+// Instant-hit weapons (laser / ring) test the star along the view ray.
+function zcStarRay() {
+  if (!ZC_ON || !zc.star) return;
+  const dir = new THREE.Vector3(); camera.getWorldDirection(dir);
+  const ray = new THREE.Raycaster(camera.position.clone(), dir, 0, 60);
+  if (ray.intersectObject(zc.star.mesh.children[0], false).length > 0) zcHitStar();
+}
+
+// ── Show goals (mission checklist) ─────────────────────────────────────────
+function zcRenderGoals(force) {
+  const el = document.getElementById('zc-goals');
+  if (!el || !ZC_ON || !zc.begun) return;
+  if (zc.allGoals && performance.now() > zc.goalsHideAt) { el.style.display = 'none'; return; }
+  const rows = ZC_GOALS.map((g) => {
+    const goal = g.goal(), val = Math.min(goal, g.val());
+    const done = zc.goalsDone.has(g.id);
+    return { g, goal, val, done };
+  });
+  const sig = rows.map((r) => r.val + (r.done ? 'd' : '')).join('|') + currentLang;
+  if (!force && sig === zc.goalSig) return;
+  zc.goalSig = sig;
+  el.style.display = 'block';
+  el.innerHTML = '<div class="hd">' + (zc.allGoals ? t('zc_goals_all') : t('zc_goals_hd')) + '</div>'
+    + rows.map((r) => '<div class="row' + (r.done ? ' done' : '') + '" data-goal="' + r.g.id + '">'
+      + '<span class="bx"></span><span class="tx">' + t('zc_goal_' + r.g.id, { n: r.goal })
+      + (r.goal > 1 ? ' <b>' + r.val + '/' + r.goal + '</b>' : '') + '</span>'
+      + (r.g.pts ? '<span class="pr">+' + r.g.pts + '</span>' : '') + '</div>').join('');
+}
+function zcCheckGoals() {
+  for (let i = 0; i < 4; i++) if (collected.has(i)) zc.devices.add(i);
+  if (currentWeapon >= 0 && zc.devices.size === 0) zc.devices.add(currentWeapon);
+  for (const g of ZC_GOALS) {
+    if (zc.goalsDone.has(g.id) || g.val() < g.goal()) continue;
+    zc.goalsDone.add(g.id);
+    zcRenderGoals(true);
+    const row = document.querySelector('#zc-goals [data-goal="' + g.id + '"]');
+    if (row) row.classList.add('flash');
+    if (g.pts) {
+      addScore(g.pts);
+      Sound.sfx.powerup();
+      addKillFeed(t('zc_goal_done', { n: g.pts }));
+      LunaAnalytics.track('goal_complete', { goal: g.id });
+    }
+  }
+  if (!zc.allGoals && zc.goalsDone.size === ZC_GOALS.length) {
+    zc.allGoals = true;
+    zc.goalsHideAt = performance.now() + 7000;
+    addScore(ZC_ALL_GOALS_PTS);
+    cheerCrowd(); zcCrowdBig(); Sound.sfx.win(); flashScreen(0x38d66b, 0.25);
+    spawnConfetti(camera.position.clone().add(new THREE.Vector3(0, 0.6, -2.2)), 30, 0.3);
+    showPrompt(t('zc_goals_all_prompt', { n: ZC_ALL_GOALS_PTS }), 4200);
+    LunaAnalytics.track('goals_all_complete', {});
+    zcRenderGoals(true);
+  }
+  zcRenderGoals(false);
+}
+
+// ── Waypoint to the nearest scanner while unarmed ──────────────────────────
+function zcUpdateWaypoint() {
+  const el = document.getElementById('zc-way');
+  if (!el) return;
+  const unarmed = currentWeapon < 0 && collected.size === 0 && !holdingPlushie && !infoOpen && !pauseOpen && !zc.finaleOpen;
+  let best = null, bestD = Infinity;
+  if (unarmed) for (const o of weaponObjs) {
+    if (o.collected || !o.mesh.parent) continue;
+    const d = camera.position.distanceTo(o.mesh.position);
+    if (d < bestD) { bestD = d; best = o; }
+  }
+  if (!best) { el.style.display = 'none'; return; }
+  const p = best.mesh.position.clone(); p.y += 0.9;
+  const v = p.project(camera);
+  let x = v.x, y = v.y;
+  const behind = v.z > 1;
+  if (behind) { x = -x; y = -y; }
+  const off = behind || Math.abs(x) > 0.86 || Math.abs(y) > 0.8;
+  let rot = 0;
+  if (off) {
+    const m = Math.max(Math.abs(x) / 0.86, Math.abs(y) / 0.8) || 1;
+    x /= m; y /= m;
+    if (behind && Math.abs(x) < 0.5) x = x < 0 ? -0.86 : 0.86; // straight behind: point sideways, not down
+    rot = Math.atan2(x, y) * 180 / Math.PI; // 0° = up on screen
+    rot = 180 + rot;                         // the arrow glyph points down by default
+  }
+  el.style.display = 'block';
+  el.style.left = ((x * 0.5 + 0.5) * 100) + '%';
+  el.style.top = ((-y * 0.5 + 0.5) * 100) + '%';
+  document.getElementById('zc-way-ar').style.transform = 'rotate(' + rot.toFixed(0) + 'deg)';
+  document.getElementById('zc-way-lb').textContent = t('zc_way', { name: best.w.name, d: Math.max(1, Math.round(bestD)) });
+}
+
+// ── Per-frame tick (called from updateGame while gameActive) ───────────────
+function zcTick(delta) {
+  if (!ZC_ON || !zc.begun) return;
+  const now = performance.now();
+  // Combo meter beside the crosshair.
+  const cm = document.getElementById('zc-combo');
+  if (cm) {
+    const left = comboExpireAt - now;
+    if (comboCount >= 2 && left > 0) {
+      cm.style.display = 'block';
+      document.getElementById('zc-combo-n').textContent = '×' + comboCount;
+      document.getElementById('zc-combo-bar').style.width = Math.max(0, Math.min(100, left / 25)) + '%';
+    } else cm.style.display = 'none';
+  }
+  // Zebra Star flight + projectile hits.
+  if (zc.star) {
+    const s = zc.star, k = (now - s.born) / ZC_STAR_MS;
+    if (k >= 1) { scene.remove(s.mesh); zc.star = null; zc.nextStarAt = now + 32000 + Math.random() * 12000; }
+    else {
+      s.mesh.position.lerpVectors(s.from, s.to, k);
+      s.mesh.position.y += Math.sin(k * Math.PI * 3) * 1.1;
+      s.mesh.rotation.y += delta * 1.6;
+      s.halo.rotation.z += delta * 2.4;
+      for (const p of projectiles) {
+        if (!p.alive || !zc.star) continue;
+        if (p.mesh.position.distanceTo(s.mesh.position) < 1.15) { p.alive = false; scene.remove(p.mesh); zcHitStar(); }
+      }
+    }
+  } else if (now >= zc.nextStarAt && !level3Active && !MP.enabled && !infoOpen && !pauseOpen && (currentWeapon >= 0)) {
+    zcSpawnStar();
+  }
+  // Slower UI + state checks (~5 Hz).
+  if (now - zc.lastUiAt > 200) {
+    zc.lastUiAt = now;
+    // Phones start with a scanner already in hand so the first tap pops a balloon.
+    if (IS_TOUCH && !zc.autoArmed && weaponObjs.length) {
+      zc.autoArmed = true;
+      const first = weaponObjs.find((o) => o.w.id === 'MC9400' && !o.collected) || weaponObjs.find((o) => !o.collected);
+      if (first && currentWeapon < 0 && collected.size === 0) pickupWeapon(first);
+    }
+    for (const b of balloons) if (b.jammer && (now > b.jammer.until || !b.alive)) zcSetJammer(b, false);
+    zcCheckGoals();
+    if (level4Active && zc.l4EndAt) {
+      updateLevelHud();
+      if (now >= zc.l4EndAt) { zc.l4EndAt = 0; updateLevelHud(); zcShowFinale('finale'); }
+    }
+  }
+  zcUpdateWaypoint();
+}
+
+// ── Finale: timed last act on the Range, then the results screen ───────────
+function zcStartFinaleTimer() {
+  if (!ZC_ON || zc.finaleSeen) return;
+  zc.l4EndAt = performance.now() + ZC_FINALE_SECONDS * 1000;
+  zc.l4Pops = 0;
+}
+function zcShowFinale(reason) {
+  if (!ZC_ON || zc.finaleOpen) return;
+  zc.finaleOpen = true; zc.finaleSeen = true; zc.l4EndAt = 0;
+  if (pauseOpen) closePause();
+  gameActive = false; mouseDown = false;
+  if (document.pointerLockElement) document.exitPointerLock();
+  submitScore();
+  const isBest = zcSaveBest();
+  saveProgress();
+  const mins = Math.max(0, (performance.now() - zc.startedAt) / 60000);
+  document.getElementById('zf-rank').textContent = t(zcRankKey(score));
+  document.getElementById('zf-score').textContent = zcFmt(score);
+  document.getElementById('zf-best').style.display = isBest ? 'inline-block' : 'none';
+  document.getElementById('zf-pops').textContent = zcFmt(zc.pops);
+  document.getElementById('zf-combo').textContent = '×' + zc.bestCombo;
+  document.getElementById('zf-acc').textContent = (zc.shots ? Math.min(100, Math.round(zc.pops / zc.shots * 100)) : 0) + '%';
+  document.getElementById('zf-qr').textContent = qrObjs.filter((q) => q.scanned).length + '/' + Math.max(4, qrObjs.length);
+  const prods = document.getElementById('zf-prods');
+  prods.innerHTML = '';
+  for (const w of ARENA_WEAPON_LIST) {
+    const a = document.createElement('a');
+    a.className = 'zf-prod'; a.href = w.url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+    a.innerHTML = '<b>' + w.name + '</b><span>' + t('weff_' + w.id) + ' ↗</span>';
+    a.addEventListener('click', () => LunaAnalytics.track('product_visit', { product: w.name, url: w.url, from: 'finale' }));
+    prods.appendChild(a);
+  }
+  document.getElementById('zc-finale').style.display = 'flex';
+  document.getElementById('zc-way').style.display = 'none';
+  Sound.sfx.win();
+  LunaAnalytics.track('finale_shown', { reason, score, level: currentLevel, minutes: Math.round(mins * 10) / 10 });
+}
+function zcCloseFinale() {
+  if (!zc.finaleOpen) return;
+  zc.finaleOpen = false;
+  document.getElementById('zc-finale').style.display = 'none';
+  gameActive = true;
+  balloons.forEach((b) => { if (!b.alive) respawnBalloon(b); });
+  updateLevelHud();
+  requestGamePointerLock();
+}
+(function zcBindUi() {
+  const on = (id, fn) => { const el = document.getElementById(id); if (el) el.addEventListener('click', fn); };
+  on('zf-explore', () => {
+    LunaAnalytics.track('product_visit', { product: 'catalogue', url: 'https://www.zebra.com/us/en/products.html', from: 'finale' });
+    window.open('https://www.zebra.com/us/en/products.html', '_blank', 'noopener,noreferrer');
+  });
+  on('zf-share', async () => {
+    const btn = document.getElementById('zf-share');
+    const url = location.origin + location.pathname;
+    const text = t('zc_share_text', { score: zcFmt(score), rank: t(zcRankKey(score)) });
+    LunaAnalytics.track('share_score', { score });
+    try {
+      if (navigator.share) { await navigator.share({ title: t('zc_share_title'), text, url }); return; }
+      await navigator.clipboard.writeText(text + ' ' + url);
+      btn.textContent = t('zc_share_copied');
+    } catch (_) {
+      // Share sheet dismissed or clipboard blocked — nothing to recover.
+      return;
+    }
+    setTimeout(() => { btn.textContent = t('zf_share'); }, 2200);
+  });
+  on('zf-again', () => {
+    // A fresh show: keep the wallet/prizes and level unlocks, drop the run score.
+    try { localStorage.setItem('zebraProgress', JSON.stringify({ score: 0, level2Unlocked, level3Unlocked })); } catch (_) {}
+    Sound.stopMusic();
+    location.reload();
+  });
+  on('zf-keep', () => zcCloseFinale());
+  on('finish-btn', () => { if (typeof Sound !== 'undefined') Sound.sfx.click(); zcShowFinale('pause'); });
+  zcRenderStartBest();
+})();
+
+// ═══════════════════════════════════════════════
+//  SHOW CROWD — a jointed, instanced audience that fills the stands.
+//  Each spectator is built from separate parts (legs, torso, head, hair,
+//  upper arms, forearms) posed every frame, so they clap, cheer, wave, pump
+//  a fist, gasp and do a stadium wave instead of bobbing as a rigid statue.
+//  ~10 draw calls for the whole crowd. Game mode only (Studio-inert).
+// ═══════════════════════════════════════════════
+const USE_SHOW_CROWD = !STUDIO_AUTHORING_MODE;
+const zcCrowd = { people: [], parts: null, waveAt: -1, built: false };
+const ZC_SHIRTS = [0xe5322d, 0xffc83d, 0x19b5a5, 0x2f6fde, 0xff7ab8, 0xf4efe6, 0x8a4fd8, 0xff8a2a, 0x3fbf5f, 0x1f2f55];
+const ZC_SKINS = [0xf6d3b4, 0xe9b98e, 0xd09a6c, 0xa9714b, 0x7b4e31, 0x5a3823];
+const ZC_HAIRS = [0x1b1411, 0x3a2416, 0x6b3f1e, 0xb8742d, 0xe3c16a, 0x8b8b8b, 0xc0392b];
+const ZC_PANTS = [0x26324a, 0x3b3b44, 0x5a4632, 0x1d4e6b, 0x6b2737, 0x2f4f3a];
+// Pose vector layout: [raiseR, raiseL, spreadR, spreadL, yawR, yawL, elbowR, elbowL, lean, rise, sway]
+const ZC_POSE_N = 11;
+
+function zcMergeGeos(list) {
+  const chunks = [];
+  let total = 0;
+  for (const [geo, matrix] of list) {
+    const g = geo.index ? geo.toNonIndexed() : geo.clone();
+    if (matrix) g.applyMatrix4(matrix);
+    chunks.push(g); total += g.attributes.position.count;
+  }
+  const pos = new Float32Array(total * 3), nor = new Float32Array(total * 3);
+  let o = 0;
+  for (const g of chunks) { pos.set(g.attributes.position.array, o); nor.set(g.attributes.normal.array, o); o += g.attributes.position.count * 3; }
+  const out = new THREE.BufferGeometry();
+  out.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  out.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+  return out;
+}
+
+function zcCrowdGeometries() {
+  const M = (x, y, z, sx = 1, sy = 1, sz = 1, rx = 0) => new THREE.Matrix4().compose(
+    new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, 0, 0)), new THREE.Vector3(sx, sy, sz));
+  const box = (w, h, d) => new THREE.BoxGeometry(w, h, d);
+  const sph = (r, a = 12, b = 9, ...rest) => new THREE.SphereGeometry(r, a, b, ...rest);
+  const cyl = (rt, rb, h, s = 9) => new THREE.CylinderGeometry(rt, rb, h, s);
+  return {
+    // origin = seat surface under the hips; +Z is the direction the person faces.
+    // legs: front row, feet resting on the deck half a metre below
+    legs: zcMergeGeos([
+      [box(0.13, 0.12, 0.38), M(0.09, 0.03, 0.17)], [box(0.13, 0.12, 0.38), M(-0.09, 0.03, 0.17)],
+      [box(0.11, 0.36, 0.11), M(0.09, -0.17, 0.33)], [box(0.11, 0.36, 0.11), M(-0.09, -0.17, 0.33)],
+      [box(0.12, 0.07, 0.19), M(0.09, -0.37, 0.37)], [box(0.12, 0.07, 0.19), M(-0.09, -0.37, 0.37)],
+    ]),
+    // legsShort: upper rows, feet on the next step down (20 cm lower)
+    legsShort: zcMergeGeos([
+      [box(0.13, 0.12, 0.38), M(0.09, 0.03, 0.17)], [box(0.13, 0.12, 0.38), M(-0.09, 0.03, 0.17)],
+      [box(0.11, 0.17, 0.11), M(0.09, -0.075, 0.33)], [box(0.11, 0.17, 0.11), M(-0.09, -0.075, 0.33)],
+      [box(0.12, 0.07, 0.19), M(0.09, -0.165, 0.37)], [box(0.12, 0.07, 0.19), M(-0.09, -0.165, 0.37)],
+    ]),
+    // legsStand: standing fans on the front deck (origin = hips, legs hang down)
+    legsStand: zcMergeGeos([
+      [box(0.13, 0.7, 0.14), M(0.09, -0.33, 0)], [box(0.13, 0.7, 0.14), M(-0.09, -0.33, 0)],
+      [box(0.13, 0.08, 0.22), M(0.09, -0.7, 0.04)], [box(0.13, 0.08, 0.22), M(-0.09, -0.7, 0.04)],
+    ]),
+    // origin = hips
+    torso: zcMergeGeos([[cyl(0.165, 0.19, 0.44, 12), M(0, 0.2, 0, 1, 1, 0.72)], [sph(0.17), M(0, 0.42, 0, 1, 0.5, 0.74)]]),
+    // origin = neck — big toon head
+    head: zcMergeGeos([[sph(0.188, 16, 12), M(0, 0.2, 0)], [cyl(0.055, 0.06, 0.08, 8), M(0, 0.03, 0)]]),
+    hairA: zcMergeGeos([[sph(0.2, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.5), M(0, 0.205, -0.014)]]),
+    hairB: zcMergeGeos([[sph(0.205, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.7), M(0, 0.2, -0.035, 1, 1.12, 1, -0.38)]]),
+    hat: zcMergeGeos([[new THREE.ConeGeometry(0.095, 0.26, 10), M(0, 0.5, -0.01, 1, 1, 1, -0.12)], [sph(0.034, 6, 5), M(0.0, 0.635, -0.027)]]),
+    // eyes + an open, cheering mouth
+    eyes: zcMergeGeos([[sph(0.028, 8, 6), M(0.07, 0.225, 0.168)], [sph(0.028, 8, 6), M(-0.07, 0.225, 0.168)],
+      [sph(0.05, 8, 6), M(0, 0.135, 0.16, 1, 0.55, 0.4)]]),
+    // origin = shoulder, arm hangs along -Y
+    upper: zcMergeGeos([[sph(0.066, 8, 6), null], [cyl(0.058, 0.052, 0.25, 8), M(0, -0.125, 0)]]),
+    // origin = elbow, forearm hangs along -Y, hand at the end
+    fore: zcMergeGeos([[cyl(0.048, 0.042, 0.22, 8), M(0, -0.11, 0)], [sph(0.06, 8, 6), M(0, -0.245, 0)]]),
+    // held in the hand: a stick continuing past the fist with a pennant
+    flag: (() => {
+      const tri = new THREE.BufferGeometry();
+      tri.setAttribute('position', new THREE.BufferAttribute(new Float32Array([0, -0.74, 0, 0, -0.5, 0, 0.3, -0.62, 0]), 3));
+      tri.setAttribute('normal', new THREE.BufferAttribute(new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1]), 3));
+      return zcMergeGeos([[cyl(0.009, 0.009, 0.52, 5), M(0, -0.49, 0)], [tri, null]]);
+    })(),
+  };
+}
+
+function zcBuildCrowd() {
+  if (!USE_SHOW_CROWD) return;
+  zcCrowd.people.length = 0; zcCrowd.parts = null; zcCrowd.waveAt = -1;
+  const rnd = createSeededRandom(0x51c0c0);
+  const occupancy = IS_TOUCH ? 0.3 : 0.5;
+  const people = zcCrowd.people;
+  // Rows measured off the wooden stand model: [hip radius, step height]. Row 0
+  // sits on the first step with feet on the wide front deck; the rest sit on
+  // the 20 cm terraces behind it. A few fans stand on the deck itself.
+  const ROWS = [[15.68, 1.18], [16.4, 1.385], [17.12, 1.59], [17.85, 1.8], [18.62, 2.0], [19.33, 2.22]];
+  const DECK_Y = 0.69;
+  const addPerson = (ang, r, y, kind) => {
+    const kid = rnd() < (kind === 'stand' ? 0.5 : 0.28);
+    people.push({
+      ang, x: Math.cos(ang) * r, y, z: Math.sin(ang) * r, kind,
+      yaw: Math.atan2(-Math.cos(ang), -Math.sin(ang)),
+      scale: kid ? 0.74 + rnd() * 0.1 : 0.95 + rnd() * 0.16,
+      shirt: ZC_SHIRTS[(rnd() * ZC_SHIRTS.length) | 0], skin: ZC_SKINS[(rnd() * ZC_SKINS.length) | 0],
+      hair: ZC_HAIRS[(rnd() * ZC_HAIRS.length) | 0], pants: ZC_PANTS[(rnd() * ZC_PANTS.length) | 0],
+      longHair: rnd() < 0.42, hat: rnd() < 0.2, flag: rnd() < (kind === 'stand' ? 0.4 : 0.12), lefty: rnd() < 0.3,
+      phase: rnd() * Math.PI * 2, tempo: 0.85 + rnd() * 0.35, energy: kind === 'stand' ? 1 : 0.6 + rnd() * 0.4,
+      act: 'idle', actUntil: 0, actFrom: 0, nextIdleAt: 2 + rnd() * 9,
+      w: { clap: 0, cheer: 0, wave: 0, pump: 0, gasp: 0 },
+      hy: 0, hx: 0, glanceUntil: 0, glance: 0,
+    });
+  };
+  ROWS.forEach(([r, y], row) => {
+    const seats = Math.floor((2 * Math.PI * r) / 0.82);
+    for (let k = 0; k < seats; k++) {
+      const ang = ((k + (row % 2) * 0.5) / seats) * Math.PI * 2;
+      // clumpy seating: friends sit together, with gaps between groups
+      const clump = 0.5 + 0.5 * Math.sin(ang * 7 + row * 1.7) * Math.sin(ang * 3 - row);
+      if (rnd() > occupancy * (0.55 + clump * 0.9)) continue;
+      addPerson(ang, r, y, row === 0 ? 'front' : 'row');
+    }
+  });
+  const standers = IS_TOUCH ? 12 : 22;
+  for (let k = 0; k < standers; k++) {
+    const ang = ((k + rnd() * 0.6) / standers) * Math.PI * 2;
+    addPerson(ang, 14.15 + rnd() * 0.5, DECK_Y + 0.74, 'stand'); // y = hip height; scaled per person below
+  }
+  for (const p of people) if (p.kind === 'stand') p.y = DECK_Y + 0.74 * p.scale;
+  const n = people.length;
+  const geos = zcCrowdGeometries();
+  const mat = () => new THREE.MeshLambertMaterial({ color: 0xffffff });
+  const make = (geo, count, material = mat()) => {
+    const mesh = new THREE.InstancedMesh(geo, material, count);
+    mesh.frustumCulled = false; mesh.castShadow = false; mesh.receiveShadow = false;
+    mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    mesh.userData.showCrowd = true;
+    mesh.raycast = function () {}; // never block shots
+    scene.add(mesh);
+    return mesh;
+  };
+  const parts = {
+    legs: make(geos.legs, n), legsShort: make(geos.legsShort, n), legsStand: make(geos.legsStand, n),
+    torso: make(geos.torso, n), head: make(geos.head, n),
+    hairA: make(geos.hairA, n), hairB: make(geos.hairB, n), hat: make(geos.hat, n),
+    eyes: make(geos.eyes, n, new THREE.MeshBasicMaterial({ color: 0x141018 })),
+    upper: make(geos.upper, n * 2), fore: make(geos.fore, n * 2),
+    flag: make(geos.flag, n, new THREE.MeshLambertMaterial({ color: 0xffffff, side: THREE.DoubleSide })),
+  };
+  const col = new THREE.Color(), hatCols = [0xffc83d, 0xe5322d, 0x19b5a5, 0xff7ab8], flagCols = [0xffffff, 0xffc83d, 0xe5322d];
+  people.forEach((p, i) => {
+    parts.legs.setColorAt(i, col.setHex(p.pants)); parts.legsShort.setColorAt(i, col.setHex(p.pants)); parts.legsStand.setColorAt(i, col.setHex(p.pants));
+    parts.torso.setColorAt(i, col.setHex(p.shirt));
+    parts.head.setColorAt(i, col.setHex(p.skin));
+    parts.hairA.setColorAt(i, col.setHex(p.hair)); parts.hairB.setColorAt(i, col.setHex(p.hair));
+    parts.hat.setColorAt(i, col.setHex(hatCols[i % hatCols.length]));
+    parts.upper.setColorAt(i * 2, col.setHex(p.shirt)); parts.upper.setColorAt(i * 2 + 1, col.setHex(p.shirt));
+    parts.fore.setColorAt(i * 2, col.setHex(p.skin)); parts.fore.setColorAt(i * 2 + 1, col.setHex(p.skin));
+    parts.flag.setColorAt(i, col.setHex(flagCols[i % flagCols.length]));
+  });
+  for (const m of Object.values(parts)) if (m.instanceColor) m.instanceColor.needsUpdate = true;
+  zcCrowd.parts = parts;
+  zcCrowd.built = true;
+  zcCrowdTick(0, 0, true); // settle everyone into the seated idle pose
+}
+
+// Send part of the crowd into a behaviour for a while.
+function zcCrowdReact(kind, share, seconds) {
+  if (!zcCrowd.parts) return;
+  const now = simulationTime;
+  for (const p of zcCrowd.people) {
+    if (Math.random() > share * p.energy * 1.3) continue;
+    if (kind === 'clap' && p.act !== 'idle' && p.actUntil > now) continue; // don't cut off a bigger reaction
+    p.act = (kind === 'clap' && p.flag) ? 'wave' : kind;
+    p.actFrom = now + Math.random() * 0.35;
+    p.actUntil = p.actFrom + seconds * (0.7 + Math.random() * 0.6);
+  }
+}
+// Big moment: most of the stands leap up and a stadium wave rolls round the ring.
+function zcCrowdBig() {
+  if (!zcCrowd.parts) return;
+  zcCrowdReact('cheer', 0.85, 3.2);
+  zcCrowd.waveAt = simulationTime + 1.2;
+}
+
+const _zq = { m: null };
+function zcCrowdTick(delta, time, force) {
+  const parts = zcCrowd.parts;
+  if (!parts) return;
+  if (!_zq.m) {
+    _zq.m = {
+      base: new THREE.Matrix4(), torso: new THREE.Matrix4(), tmp: new THREE.Matrix4(), arm: new THREE.Matrix4(), head: new THREE.Matrix4(),
+      zero: new THREE.Matrix4().makeScale(0, 0, 0),
+      q: new THREE.Quaternion(), q2: new THREE.Quaternion(), v: new THREE.Vector3(), s: new THREE.Vector3(), one: new THREE.Vector3(1, 1, 1),
+      X: new THREE.Vector3(1, 0, 0), Y: new THREE.Vector3(0, 1, 0), Z: new THREE.Vector3(0, 0, 1), e: new THREE.Euler(),
+      pose: new Float32Array(ZC_POSE_N), idle: new Float32Array(ZC_POSE_N), b: new Float32Array(ZC_POSE_N),
+    };
+  }
+  const T = _zq.m, people = zcCrowd.people, pose = T.pose, idle = T.idle, b = T.b;
+  const k = Math.min(1, delta * 9);
+  const camX = camera ? camera.position.x : 0, camY = camera ? camera.position.y : 1.7, camZ = camera ? camera.position.z : 0;
+  // Stadium wave: a crest travelling once round the ring.
+  let waveAng = null;
+  if (zcCrowd.waveAt >= 0) {
+    const wt = time - zcCrowd.waveAt;
+    if (wt > 3.4) zcCrowd.waveAt = -1; else if (wt >= 0) waveAng = (wt / 3.2) * Math.PI * 2;
+  }
+  for (let i = 0; i < people.length; i++) {
+    const p = people[i];
+    // ── behaviour scheduling ──
+    if (p.act !== 'idle' && time > p.actUntil) { p.act = 'idle'; p.nextIdleAt = time + 3 + Math.random() * 10; }
+    if (p.act === 'idle' && time > p.nextIdleAt && !force) {
+      const r = Math.random();
+      p.act = r < 0.4 ? 'clap' : r < 0.65 ? 'wave' : r < 0.85 ? 'pump' : 'cheer';
+      p.actFrom = time; p.actUntil = time + 1.2 + Math.random() * 2.2;
+    }
+    const active = (p.act !== 'idle' && time >= p.actFrom) ? p.act : null;
+    const w = p.w;
+    w.clap += ((active === 'clap' ? 1 : 0) - w.clap) * k;
+    w.wave += ((active === 'wave' ? 1 : 0) - w.wave) * k;
+    w.pump += ((active === 'pump' ? 1 : 0) - w.pump) * k;
+    w.gasp += ((active === 'gasp' ? 1 : 0) - w.gasp) * k;
+    let cheerTarget = active === 'cheer' ? 1 : 0;
+    if (waveAng !== null) {
+      let d = Math.abs(((p.ang - waveAng) % (Math.PI * 2) + Math.PI * 3) % (Math.PI * 2) - Math.PI);
+      cheerTarget = Math.max(cheerTarget, Math.max(0, 1 - d / 0.55));
+    }
+    w.cheer += (cheerTarget - w.cheer) * Math.min(1, delta * 12);
+    if (force) { w.clap = w.wave = w.pump = w.gasp = w.cheer = 0; }
+
+    const tt = time * p.tempo + p.phase;
+    // ── idle pose: hands resting forward on the lap, breathing ──
+    idle[0] = idle[1] = -0.5 + Math.sin(tt * 1.3) * 0.03;
+    idle[2] = idle[3] = 0.1;
+    idle[4] = idle[5] = 0.32;
+    idle[6] = idle[7] = -1.25;
+    if (p.kind === 'stand') { idle[0] = idle[1] = -0.12 + Math.sin(tt * 1.3) * 0.04; idle[4] = idle[5] = 0.05; idle[6] = idle[7] = -0.35; }
+    idle[8] = 0.07 + Math.sin(tt * 0.9) * 0.025; idle[9] = 0; idle[10] = Math.sin(tt * 0.6) * 0.03;
+    for (let j = 0; j < ZC_POSE_N; j++) pose[j] = idle[j];
+    const blend = (weight) => { for (let j = 0; j < ZC_POSE_N; j++) pose[j] += weight * (b[j] - idle[j]); };
+    if (w.clap > 0.003) {
+      const c = Math.sin(time * 25 * p.tempo + p.phase);          // ~4 claps a second
+      b[0] = b[1] = -1.22; b[2] = b[3] = 0.05; b[4] = b[5] = 0.3 + c * 0.2; b[6] = b[7] = -0.95;
+      b[8] = 0.16; b[9] = 0.015 * (1 + c); b[10] = Math.sin(tt * 2) * 0.04;
+      blend(w.clap);
+    }
+    if (w.cheer > 0.003) {
+      const s = Math.sin(time * 7.5 * p.tempo + p.phase);
+      b[0] = -2.75 + s * 0.18; b[1] = -2.75 - s * 0.18; b[2] = 0.38 + s * 0.2; b[3] = 0.38 - s * 0.2;
+      b[4] = b[5] = 0; b[6] = b[7] = -0.3; b[8] = -0.1; b[9] = 0.1 + Math.abs(Math.sin(time * 8.5 * p.tempo + p.phase)) * 0.07; b[10] = s * 0.06;
+      blend(w.cheer);
+    }
+    if (w.wave > 0.003) {
+      const s = Math.sin(time * 8.5 * p.tempo + p.phase);
+      const R = p.lefty ? 1 : 0, L = 1 - R;                        // waving arm / resting arm index
+      b[R] = -2.6; b[L] = idle[L]; b[2 + R] = 0.45 + s * 0.42; b[2 + L] = idle[2 + L];
+      b[4 + R] = 0; b[4 + L] = idle[4 + L]; b[6 + R] = -0.35 - s * 0.15; b[6 + L] = idle[6 + L];
+      b[8] = 0.02; b[9] = 0.02; b[10] = (p.lefty ? 1 : -1) * 0.07 + s * 0.03;
+      blend(w.wave);
+    }
+    if (w.pump > 0.003) {
+      const s = Math.sin(time * 11 * p.tempo + p.phase);
+      const R = p.lefty ? 1 : 0, L = 1 - R;
+      b[R] = -2.0 + s * 0.5; b[L] = idle[L]; b[2 + R] = 0.2; b[2 + L] = idle[2 + L];
+      b[4 + R] = 0.1; b[4 + L] = idle[4 + L]; b[6 + R] = -1.5 + s * 0.35; b[6 + L] = idle[6 + L];
+      b[8] = 0.1; b[9] = 0.03 * (1 + s); b[10] = 0;
+      blend(w.pump);
+    }
+    if (w.gasp > 0.003) {                                           // hands fly to the head
+      b[0] = b[1] = -2.25; b[2] = b[3] = 0.25; b[4] = b[5] = 0.5; b[6] = b[7] = -2.15;
+      b[8] = -0.16; b[9] = 0; b[10] = Math.sin(time * 14 + p.phase) * 0.03;
+      blend(w.gasp);
+    }
+
+    // ── head: watch the performer (the player), with the odd glance at a neighbour ──
+    const dx = camX - p.x, dz = camZ - p.z, dy = camY - (p.y + 0.6);
+    let look = Math.atan2(dx, dz) - p.yaw;
+    look = Math.atan2(Math.sin(look), Math.cos(look));
+    if (time > p.glanceUntil) {
+      if (p.glance) { p.glance = 0; p.glanceUntil = time + 4 + Math.random() * 12; }
+      else if (!force) { p.glance = (Math.random() < 0.5 ? -1 : 1) * (0.5 + Math.random() * 0.5); p.glanceUntil = time + 0.7 + Math.random() * 1.2; }
+    }
+    const hyT = Math.max(-1.0, Math.min(1.0, look)) + p.glance * (1 - w.cheer);
+    const hxT = Math.max(-0.5, Math.min(0.45, -Math.atan2(dy, Math.hypot(dx, dz)))) - w.cheer * 0.25 - w.gasp * 0.2;
+    const hk = force ? 1 : Math.min(1, delta * 5);
+    p.hy += (hyT - p.hy) * hk; p.hx += (hxT - p.hx) * hk;
+
+    // ── matrices ──
+    const sc = p.scale;
+    T.base.compose(T.v.set(p.x, p.y, p.z), T.q.setFromAxisAngle(T.Y, p.yaw), T.s.set(sc, sc, sc));
+    const standing = p.kind === 'stand';
+    if (force) {
+      parts.legs.setMatrixAt(i, p.kind === 'front' ? T.base : T.zero);
+      parts.legsShort.setMatrixAt(i, p.kind === 'row' ? T.base : T.zero);
+      if (!standing) parts.legsStand.setMatrixAt(i, T.zero);
+    }
+    // Standing fans hop with their whole body (and lean less); seated fans lift off the bench a little.
+    const rise = standing ? pose[9] * 2.2 : pose[9];
+    if (standing) {
+      T.tmp.makeTranslation(0, rise, 0);
+      T.arm.multiplyMatrices(T.base, T.tmp);
+      parts.legsStand.setMatrixAt(i, T.arm);
+    }
+    T.tmp.compose(T.v.set(0, (standing ? 0 : 0.05) + rise, 0), T.q.setFromEuler(T.e.set(pose[8] * (standing ? 0.5 : 1), 0, pose[10])), T.one);
+    T.torso.multiplyMatrices(T.base, T.tmp);
+    parts.torso.setMatrixAt(i, T.torso);
+    T.tmp.compose(T.v.set(0, 0.49, 0), T.q.setFromEuler(T.e.set(p.hx, p.hy, 0, 'YXZ')), T.one);
+    T.head.multiplyMatrices(T.torso, T.tmp);
+    parts.head.setMatrixAt(i, T.head);
+    parts.eyes.setMatrixAt(i, T.head);
+    parts.hairA.setMatrixAt(i, p.longHair ? T.zero : T.head);
+    parts.hairB.setMatrixAt(i, p.longHair ? T.head : T.zero);
+    parts.hat.setMatrixAt(i, p.hat ? T.head : T.zero);
+    for (let side = 0; side < 2; side++) {
+      const sg = side === 0 ? 1 : -1; // 0 = right arm (+X), 1 = left arm
+      T.q.setFromAxisAngle(T.Y, -sg * pose[4 + side]);
+      // spread is applied to the hanging arm first, so it always opens outward
+      // whether the arm ends up down, forward or overhead
+      T.q.multiply(T.q2.setFromAxisAngle(T.X, pose[side]));
+      T.q.multiply(T.q2.setFromAxisAngle(T.Z, sg * pose[2 + side]));
+      T.tmp.compose(T.v.set(sg * 0.235, 0.4, 0), T.q, T.one);
+      T.arm.multiplyMatrices(T.torso, T.tmp);
+      parts.upper.setMatrixAt(i * 2 + side, T.arm);
+      T.tmp.compose(T.v.set(0, -0.25, 0), T.q.setFromAxisAngle(T.X, pose[6 + side]), T.one);
+      T.arm.multiply(T.tmp);
+      parts.fore.setMatrixAt(i * 2 + side, T.arm);
+      if (side === (p.lefty ? 1 : 0)) parts.flag.setMatrixAt(i, p.flag ? T.arm : T.zero);
+    }
+  }
+  if (force) { parts.legs.instanceMatrix.needsUpdate = true; parts.legsShort.instanceMatrix.needsUpdate = true; }
+  for (const key of ['legsStand', 'torso', 'head', 'eyes', 'hairA', 'hairB', 'hat', 'upper', 'fore', 'flag']) parts[key].instanceMatrix.needsUpdate = true;
+}
+
+// ═══════════════════════════════════════════════
+//  EASY MOBILE PLAY — tap a target to shoot it, aim assist, auto-pickup,
+//  hold-to-fire with every scanner, portrait-friendly field of view.
+// ═══════════════════════════════════════════════
+// Nudge a shot direction onto the nearest worthwhile target inside `cone`
+// radians (never onto a jammer balloon).
+function zcAssistDir(dir, cone) {
+  let best = null, bestAng = cone;
+  const tryPoint = (pt) => {
+    const to = new THREE.Vector3().subVectors(pt, camera.position);
+    const dist = to.length();
+    if (dist < 0.5 || dist > 60) return;
+    const ang = Math.acos(Math.max(-1, Math.min(1, to.multiplyScalar(1 / dist).dot(dir))));
+    if (ang < bestAng) { bestAng = ang; best = to.clone(); }
+  };
+  for (const b of balloons) if (b.alive && !b.jammer) tryPoint(b.mesh.position);
+  if (zc.star) tryPoint(zc.star.mesh.position);
+  if (level3Active && boss && boss.mesh) tryPoint(boss.mesh.position);
+  for (const q of qrObjs) if (!q.scanned) tryPoint(q.g.position);
+  return best || dir;
+}
+// Fire one shot along `dir` without swinging the player's view.
+function zcFireAlong(dir) {
+  camera.rotation.set(Math.asin(Math.max(-1, Math.min(1, dir.y))), Math.atan2(-dir.x, -dir.z), 0, 'YXZ');
+  camera.updateMatrixWorld(true);
+  shoot();
+  camera.rotation.set(pitch, yaw, 0, 'YXZ');
+  camera.updateMatrixWorld(true);
+}
+// FIRE button / held fire: shoot where the crosshair points, with assist.
+function zcTouchFire() {
+  const fwd = new THREE.Vector3(0, 0, -1).applyEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ'));
+  zcFireAlong(zcAssistDir(fwd, 0.1));
+}
+// Tap on the scene: shoot at the tapped point, with a wider assist.
+function zcTapFire(clientX, clientY) {
+  if (!gameActive || infoOpen || pauseOpen || zc.finaleOpen) return;
+  const ring = document.createElement('div');
+  ring.className = 'zc-tap'; ring.style.left = clientX + 'px'; ring.style.top = clientY + 'px';
+  document.body.appendChild(ring); setTimeout(() => ring.remove(), 340);
+  camera.rotation.set(pitch, yaw, 0, 'YXZ'); camera.updateMatrixWorld(true);
+  const dir = new THREE.Vector3((clientX / window.innerWidth) * 2 - 1, -(clientY / window.innerHeight) * 2 + 1, 0.5)
+    .unproject(camera).sub(camera.position).normalize();
+  zcFireAlong(zcAssistDir(dir, 0.15));
+}
+// Portrait phones get a taller field of view so the ring isn't a narrow slit.
+function zcFitCamera() {
+  if (!camera || STUDIO_AUTHORING_MODE) return;
+  const fov = (IS_TOUCH && window.innerHeight > window.innerWidth) ? 96 : 72;
+  if (camera.fov !== fov) { camera.fov = fov; camera.updateProjectionMatrix(); }
+}
+window.addEventListener('resize', () => setTimeout(zcFitCamera, 50));
 
 async function startGame() {
   document.getElementById('start-screen').style.display = 'none';
@@ -4101,11 +5759,74 @@ function dismissTutorial() {
   gameActive = true;
   if (IS_TOUCH) { document.getElementById('touch-controls').classList.remove('hidden'); document.body.classList.add('in-game'); }
   LunaAnalytics.startSession();
+  zcBegin();
   if (wallet.plushAwarded) markPlushieSlot(); // restore owned plushie in inventory
   loadProgress(); // restore saved score + level unlocks
   flushPendingClaims(); // resend any prize claims that failed to reach the API
   updateLevelHud();
   Sound.resume(); Sound.startMusic();
+}
+
+// ── Intro cinematic ───────────────────────────────────────────────────────
+// Plays full-screen right after sign-in while startGame() builds the scene
+// underneath, then dissolves into the "How to play" card. Game-only: a no-op
+// in the Studio editor and in silent/test boots. Never blocks play: any
+// playback problem (or SKIP / Esc) just ends it.
+const ZC_INTRO_SRC = 'video/intro.mp4';
+const ZC_INTRO_FADE_S = 1.1; // start dissolving this long before the clip ends
+let zcIntroState = null;
+function zcIntroPlay() {
+  if (STUDIO_AUTHORING_MODE || window._silent || zcIntroState) return;
+  const wrap = document.getElementById('zc-intro');
+  const vid = document.getElementById('zc-intro-video');
+  if (!wrap || !vid || typeof vid.play !== 'function') return;
+  const st = zcIntroState = { done: false, timers: [] };
+  const later = (fn, ms) => st.timers.push(setTimeout(fn, ms));
+  const finish = () => {
+    if (st.done) return;
+    st.done = true;
+    st.timers.forEach(clearTimeout);
+    vid.removeEventListener('timeupdate', onTime);
+    window.removeEventListener('keydown', onKey, true);
+    wrap.classList.add('out');
+    // Ramp the clip's audio down with the picture.
+    const v0 = vid.volume, t0 = performance.now();
+    const ramp = () => {
+      const k = Math.min(1, (performance.now() - t0) / 1000);
+      try { vid.volume = v0 * (1 - k); } catch (_) {}
+      if (k < 1) requestAnimationFrame(ramp);
+    };
+    requestAnimationFrame(ramp);
+    setTimeout(() => {
+      wrap.style.display = 'none';
+      wrap.classList.remove('on', 'out');
+      try { vid.pause(); vid.removeAttribute('src'); vid.load(); } catch (_) {}
+      zcIntroState = null;
+    }, 1300);
+  };
+  const onTime = () => {
+    if (vid.duration && vid.duration - vid.currentTime <= ZC_INTRO_FADE_S) finish();
+  };
+  const onKey = (e) => { if (e.code === 'Escape') finish(); };
+  vid.addEventListener('timeupdate', onTime);
+  vid.addEventListener('ended', finish, { once: true });
+  vid.addEventListener('error', finish, { once: true });
+  vid.addEventListener('playing', () => later(finish, ((vid.duration || 16) + 4) * 1000), { once: true });
+  window.addEventListener('keydown', onKey, true);
+  document.getElementById('zc-intro-skip').onclick = finish;
+  later(() => { if (vid.readyState < 2) finish(); }, 6000); // never loaded: don't hold the player up
+  vid.muted = Sound.isMuted();
+  vid.volume = 0.9;
+  vid.src = ZC_INTRO_SRC;
+  wrap.style.display = 'block';
+  requestAnimationFrame(() => requestAnimationFrame(() => wrap.classList.add('on')));
+  const tryPlay = vid.play();
+  if (tryPlay && tryPlay.catch) tryPlay.catch(() => {
+    // Autoplay with sound refused (no fresh user gesture): play it silently.
+    vid.muted = true;
+    const again = vid.play();
+    if (again && again.catch) again.catch(finish);
+  });
 }
 
 // ── Save / load progress + exit ───────────────────────────────────────────
@@ -4133,6 +5854,7 @@ function loadProgress() {
 }
 function exitToMenu() {
   saveProgress();
+  zcSaveBest();
   Sound.stopMusic();
   gameActive = false; pauseOpen = false;
   if (document.pointerLockElement) document.exitPointerLock();
@@ -4168,6 +5890,7 @@ function restartGame() {
   buildPersistentSceneObjects();
   applySceneDocument(runtimeSceneDocument, runtimeSceneSource);
   gameActive = true;
+  if (ZC_ON) zcReset();
 }
 
 // ═══════════════════════════════════════════════
@@ -4366,6 +6089,7 @@ function buildScene() {
   upgradePropVisuals();
   upgradeBleachers();
   upgradeSeatedAudience();
+  zcBuildCrowd();
   addCircusProps();
   addCircusSpotlights();
 }
@@ -4510,6 +6234,7 @@ function spawnConfetti(pos, count = 16, spread = 0.22) {
 function cheerCrowd(delay = 0) {
   const now = simulationTime + delay;
   for (const s of seatedSpectators) s.cheerAt = now + Math.random() * 0.3;
+  zcCrowdReact('clap', 0.3, 1.4);
 }
 
 // On-screen combo popup.
@@ -4523,7 +6248,7 @@ function showComboText(n, bonus) {
       + 'color:#ffd200;text-shadow:0 2px 12px rgba(255,106,0,0.8);letter-spacing:2px;text-align:center;';
     document.body.appendChild(el);
   }
-  el.innerHTML = `COMBO ×${n}<div style="font-size:0.45em;color:#fff">+${bonus} BONUS</div>`;
+  el.innerHTML = t('combo_title', {n}) + '<div style="font-size:0.45em;color:#fff">' + t('combo_bonus', {n: bonus}) + '</div>';
   el.style.fontSize = Math.min(64, 30 + n * 4) + 'px';
   el.style.opacity = '1';
   el.style.transition = 'none';
@@ -4545,10 +6270,10 @@ function activatePowerup(key, pos) {
   else if (key === 'bonus') { addScore(300); showFloatingScore(300); }
   else if (key === 'clear') {
     const w = currentWeapon >= 0 ? WEAPONS[currentWeapon] : WEAPONS[0];
-    balloons.filter(b => b.alive).forEach((b, i) => setTimeout(() => { if (b.alive) { popBalloon(b, w); addScore(w.pts); } }, i * 25));
+    balloons.filter(b => b.alive).forEach((b, i) => setTimeout(() => { if (b.alive) { zc.safePop++; try { popBalloon(b, w); } finally { zc.safePop--; } addScore(w.pts); } }, i * 25));
   }
-  showPrompt(t('dyn_powerup', {icon: p.icon, label: p.label}), 2200);
-  addKillFeed(t('dyn_powerup_kf', {icon: p.icon, label: p.label}));
+  showPrompt(t('dyn_powerup', {icon: p.icon, label: t('pwl_' + key)}), 2200);
+  addKillFeed(t('dyn_powerup_kf', {icon: p.icon, label: t('pwl_' + key)}));
   updatePowerupHud();
 }
 function updatePowerupHud() {
@@ -4562,9 +6287,9 @@ function updatePowerupHud() {
   }
   const now = performance.now();
   const active = [];
-  if (now < goldenRushUntil) active.push('✨ GOLDEN RUSH ' + Math.ceil((goldenRushUntil - now) / 1000) + 's');
-  if (now < balloonSlowUntil) active.push('⏱ SLOW-MO ' + Math.ceil((balloonSlowUntil - now) / 1000) + 's');
-  if (now < fireRapidUntil) active.push('🔥 RAPID ' + Math.ceil((fireRapidUntil - now) / 1000) + 's');
+  if (now < goldenRushUntil) active.push('✨ ' + t('pw_golden') + ' ' + Math.ceil((goldenRushUntil - now) / 1000) + 's');
+  if (now < balloonSlowUntil) active.push('⏱ ' + t('pw_slow') + ' ' + Math.ceil((balloonSlowUntil - now) / 1000) + 's');
+  if (now < fireRapidUntil) active.push('🔥 ' + t('pw_rapid') + ' ' + Math.ceil((fireRapidUntil - now) / 1000) + 's');
   el.innerHTML = active.map(a => '<div style="background:rgba(5,5,15,0.8);border:1px solid #ff6a00;padding:3px 8px;margin-bottom:4px;color:#fff">' + a + '</div>').join('');
   el.style.display = active.length ? 'block' : 'none';
 }
@@ -4584,19 +6309,24 @@ function updateLevelHud() {
     const left = Math.max(0, Math.ceil((level2EndAt - performance.now()) / 1000));
     const mm = Math.floor(left / 60), ss = String(left % 60).padStart(2, '0');
     el.style.borderColor = '#ff2d55';
-    el.innerHTML = `⚡ LEVEL 2 · BALLOON FRENZY &nbsp; <span style="color:#ffd200">${mm}:${ss}</span> &nbsp; ${level2Score}/${LEVEL2_TARGET}`;
+    el.innerHTML = `${t('level_2')} &nbsp; <span style="color:#ffd200">${mm}:${ss}</span> &nbsp; ${level2Score}/${LEVEL2_TARGET}`;
     el.style.display = 'block';
   } else if (level3Active) {
     el.style.borderColor = '#ff2d55';
-    el.innerHTML = '👑 LEVEL 3 · BIG TOP BOSS';
+    el.innerHTML = t('level_3');
     el.style.display = 'block';
   } else if (level4Active) {
     el.style.borderColor = '#8ac640';
-    el.innerHTML = '🎯 ' + t('level_4');
+    let l4Extra = '';
+    if (zc.l4EndAt) {
+      const left = Math.max(0, Math.ceil((zc.l4EndAt - performance.now()) / 1000));
+      l4Extra = ` &nbsp; <span style="color:#ffd200">${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}</span> &nbsp; 🎈 ${zc.l4Pops}`;
+    }
+    el.innerHTML = '🎯 ' + t('level_4') + l4Extra;
     el.style.display = 'block';
   } else if (currentLevel === 1) {
     el.style.borderColor = '#ff6a00';
-    el.innerHTML = 'LEVEL 1 · CIRCUS BLASTER' + (level2Unlocked ? ' &nbsp;<span style="color:#38d66b">— L2 unlocked! Pause → Level 2</span>' : '');
+    el.innerHTML = t('level_1') + (level2Unlocked ? ' &nbsp;<span style="color:#38d66b">' + t('l2_unlocked') + '</span>' : '');
     el.style.display = 'block';
   } else { el.style.display = 'none'; }
 }
@@ -4604,6 +6334,7 @@ function updateLevelHud() {
 function unlockLevel2() {
   if (level2Active || currentLevel !== 1) return; // advance only once, from L1
   level2Unlocked = true;
+  zcCrowdBig();
   addKillFeed(t('dyn_l1_cleared_kf'));
   showPrompt(t('dyn_l1_cleared'), 2400);
   flashScreen(0xff2d55, 0.3);
@@ -4695,6 +6426,8 @@ function damageBoss(w) {
   setTimeout(() => { if (boss) boss.mat.emissiveIntensity = 0.4; }, 80);
   boss.mesh.scale.setScalar(0.94); setTimeout(() => { if (boss) boss.mesh.scale.setScalar(1); }, 70);
   spawnConfetti(boss.mesh.position.clone(), 6, 0.2);
+  zcHitMarker(false); zcShake(0.012);
+  zcPopText(boss.mesh.position, '−' + dmg, '#ff8a00', false);
   addScore((w && w.pts) || 10);
   // Phase colors as it weakens: red → orange → gold.
   const frac = boss.hp / boss.maxHp;
@@ -4712,7 +6445,7 @@ function defeatBoss() {
   boss = null; level3Active = false;
   // Big pop: confetti storm + crowd cheer.
   for (let k = 0; k < 10; k++) spawnConfetti(pos.clone().add(new THREE.Vector3((Math.random()-0.5)*4, (Math.random()-0.5)*4, (Math.random()-0.5)*4)), 26, 0.35);
-  cheerCrowd(); flashScreen(0xffd200, 0.4);
+  cheerCrowd(); zcCrowdBig(); flashScreen(0xffd200, 0.4); zcShake(0.07);
   addScore(500);
   // Reward +500 balloons to the bank (batched, then run prize-award checks once).
   wallet.earned += 500;
@@ -4763,12 +6496,13 @@ function updateBossHud() {
     el.id = '__boss';
     el.style.cssText = 'position:fixed;top:44px;left:50%;transform:translateX(-50%);z-index:929;'
       + 'pointer-events:none;width:340px;max-width:70vw;text-align:center;font-family:"Barlow Condensed",sans-serif;';
-    el.innerHTML = '<div style="font-weight:800;letter-spacing:2px;color:#ff2d55;font-size:14px;margin-bottom:3px">👑 BIG TOP BOSS</div>'
+    el.innerHTML = '<div style="font-weight:800;letter-spacing:2px;color:#ff2d55;font-size:14px;margin-bottom:3px" id="__bossname"></div>'
       + '<div style="height:14px;background:rgba(5,5,15,0.8);border:1px solid #ff2d55"><div id="__bosshp" style="height:100%;width:100%;background:linear-gradient(90deg,#ff2d55,#ffcf3f)"></div></div>';
     document.body.appendChild(el);
   }
   if (!level3Active || !boss) { el.style.display = 'none'; return; }
   el.style.display = 'block';
+  document.getElementById('__bossname').textContent = t('boss_name');
   document.getElementById('__bosshp').style.width = Math.max(0, (boss.hp / boss.maxHp) * 100) + '%';
 }
 
@@ -4796,6 +6530,7 @@ function startLevel4() {
   closePause();
   flashScreen(0x8ac640, 0.35);
   showPrompt(t('dyn_l4_go'), 3800);
+  zcStartFinaleTimer();
   updateLevelHud();
   LunaAnalytics.track('level4_start', {});
 }
@@ -4816,7 +6551,7 @@ function showBigMessage(title, sub, onClose) {
     + '<div style="font-size:30px;font-weight:800;letter-spacing:2px;color:#ffd200">' + title + '</div>'
     + '<div style="font-family:\'Source Sans 3\',sans-serif;font-size:14px;color:#cdd3ea;margin:10px 0 18px;line-height:1.5">' + sub + '</div>'
     + '<button id="__bigmsg-btn" style="width:100%;background:#ff6a00;color:#fff;border:none;padding:12px;'
-    + 'font-family:\'Barlow Condensed\',sans-serif;font-weight:800;font-size:16px;letter-spacing:2px;cursor:pointer">CONTINUE</button></div>';
+    + 'font-family:\'Barlow Condensed\',sans-serif;font-weight:800;font-size:16px;letter-spacing:2px;cursor:pointer">' + t('continue_btn') + '</button></div>';
   el.style.display = 'flex';
   // Robust for both mouse (click) and touch (touchend) — guard against the
   // touchend + synthesized-click firing onClose twice.
@@ -4853,6 +6588,12 @@ function upgradeSeatedAudience() {
   if (typeof STUDIO_AUTHORING_MODE !== 'undefined' && STUDIO_AUTHORING_MODE) return;
   seatedSpectators.length = 0; // reset animation registry on scene (re)build
   const files = ['models/crowd/seated-a.glb', 'models/crowd/seated-b.glb', 'models/crowd/seated-c.glb', 'models/crowd/seated-d.glb'];
+  if (USE_SHOW_CROWD) {
+    // The jointed show crowd (zcBuildCrowd) replaces the static statues: just
+    // hide the 40 authored abstract seats and skip the ~4 MB of statue GLBs.
+    for (let i = 0; i < 40; i++) hideAuthoredSeat(`crowd-proc-${String(i).padStart(2, '0')}`, 0);
+    return;
+  }
   const loader = new THREE.GLTFLoader();
   const gltfs = [];
   let done = 0;
@@ -4928,6 +6669,16 @@ function upgradeSeatedAudience() {
 
     // Scene doc applies asynchronously and may re-show the authored mesh; keep
     // it hidden for a few seconds.
+    [800, 2000, 4000, 7000].forEach((delay) => setTimeout(() => hideSeatMeshes(target), delay));
+  }
+
+  function hideAuthoredSeat(id, attempt) {
+    const target = editableObjects.get(id);
+    if (!target || new THREE.Box3().setFromObject(target).isEmpty()) {
+      if (attempt < 40) setTimeout(() => hideAuthoredSeat(id, attempt + 1), 400);
+      return;
+    }
+    hideSeatMeshes(target);
     [800, 2000, 4000, 7000].forEach((delay) => setTimeout(() => hideSeatMeshes(target), delay));
   }
 
@@ -5820,6 +7571,7 @@ function respawnBalloon(bo) {
     bo.mesh.scale.setScalar(0.85);
     bo.mesh.visible = true;
     bo.alive = true;
+    zcOnRespawn(bo);
     return;
   }
   if (!applyRegisteredObjectTransform(bo.editorId)) {
@@ -5829,10 +7581,13 @@ function respawnBalloon(bo) {
     bo.mesh.visible = true;
   }
   bo.alive=true;
+  zcOnRespawn(bo);
 }
 
 function popBalloon(bo, weapon) {
   if (!bo.alive) return;
+  if (bo.jammer && zcPopJammer(bo, weapon)) return;
+  let zcPts = weapon.pts; // total awarded for this pop, for the on-target pop-up
   if (MP.enabled) MP.onLocalPop(bo, weapon);
   if (!(MP.enabled && MP.remotePopInProgress())) earnBalloon();
   bo.alive = false;
@@ -5869,14 +7624,14 @@ function popBalloon(bo, weapon) {
   comboExpireAt = nowMs + 2500;
   if (comboCount >= 2) {
     const bonus = Math.min(comboCount, 10) * 5;
-    addScore(bonus);
+    addScore(bonus); zcPts += bonus;
     showComboText(comboCount, bonus);
     Sound.sfx.combo(comboCount);
   }
   // Bonus round: a 6+ combo ignites GOLDEN RUSH — every balloon pays 5x for 12s.
   if (comboCount === 6 && performance.now() >= goldenRushUntil) {
     goldenRushUntil = performance.now() + 12000;
-    flashScreen(0xffd200, 0.35); cheerCrowd(); Sound.sfx.golden();
+    flashScreen(0xffd200, 0.35); cheerCrowd(); zcCrowdBig(); Sound.sfx.golden();
     showPrompt(t('dyn_golden_rush'), 3500);
     addKillFeed(t('dyn_golden_rush_kf'));
   }
@@ -5884,12 +7639,14 @@ function popBalloon(bo, weapon) {
   // Golden balloon bonus (or during Golden Rush): 5x points + extra sparkle.
   if (bo.mesh.userData.golden || performance.now() < goldenRushUntil) {
     const gb = weapon.pts * 4;
-    addScore(gb);
+    addScore(gb); zcPts += gb;
     spawnConfetti(pos, 22, 0.28);
     showFloatingScore(gb);
     addKillFeed(t('dyn_golden_balloon_kf', {n: gb}));
     Sound.sfx.golden();
   }
+
+  zcOnPop(pos, zcPts, bo.mesh.userData.golden || performance.now() < goldenRushUntil);
 
   // Power-up balloon: grant its effect.
   if (bo.mesh.userData.power) { activatePowerup(bo.mesh.userData.power, pos); }
@@ -6211,7 +7968,7 @@ let __touchSetup = false;
 function setupTouchControls() {
   if (!IS_TOUCH || __touchSetup) return;
   __touchSetup = true;
-  document.body.classList.add('touch');
+  document.body.classList.add('touch', 'rotate-ok');
 
   // If the browser ever drops fullscreen (e.g. on a rotation), the next tap
   // during play re-enters it, hiding the tab/address bar again. No-op once
@@ -6232,11 +7989,11 @@ function setupTouchControls() {
   const JOY_R = 52;
 
   // Movement joystick — appears wherever the left thumb lands.
-  let moveId = null, moveOx = 0, moveOy = 0;
+  let moveId = null, moveOx = 0, moveOy = 0, moveAt = 0, moveTravel = 0;
   moveZone.addEventListener('touchstart', (e) => {
     if (moveId !== null) return;
     const t = e.changedTouches[0];
-    moveId = t.identifier; moveOx = t.clientX; moveOy = t.clientY;
+    moveId = t.identifier; moveOx = t.clientX; moveOy = t.clientY; moveAt = performance.now(); moveTravel = 0;
     joy.style.left = moveOx + 'px'; joy.style.top = moveOy + 'px';
     knob.style.left = '50%'; knob.style.top = '50%'; joy.classList.add('on');
     e.preventDefault();
@@ -6246,6 +8003,7 @@ function setupTouchControls() {
       if (t.identifier !== moveId) continue;
       let dx = t.clientX - moveOx, dy = t.clientY - moveOy;
       const len = Math.hypot(dx, dy);
+      moveTravel = Math.max(moveTravel, len);
       if (len > JOY_R) { dx = dx / len * JOY_R; dy = dy / len * JOY_R; }
       knob.style.left = (50 + dx / JOY_R * 50) + '%';
       knob.style.top  = (50 + dy / JOY_R * 50) + '%';
@@ -6256,6 +8014,8 @@ function setupTouchControls() {
   const endMove = (e) => {
     for (const t of e.changedTouches) {
       if (t.identifier !== moveId) continue;
+      // a quick still touch on the walking side is also a tap-to-shoot
+      if (e.type === 'touchend' && performance.now() - moveAt < 280 && moveTravel < 12) zcTapFire(moveOx, moveOy);
       moveId = null; touchMove.x = 0; touchMove.y = 0; joy.classList.remove('on');
     }
   };
@@ -6264,21 +8024,29 @@ function setupTouchControls() {
 
   // Look drag — right thumb pans yaw/pitch.
   let lookId = null, lookX = 0, lookY = 0;
+  let tapX = 0, tapY = 0, tapAt = 0, tapMoved = 0; // a short, still touch is a tap-to-shoot
   lookZone.addEventListener('touchstart', (e) => {
     if (lookId !== null) return;
     const t = e.changedTouches[0];
     lookId = t.identifier; lookX = t.clientX; lookY = t.clientY; e.preventDefault();
+    tapX = t.clientX; tapY = t.clientY; tapAt = performance.now(); tapMoved = 0;
   }, { passive: false });
   lookZone.addEventListener('touchmove', (e) => {
     for (const t of e.changedTouches) {
       if (t.identifier !== lookId) continue;
       const s = 0.006;
+      tapMoved += Math.abs(t.clientX - lookX) + Math.abs(t.clientY - lookY);
       yaw -= (t.clientX - lookX) * s;
       pitch = Math.max(-1.4, Math.min(1.4, pitch - (t.clientY - lookY) * s));
       lookX = t.clientX; lookY = t.clientY; e.preventDefault();
     }
   }, { passive: false });
   const endLook = (e) => { for (const t of e.changedTouches) if (t.identifier === lookId) lookId = null; };
+  lookZone.addEventListener('touchend', (e) => {
+    for (const touch of e.changedTouches) {
+      if (touch.identifier === lookId && performance.now() - tapAt < 300 && tapMoved < 16) zcTapFire(tapX, tapY);
+    }
+  });
   lookZone.addEventListener('touchend', endLook);
   lookZone.addEventListener('touchcancel', endLook);
 
@@ -6289,7 +8057,7 @@ function setupTouchControls() {
     if (onEnd) { el.addEventListener('touchend', (e) => { e.preventDefault(); onEnd(); }); el.addEventListener('touchcancel', onEnd); }
   };
   bind('tc-fire',
-    () => { if (gameActive && !infoOpen && !pauseOpen) { mouseDown = true; shoot(); } },
+    () => { if (gameActive && !infoOpen && !pauseOpen) { mouseDown = true; zcTouchFire(); } },
     () => { mouseDown = false; });
   bind('tc-jump', () => { if (gameActive && !infoOpen && !pauseOpen && grounded) { verticalVel = JUMP_SPEED; grounded = false; } });
   bind('tc-pickup', () => { if (gameActive && !pauseOpen) tryPickup(); });
@@ -6348,7 +8116,7 @@ function pickupWeapon(obj) {
   trySwitch(idx); // grabbing a device always equips it
   flashScreen(obj.w.accent, 0.35);
   showPrompt(t('dyn_picked_up', {name: obj.w.name}), 2200);
-  addKillFeed(obj.w.name + ' equipped');
+  addKillFeed(t('kf_equipped', {name: obj.w.name}));
 }
 
 function dropWeapon() {
@@ -6399,7 +8167,7 @@ function dropWeapon() {
     document.getElementById('weapon-info').style.display = 'none';
   }
   showPrompt(t('dyn_dropped', {name: obj.w.name}), 1600);
-  addKillFeed(obj.w.name + ' dropped');
+  addKillFeed(t('kf_dropped', {name: obj.w.name}));
 }
 
 function trySwitch(idx) {
@@ -6450,10 +8218,13 @@ function shoot() {
   if (currentWeapon<0) { showPrompt(t('dyn_press_e_weapon'),1800); return; }
   const w = WEAPONS[currentWeapon];
   const now = Date.now();
-  const rate = (performance.now() < fireRapidUntil) ? w.fireRate * 0.4 : w.fireRate;
+  let rate = (performance.now() < fireRapidUntil) ? w.fireRate * 0.4 : w.fireRate;
+  if (IS_TOUCH && w.effect !== 'rapid') rate *= 0.55; // tapping should feel snappy on phones
   if (now-lastShot < rate) return;
   lastShot = now;
   Sound.sfx.shoot();
+  zc.shots++;
+  if (w.effect === 'laser' || w.effect === 'ring') zcStarRay();
 
   // Kick animation
   if (heldMesh) {
@@ -6567,7 +8338,7 @@ function fireRing(w) {
     if (hitQ) scanQR(hitQ);
   }
   createRingWave(center, w.areaR, w.projColor);
-  addKillFeed(t('dyn_ring_shockwave') + (closest ? ' +'+w.pts+'pts!' : ''));
+  addKillFeed(t('dyn_ring_shockwave') + (closest ? t('pts_gain', {n: w.pts}) : ''));
 }
 
 function fireCryo(w) {
@@ -6600,6 +8371,7 @@ function explodeCryo(pos, w) {
   }
   createRingWave(pos, w.areaR, w.projColor);
   createRingWave(pos, w.areaR*0.4, 0xffffff);
+  zcShake(0.022);
   const fl=new THREE.PointLight(0x88ffff,12,8); fl.position.copy(pos); scene.add(fl);
   setTimeout(()=>scene.remove(fl),250);
 
@@ -6665,12 +8437,8 @@ function scanQR(qObj) {
   },20);
 
   // Fill popup with product info
-  document.getElementById('ip-title').textContent = w.fullName;
-  document.getElementById('prod-desc').textContent = w.desc;
-  const specEl = document.getElementById('prod-specs');
-  specEl.innerHTML = '';
-  w.specs.forEach(s => { const li = document.createElement('li'); li.textContent = s; specEl.appendChild(li); });
-  document.getElementById('prod-effect').textContent = w.effectDesc;
+  lastScannedProduct = w;
+  fillProductPanel(w);
   document.getElementById('prod-visit-btn').onclick = () => {
     LunaAnalytics.track('product_visit', { product: w.name, url: w.url });
     window.open(w.url, '_blank', 'noopener,noreferrer');
@@ -6713,13 +8481,14 @@ function updateRfidHud() {
       + 'font-family:"Barlow Condensed",sans-serif;font-weight:800;letter-spacing:1px;font-size:15px;'
       + 'padding:7px 14px;border:1px solid #00a651;color:#fff;background:rgba(5,5,15,0.85);';
     document.body.appendChild(el);
+    el.addEventListener('touchstart', (e) => { e.preventDefault(); rfidBulkRead(); }, { passive: false });
   }
   if (!rfidUnlocked) { el.style.display = 'none'; return; }
   el.style.display = 'block';
   const ready = performance.now() >= rfidCooldownUntil;
   el.innerHTML = ready
-    ? '📡 RFID BULK READ <span style="color:#38d66b">READY</span> — R'
-    : '📡 RFID <span style="color:#ff6a00">CHARGING…</span>';
+    ? t('rfid_ready')
+    : t('rfid_charging');
 }
 function rfidBulkRead() {
   const now = performance.now();
@@ -6832,8 +8601,8 @@ function awardPrize(key) {
   LunaAnalytics.track('prize_won', { prize: p.label });
   cheerCrowd();
   spawnConfetti(camera.position.clone().add(new THREE.Vector3(0, 0.5, -2)), 24, 0.25);
-  showPrompt(t('dyn_prize_won', {emoji: p.emoji, label: p.label.toUpperCase(), coupon: rec.coupon}), 6500);
-  addKillFeed(t('dyn_prize_won_kf', {label: p.label, coupon: rec.coupon}));
+  showPrompt(t('dyn_prize_won', {emoji: p.emoji, label: upperLocal(prizeName(key)), coupon: rec.coupon}), 6500);
+  addKillFeed(t('dyn_prize_won_kf', {label: prizeName(key), coupon: rec.coupon}));
   saveWallet();
 }
 // Back-compat alias.
@@ -6888,7 +8657,7 @@ function refreshWalletUi() {
   const bbs = document.getElementById('buy-balloons-sub');
   if (bb) {
     if (score >= 1000) { bb.disabled = false; bb.textContent = t('buy_ready'); if (bbs) bbs.textContent = t('buy_ready_sub'); }
-    else { bb.disabled = true; bb.textContent = `NEED ${1000 - score}`; if (bbs) bbs.textContent = t('buy_need_sub'); }
+    else { bb.disabled = true; bb.textContent = t('need_n', {n: 1000 - score}); if (bbs) bbs.textContent = t('buy_need_sub'); }
   }
   for (const p of Object.values(PRIZES)) {
     const rec = wallet.prizes[p.key];
@@ -6897,7 +8666,7 @@ function refreshWalletUi() {
     if (!btn) continue;
     if (rec.claimed) { btn.disabled = true; btn.textContent = t('prize_claimed_btn'); if (sub) sub.textContent = t('prize_claimed_sub', {coupon: rec.coupon || ''}); }
     else if (rec.won) { btn.disabled = false; btn.textContent = t('prize_claim_btn'); if (sub) sub.textContent = t('prize_won_sub', {coupon: rec.coupon || ''}); }
-    else { btn.disabled = true; btn.textContent = `${Math.min(wallet.earned, p.goal)}/${p.goal}`; if (sub) sub.textContent = t('prize_locked_sub', {label: p.label.toLowerCase(), goal: p.goal}); }
+    else { btn.disabled = true; btn.textContent = `${Math.min(wallet.earned, p.goal)}/${p.goal}`; if (sub) sub.textContent = t('prize_locked_sub', {label: prizeName(p.key), goal: p.goal}); }
   }
 }
 function armThenRedeem(key) {
@@ -6925,12 +8694,14 @@ function openPause() {
   pauseOpen = true;
   mouseDown = false;
   refreshWalletUi();
+  document.body.classList.add('zc-menu-open');
   document.getElementById('pause-overlay').style.display = 'flex';
   if (document.pointerLockElement) document.exitPointerLock();
 }
 function closePause() {
   if (!pauseOpen) return;
   pauseOpen = false;
+  document.body.classList.remove('zc-menu-open');
   document.getElementById('pause-overlay').style.display = 'none';
   if (gameActive) {
     const canvas = document.getElementById('game-canvas');
@@ -7054,8 +8825,8 @@ function awardPrizeAndAutoShip(key, cb) {
     rec.claimed = true; saveWallet(); refreshWalletUi();
     LunaAnalytics.track('prize_claimed', { prize: PRIZES[key].label, auto: true });
     const addr = [ship.address, ship.city, ship.postcode, ship.country].filter(Boolean).join(', ');
-    showBigMessage(t('autoship_title', { emoji: PRIZES[key].emoji, label: PRIZES[key].label.toUpperCase() }),
-      t('autoship_sub', { label: PRIZES[key].label, addr }), () => { if (cb) cb(); });
+    showBigMessage(t('autoship_title', { emoji: PRIZES[key].emoji, label: upperLocal(prizeName(key)) }),
+      t('autoship_sub', { label: prizeName(key), addr }), () => { if (cb) cb(); });
   } else {
     // No address on file yet — collect it once, then continue.
     awardPrizeAndClaim(key, cb);
@@ -7095,7 +8866,7 @@ document.getElementById('prize-form').addEventListener('submit', async (e) => {
   btn.disabled = false; btn.textContent = t('pm_submit');
   document.getElementById('prize-form').style.display = 'none';
   document.getElementById('pm-done-sub').innerHTML = t('pm_done_ship', {
-    prize: claim.prize,
+    prize: (() => { const pz = Object.values(PRIZES).find((x) => x.label === claim.prize); return pz ? prizeName(pz.key) : claim.prize; })(),
     addr: claim.address + ', ' + claim.city + ' ' + claim.postcode + ', ' + claim.country,
     coupon: claim.coupon,
   });
@@ -7239,7 +9010,7 @@ function addKillFeed(txt) {
 
 function showFloatingScore(pts) {
   // Show brief message near center
-  addKillFeed('+'+pts+(pts>=25?' PRECISION!':''));
+  addKillFeed('+'+pts+(pts>=25?t('precision'):''));
 }
 
 // ═══════════════════════════════════════════════
@@ -7267,6 +9038,8 @@ function updateGame(delta, simTime) {
     tickLevel2();
     tickLevel3();
     updatePowerupHud();
+    zcTick(delta);
+    zcCrowdTick(delta, simTime, false);
     for (const s of circusSpotlights) {
       const a = simTime * s.speed + s.phase;
       s.light.target.position.set(Math.cos(a) * s.radius, 0, Math.sin(a) * s.radius);
@@ -7279,6 +9052,11 @@ function updateGame(delta, simTime) {
   camera.rotation.order='YXZ';
   camera.rotation.y=yaw;
   camera.rotation.x=pitch;
+  if (zc.shake > 0.0008) {
+    camera.rotation.z = (Math.random() - 0.5) * zc.shake;
+    camera.rotation.x += (Math.random() - 0.5) * zc.shake * 0.6;
+    zc.shake *= 0.86;
+  } else if (zc.shake) { zc.shake = 0; camera.rotation.z = 0; }
 
   // Player move
   if((isLocked || pointerLockFallback || IS_TOUCH) && gameActive && !infoOpen && !pauseOpen) movePlayer(delta);
@@ -7287,8 +9065,8 @@ function updateGame(delta, simTime) {
   if (MP.enabled) MP.tick(delta, simTime);
 
   // Auto-fire for rapid weapon
-  if(mouseDown && gameActive && !infoOpen && !pauseOpen && currentWeapon>=0 && WEAPONS[currentWeapon].effect==='rapid') {
-    shoot();
+  if(mouseDown && gameActive && !infoOpen && !pauseOpen && currentWeapon>=0 && (IS_TOUCH || WEAPONS[currentWeapon].effect==='rapid')) {
+    if (IS_TOUCH) zcTouchFire(); else shoot();
   }
 
   // Persistent authored visuals stay frozen until gameplay actually begins.
@@ -7298,7 +9076,7 @@ function updateGame(delta, simTime) {
     o.mesh.position.y = o.baseY+Math.sin(simTime*1.6+o.bob)*0.1;
     o.mesh.rotation.y += 0.018;
     o.pl.intensity = 0.6+Math.sin(simTime*2.5+o.bob)*0.35;
-    if(camera.position.distanceTo(o.mesh.position)<2.6) showPrompt(t('dyn_press_e_pickup', {name: o.w.name}),80);
+    if(camera.position.distanceTo(o.mesh.position)<2.6) { if (IS_TOUCH && !pauseOpen && !infoOpen) pickupWeapon(o); else showPrompt(t('dyn_press_e_pickup', {name: o.w.name}),80); }
   });
 
   if (gameActive) balloons.forEach(b=>{
