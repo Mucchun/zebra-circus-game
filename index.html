@@ -1275,6 +1275,21 @@ body.touch .tut-touch { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 
 /* pause-menu button colours (need the extra id to beat `#pause-actions button`) */
 #pause-actions #save-progress-btn { background: var(--k-teal) !important; color: #fff !important; box-shadow: 0 5px 0 var(--k-teal-d), 0 5px 0 3px var(--k-ink) !important; }
 #pause-actions #exit-btn { background: var(--k-red) !important; color: #fff !important; box-shadow: 0 5px 0 var(--k-red-d), 0 5px 0 3px var(--k-ink) !important; }
+/* ── INTRO CINEMATIC (plays over the scene build after sign-in) ── */
+#zc-intro { position: fixed; inset: 0; z-index: 5000; display: none; background: #120707; overflow: hidden;
+  opacity: 0; transition: opacity .45s ease; }
+#zc-intro.on { opacity: 1; }
+#zc-intro.out { opacity: 0; pointer-events: none; transition: opacity 1.25s cubic-bezier(.4,0,.2,1); }
+#zc-intro video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #120707;
+  transform: scale(1); filter: none; transition: transform 1.4s cubic-bezier(.4,0,.2,1), filter 1.25s ease; }
+#zc-intro.out video { transform: scale(1.09); filter: blur(7px) brightness(1.25); }
+#zc-intro-skip { position: absolute; right: max(18px, env(safe-area-inset-right)); bottom: max(18px, env(safe-area-inset-bottom));
+  font-family: var(--k-display, Arial, sans-serif); font-size: 15px; letter-spacing: 1px; color: #fff;
+  background: rgba(20,10,30,.55); border: 2px solid rgba(255,255,255,.75); border-radius: 999px; padding: 8px 18px;
+  cursor: pointer; opacity: 0; transition: opacity .4s ease .9s, background .15s; }
+#zc-intro.on #zc-intro-skip { opacity: .9; }
+#zc-intro-skip:hover { background: rgba(20,10,30,.85); }
+#zc-intro.out #zc-intro-skip { opacity: 0; transition: opacity .2s; }
 </style>
 </head>
 <body>
@@ -1358,6 +1373,11 @@ body.touch .tut-touch { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 
     </form>
     </div>
   </div>
+</div>
+
+<div id="zc-intro" aria-hidden="true">
+  <video id="zc-intro-video" playsinline webkit-playsinline preload="none" poster="video/intro-poster.jpg"></video>
+  <button type="button" id="zc-intro-skip" data-i18n="intro_skip">SKIP ▸▸</button>
 </div>
 
 <div id="tutorial-overlay" style="display:none;">
@@ -2715,6 +2735,7 @@ document.getElementById('wb-play').addEventListener('click', () => {
   window.__zebraPlayer = saved;
   if (typeof LunaAnalytics !== 'undefined') LunaAnalytics.track('player_returning', {});
   document.getElementById('register-screen').style.display = 'none';
+  zcIntroPlay();
   startGame();
 });
 document.getElementById('wb-switch').addEventListener('click', () => showSignInForm());
@@ -2761,6 +2782,7 @@ document.getElementById('reg-form').addEventListener('submit', async (e) => {
 
   const btn = document.getElementById('reg-submit');
   btn.disabled = true; btn.textContent = 'STARTING…';
+  zcIntroPlay(); // start inside the click so the clip may play with sound
 
   // Save this login to the leads DB, and resend any earlier logins that failed
   // to reach the API — so every sign-in is captured (never blocks play).
@@ -4542,6 +4564,7 @@ const I18N = {
     ss_presents: 'presents',
     ss_banner: 'Pop barcode balloons, scan the QR boards and meet the Zebra devices.',
     play_now: 'PLAY NOW',
+    intro_skip: 'SKIP ▸▸',
     reg_title: 'PLAYER SIGN-IN',
     reg_sub: 'Enter your details to start — and to claim your Zebra reward.',
     wb_title: 'WELCOME BACK!',
@@ -4679,6 +4702,7 @@ const I18N = {
     ss_presents: 'sunar',
     ss_banner: 'Barkodlu balonları patlat, QR panolarını tara ve Zebra cihazlarıyla tanış.',
     play_now: 'OYNA',
+    intro_skip: 'GEÇ ▸▸',
     reg_title: 'OYUNCU GİRİŞİ',
     reg_sub: 'Başlamak ve Zebra ödülünüzü almak için bilgilerinizi girin.',
     wb_title: 'TEKRAR HOŞ GELDİN!',
@@ -5741,6 +5765,68 @@ function dismissTutorial() {
   flushPendingClaims(); // resend any prize claims that failed to reach the API
   updateLevelHud();
   Sound.resume(); Sound.startMusic();
+}
+
+// ── Intro cinematic ───────────────────────────────────────────────────────
+// Plays full-screen right after sign-in while startGame() builds the scene
+// underneath, then dissolves into the "How to play" card. Game-only: a no-op
+// in the Studio editor and in silent/test boots. Never blocks play: any
+// playback problem (or SKIP / Esc) just ends it.
+const ZC_INTRO_SRC = 'video/intro.mp4';
+const ZC_INTRO_FADE_S = 1.1; // start dissolving this long before the clip ends
+let zcIntroState = null;
+function zcIntroPlay() {
+  if (STUDIO_AUTHORING_MODE || window._silent || zcIntroState) return;
+  const wrap = document.getElementById('zc-intro');
+  const vid = document.getElementById('zc-intro-video');
+  if (!wrap || !vid || typeof vid.play !== 'function') return;
+  const st = zcIntroState = { done: false, timers: [] };
+  const later = (fn, ms) => st.timers.push(setTimeout(fn, ms));
+  const finish = () => {
+    if (st.done) return;
+    st.done = true;
+    st.timers.forEach(clearTimeout);
+    vid.removeEventListener('timeupdate', onTime);
+    window.removeEventListener('keydown', onKey, true);
+    wrap.classList.add('out');
+    // Ramp the clip's audio down with the picture.
+    const v0 = vid.volume, t0 = performance.now();
+    const ramp = () => {
+      const k = Math.min(1, (performance.now() - t0) / 1000);
+      try { vid.volume = v0 * (1 - k); } catch (_) {}
+      if (k < 1) requestAnimationFrame(ramp);
+    };
+    requestAnimationFrame(ramp);
+    setTimeout(() => {
+      wrap.style.display = 'none';
+      wrap.classList.remove('on', 'out');
+      try { vid.pause(); vid.removeAttribute('src'); vid.load(); } catch (_) {}
+      zcIntroState = null;
+    }, 1300);
+  };
+  const onTime = () => {
+    if (vid.duration && vid.duration - vid.currentTime <= ZC_INTRO_FADE_S) finish();
+  };
+  const onKey = (e) => { if (e.code === 'Escape') finish(); };
+  vid.addEventListener('timeupdate', onTime);
+  vid.addEventListener('ended', finish, { once: true });
+  vid.addEventListener('error', finish, { once: true });
+  vid.addEventListener('playing', () => later(finish, ((vid.duration || 16) + 4) * 1000), { once: true });
+  window.addEventListener('keydown', onKey, true);
+  document.getElementById('zc-intro-skip').onclick = finish;
+  later(() => { if (vid.readyState < 2) finish(); }, 6000); // never loaded: don't hold the player up
+  vid.muted = Sound.isMuted();
+  vid.volume = 0.9;
+  vid.src = ZC_INTRO_SRC;
+  wrap.style.display = 'block';
+  requestAnimationFrame(() => requestAnimationFrame(() => wrap.classList.add('on')));
+  const tryPlay = vid.play();
+  if (tryPlay && tryPlay.catch) tryPlay.catch(() => {
+    // Autoplay with sound refused (no fresh user gesture): play it silently.
+    vid.muted = true;
+    const again = vid.play();
+    if (again && again.catch) again.catch(finish);
+  });
 }
 
 // ── Save / load progress + exit ───────────────────────────────────────────
