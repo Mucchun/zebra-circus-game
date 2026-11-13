@@ -1214,6 +1214,67 @@ body { font-family: var(--k-body); background: var(--k-ink); }
   .zf-btns button { font-size: 14px !important; padding: 9px 6px !important; }
   #zf-explore { font-size: 16px !important; padding: 11px 6px !important; }
 }
+
+/* ── Easy mobile play ── */
+#tc-look-zone { inset: 0; width: auto; height: auto; }          /* drag anywhere to look, tap anywhere to shoot */
+body.touch #tc-pickup, body.touch .tc-hint { display: none; }    /* scanners are picked up by walking into them */
+body.touch #rotate-hint { display: none !important; }            /* portrait is fully supported */
+#tc-fire { background: var(--k-red) !important; color: #fff; box-shadow: 0 5px 0 var(--k-red-d), 0 5px 0 3px var(--k-ink); opacity: 0.92; }
+#tc-jump { background: var(--k-plum) !important; color: #fff; box-shadow: 0 4px 0 rgba(0,0,0,0.5); opacity: 0.9; }
+#tc-joy { border: 3px solid var(--k-ink); background: rgba(50,26,74,0.45); }
+#tc-knob { background: var(--k-gold); border: 3px solid var(--k-ink); }
+body.touch #__rfid { pointer-events: auto !important; z-index: 946 !important; bottom: 190px !important; }
+.zc-tap { position: fixed; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%; border: 4px solid #fff;
+  pointer-events: none; z-index: 947; animation: zcTap 0.32s ease-out forwards; box-shadow: 0 0 0 2px var(--k-ink), inset 0 0 0 2px var(--k-ink); }
+@keyframes zcTap { 0% { transform: scale(0.35); opacity: 1; } 100% { transform: scale(1.15); opacity: 0; } }
+.tut-touch { display: none; }
+body.touch #tutorial-overlay .tut-controls { display: none; }
+body.touch .tut-touch { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 22px; margin-bottom: 22px; max-width: 92vw;
+  font-family: var(--k-body); font-weight: 800; font-size: 15px; color: var(--k-cream); }
+.tut-touch span { display: flex; align-items: center; gap: 8px; }
+.tut-touch i { font-style: normal; font-size: 22px; }
+@media (max-width: 720px), (max-height: 500px) {
+  body.touch .tut-touch { font-size: 12px; gap: 5px 14px; margin-bottom: 10px; }
+  .tut-touch i { font-size: 16px; }
+}
+/* Product panel must always fit the screen (short landscape phones especially). */
+#info-panel { max-height: calc(100dvh - 16px); overflow-y: auto; -webkit-overflow-scrolling: touch; }
+@media (max-width: 720px), (max-height: 500px) {
+  #info-panel { width: min(330px, 92vw); right: 8px; }
+  #info-panel-header { padding: 7px 12px 9px; } #info-panel-header .prod-title { font-size: 13.5px; }
+  #info-panel { background: linear-gradient(var(--k-ink), var(--k-ink)) 0 38px / 100% 4px no-repeat,
+      linear-gradient(var(--k-green), var(--k-green)) top / 100% 38px no-repeat, var(--k-cream) !important; }
+  #prod-body { padding: 9px 12px 12px; }
+  #prod-desc { font-size: 12px; margin-bottom: 6px; line-height: 1.35; }
+  #prod-specs { margin-bottom: 7px; } #prod-specs li { font-size: 11.5px; padding: 2px 0; }
+  #prod-effect { font-size: 11.5px; padding: 6px 9px; margin-bottom: 9px; }
+  #prod-visit-btn { font-size: 14px; padding: 9px; }
+  /* shop cards: text on its own line, price + button underneath */
+  .shop-card { flex-wrap: wrap; gap: 6px 12px; padding: 9px 11px; }
+  .shop-card > div:first-child { flex: 1 1 100%; }
+  .shop-card .sc-cost { margin-left: auto; }
+}
+@media (max-height: 500px) {
+  /* landscape phones: two columns of specs so the panel stays short */
+  #prod-specs { display: grid; grid-template-columns: 1fr 1fr; column-gap: 12px; }
+  #info-panel { width: min(430px, 60vw); }
+}
+/* Portrait phones: stack the how-to cards 2×2, keep everything on screen */
+@media (orientation: portrait) and (max-width: 720px) {
+  #tutorial-overlay .tut-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; padding: 0 12px; }
+  .tut-card { width: auto; min-width: 0; }
+  body.touch .tut-touch { grid-template-columns: 1fr; }
+  .ss-game-title { font-size: clamp(54px, 19vw, 96px); }
+  .ss-chips { max-width: 94vw; }
+  #tc-fire { width: 104px; height: 104px; right: 16px; bottom: 96px; font-size: 18px; }
+  #tc-jump { right: 26px; bottom: 214px; }
+  #zc-goals { width: 200px; }
+  #weapon-info { bottom: 66px; }
+  .zf-stats, .zf-prods { grid-template-columns: 1fr 1fr; }
+}
+/* pause-menu button colours (need the extra id to beat `#pause-actions button`) */
+#pause-actions #save-progress-btn { background: var(--k-teal) !important; color: #fff !important; box-shadow: 0 5px 0 var(--k-teal-d), 0 5px 0 3px var(--k-ink) !important; }
+#pause-actions #exit-btn { background: var(--k-red) !important; color: #fff !important; box-shadow: 0 5px 0 var(--k-red-d), 0 5px 0 3px var(--k-ink) !important; }
 </style>
 </head>
 <body>
@@ -1329,6 +1390,12 @@ body { font-family: var(--k-body); background: var(--k-ink); }
     <span><span class="k">P</span> &nbsp;<span data-i18n="ctrl_pause">Pause &amp; balloon shop</span></span>
     <span><span class="k">QR board</span> &nbsp;<span data-i18n="ctrl_qr">Shoot to learn</span></span>
   </div>
+  <div class="tut-touch">
+    <span><i>👆</i><b data-i18n="tt_tap">Tap a balloon to scan it</b></span>
+    <span><i>↔️</i><b data-i18n="tt_drag">Drag to look around</b></span>
+    <span><i>🕹️</i><b data-i18n="tt_walk">Left thumb to walk</b></span>
+    <span><i>📟</i><b data-i18n="tt_grab">Walk into a scanner to grab it</b></span>
+  </div>
   <button class="btn" id="tut-go-btn" data-i18n="lets_go">LET'S GO</button>
 </div>
 
@@ -1377,12 +1444,12 @@ body { font-family: var(--k-body); background: var(--k-ink); }
   <div id="tc-look-zone"></div>
   <div id="tc-move-zone"></div>
   <div id="tc-joy"><div id="tc-knob"></div></div>
-  <div id="tc-fire" class="tc-btn">FIRE</div>
-  <div id="tc-jump" class="tc-btn">JUMP</div>
-  <div id="tc-pickup" class="tc-btn">PICK<br>UP</div>
+  <div id="tc-fire" class="tc-btn" data-i18n="tc_fire">FIRE</div>
+  <div id="tc-jump" class="tc-btn" data-i18n="tc_jump">JUMP</div>
+  <div id="tc-pickup" class="tc-btn" data-i18n="tc_pick">PICK<br>UP</div>
 </div>
-<div class="tc-hint">Left: move · Right: look · buttons: fire / jump / pick up</div>
-<div id="rotate-hint"><div style="font-size:34px">📱↻</div><div style="font-size:20px;letter-spacing:1px">ROTATE YOUR DEVICE</div><div style="font-family:'Source Sans 3',sans-serif;font-size:13px;color:#9aa">Circus Blaster plays best in landscape.</div><button class="rh-play" id="rh-play" type="button">PLAY IN PORTRAIT →</button></div>
+<div class="tc-hint" data-i18n="tc_hint">Left: move · Right: look · buttons: fire / jump / pick up</div>
+<div id="rotate-hint"><div style="font-size:34px">📱↻</div><div style="font-size:20px;letter-spacing:1px" data-i18n="rot_title">ROTATE YOUR DEVICE</div><div style="font-family:'Source Sans 3',sans-serif;font-size:13px;color:#9aa" data-i18n="rot_sub">Circus Blaster plays best in landscape.</div><button class="rh-play" id="rh-play" type="button" data-i18n="rot_play">PLAY IN PORTRAIT →</button></div>
 <!-- iOS-only tip: Safari can't hide its tab/address bar from a web page, so
      suggest Add-to-Home-Screen for a true fullscreen (no-tabs) experience. -->
 <div id="ios-tip"><span>📲 <b>For fullscreen with no tabs:</b> tap Share <b>⬆</b> → “Add to Home Screen”.<br><span style="color:#dac493;font-style:italic">Sekmesiz tam ekran için: Paylaş ⬆ → “Ana Ekrana Ekle”.</span></span><button id="ios-tip-x" type="button" aria-label="close">✕</button></div>
@@ -1391,11 +1458,11 @@ body { font-family: var(--k-body); background: var(--k-ink); }
   <div id="hint"></div>
 
   <div id="score-box">
-    <div class="lbl">SCORE</div>
+    <div class="lbl" data-i18n="score">SCORE</div>
     <div id="score-value">0</div>
   </div>
   <div id="balloon-bank">🎈 <span id="wallet-hud">0</span></div>
-  <button id="pause-btn" type="button">⏸ MENU</button>
+  <button id="pause-btn" type="button" data-i18n="menu_btn">⏸ MENU</button>
 
   <div id="kill-feed"></div>
   <div id="crosshair"><div id="zc-hit"></div></div>
@@ -1413,7 +1480,7 @@ body { font-family: var(--k-body); background: var(--k-ink); }
       <div id="prod-desc"></div>
       <ul id="prod-specs"></ul>
       <div id="prod-effect"></div>
-      <button id="prod-visit-btn">VIEW ON ZEBRA.COM ↗</button>
+      <button id="prod-visit-btn" data-i18n="view_zebra">VIEW ON ZEBRA.COM ↗</button>
     </div>
   </div>
 
@@ -1429,7 +1496,7 @@ body { font-family: var(--k-body); background: var(--k-ink); }
     <div class="wslot empty" id="slot-3" data-num="4"><div class="ico">TC8300</div></div>
     <div class="wslot empty" id="slot-4" data-num="5"><div class="ico">DS3678</div></div>
     <div class="wslot empty" id="slot-5" data-num="6"><div class="ico">DS2278</div></div>
-    <div class="wslot empty" id="slot-6" data-num="7"><div class="ico">🦓 PLUSH</div></div>
+    <div class="wslot empty" id="slot-6" data-num="7"><div class="ico" data-i18n="slot_plush">🦓 PLUSH</div></div>
   </div>
 
   <div id="progress-wrap">
@@ -1449,12 +1516,12 @@ body { font-family: var(--k-body); background: var(--k-ink); }
         <div class="sc-name" data-i18n="buy_balloons_name">🎈 BUY +50 BALLOONS</div>
         <div class="sc-sub" id="buy-balloons-sub">Convert 1000 points into 50 balloons for the bank.</div>
       </div>
-      <div class="sc-cost">1000 pts</div>
-      <button class="shop-btn" id="buy-balloons-btn" type="button" disabled>NEED 1000</button>
+      <div class="sc-cost" data-i18n="cost_pts">1000 pts</div>
+      <button class="shop-btn" id="buy-balloons-btn" type="button" disabled>—</button>
     </div>
     <div class="shop-card" id="prize-card-plush">
       <div>
-        <div class="sc-name">🦓 ZEBRA PLUSHIE</div>
+        <div class="sc-name" data-i18n="prize_plush_name">🦓 ZEBRA PLUSHIE</div>
         <div class="sc-sub" id="prize-sub-plush">Win a real plushie at 30000 balloons.</div>
       </div>
       <div class="sc-cost">30000 🎈</div>
@@ -1462,7 +1529,7 @@ body { font-family: var(--k-body); background: var(--k-ink); }
     </div>
     <div class="shop-card" id="prize-card-terminal">
       <div>
-        <div class="sc-name">📟 ZEBRA HAND TERMINAL</div>
+        <div class="sc-name" data-i18n="prize_terminal_name">📟 ZEBRA HAND TERMINAL</div>
         <div class="sc-sub" id="prize-sub-terminal">Win a real hand terminal at 50000 balloons.</div>
       </div>
       <div class="sc-cost">50000 🎈</div>
@@ -1515,8 +1582,8 @@ body { font-family: var(--k-body); background: var(--k-ink); }
       <div class="pm-row">
         <label><span data-i18n="pm_prize">Prize</span>
           <select id="pm-prize" name="prize">
-            <option value="Zebra Plushie">🦓 Zebra Plushie</option>
-            <option value="Zebra Barcode Reader">📟 Zebra Barcode Reader</option>
+            <option value="Zebra Plushie" data-i18n="opt_plush">🦓 Zebra Plushie</option>
+            <option value="Zebra Barcode Reader" data-i18n="opt_terminal">📟 Zebra Barcode Reader</option>
           </select>
         </label>
       </div>
@@ -4586,6 +4653,25 @@ const I18N = {
     zf_keep: 'Keep playing in free play',
     zc_share_text: 'I scored {score} and made {rank} in Zebra Circus Blaster 🎪 Can you beat me?',
     zc_share_copied: '✓ LINK COPIED',
+    // ── full-coverage pass: product panel, HUD, touch, prizes ──
+    view_zebra: 'VIEW ON ZEBRA.COM ↗', menu_btn: '⏸ MENU', slot_plush: '🦓 PLUSH', cost_pts: '1000 pts',
+    tc_fire: 'FIRE', tc_jump: 'JUMP', tc_pick: 'PICK<br>UP',
+    tc_hint: 'Left: move · Right: look · buttons: fire / jump / pick up',
+    rot_title: 'ROTATE YOUR DEVICE', rot_sub: 'Circus Blaster plays best in landscape.', rot_play: 'PLAY IN PORTRAIT →',
+    prize_plush_name: '🦓 ZEBRA PLUSHIE', prize_terminal_name: '📟 ZEBRA HAND TERMINAL',
+    prize_plush: 'Zebra Plushie', prize_terminal: 'Zebra Barcode Reader',
+    opt_plush: '🦓 Zebra Plushie', opt_terminal: '📟 Zebra Barcode Reader',
+    combo_title: 'COMBO ×{n}', combo_bonus: '+{n} BONUS',
+    pw_golden: 'GOLDEN RUSH', pw_slow: 'SLOW-MO', pw_rapid: 'RAPID',
+    pwl_slow: 'SLOW-MO', pwl_rapid: 'RAPID FIRE', pwl_clear: 'BALLOON BOMB', pwl_bonus: 'BONUS +300',
+    level_1: 'LEVEL 1 · CIRCUS BLASTER', l2_unlocked: '— L2 unlocked! Pause → Level 2',
+    level_2: '⚡ LEVEL 2 · BALLOON FRENZY', level_3: '👑 LEVEL 3 · BIG TOP BOSS', boss_name: '👑 BIG TOP BOSS',
+    continue_btn: 'CONTINUE', kf_equipped: '{name} equipped', kf_dropped: '{name} dropped',
+    pts_gain: ' +{n} pts!', precision: ' PRECISION!', need_n: 'NEED {n}',
+    rfid_ready: '📡 RFID BULK READ <span style="color:#38d66b">READY</span> — R',
+    rfid_charging: '📡 RFID <span style="color:#ff6a00">CHARGING…</span>',
+    zc_share_title: 'Zebra Circus Blaster',
+    tt_tap: 'Tap a balloon to scan it', tt_drag: 'Drag to look around', tt_walk: 'Left thumb to walk', tt_grab: 'Walk into a scanner to grab it',
   },
   tr: {
     loading: 'ZEBRA SİRKİ YÜKLENİYOR...',
@@ -4704,6 +4790,25 @@ const I18N = {
     zf_keep: 'Serbest oyunda devam et',
     zc_share_text: 'Zebra Sirk Nişancısı\'nda {score} puan yaptım ve {rank} oldum 🎪 Beni geçebilir misin?',
     zc_share_copied: '✓ BAĞLANTI KOPYALANDI',
+    // ── tam kapsama: ürün paneli, HUD, dokunmatik, ödüller ──
+    view_zebra: 'ZEBRA.COM\'DA İNCELE ↗', menu_btn: '⏸ MENÜ', slot_plush: '🦓 PELUŞ', cost_pts: '1000 puan',
+    tc_fire: 'ATEŞ', tc_jump: 'ZIPLA', tc_pick: 'AL',
+    tc_hint: 'Sol: hareket · Sağ: bakış · düğmeler: ateş / zıpla / al',
+    rot_title: 'CİHAZINI ÇEVİR', rot_sub: 'Sirk Nişancısı yatay modda en iyi oynanır.', rot_play: 'DİKEY OYNA →',
+    prize_plush_name: '🦓 ZEBRA PELUŞ', prize_terminal_name: '📟 ZEBRA EL TERMİNALİ',
+    prize_plush: 'Zebra Peluş', prize_terminal: 'Zebra Barkod Okuyucu',
+    opt_plush: '🦓 Zebra Peluş', opt_terminal: '📟 Zebra Barkod Okuyucu',
+    combo_title: 'KOMBO ×{n}', combo_bonus: '+{n} BONUS',
+    pw_golden: 'ALTIN YAĞMURU', pw_slow: 'AĞIR ÇEKİM', pw_rapid: 'SERİ ATIŞ',
+    pwl_slow: 'AĞIR ÇEKİM', pwl_rapid: 'SERİ ATIŞ', pwl_clear: 'BALON BOMBASI', pwl_bonus: 'BONUS +300',
+    level_1: 'BÖLÜM 1 · SİRK NİŞANCISI', l2_unlocked: '— 2. Bölüm açıldı! Duraklat → Bölüm 2',
+    level_2: '⚡ BÖLÜM 2 · BALON ÇILGINLIĞI', level_3: '👑 BÖLÜM 3 · BÜYÜK PATRON', boss_name: '👑 BÜYÜK PATRON',
+    continue_btn: 'DEVAM', kf_equipped: '{name} kuşanıldı', kf_dropped: '{name} bırakıldı',
+    pts_gain: ' +{n} puan!', precision: ' TAM İSABET!', need_n: '{n} PUAN GEREK',
+    rfid_ready: '📡 RFID TOPLU OKUMA <span style="color:#38d66b">HAZIR</span> — R',
+    rfid_charging: '📡 RFID <span style="color:#ff6a00">ŞARJ OLUYOR…</span>',
+    zc_share_title: 'Zebra Sirk Nişancısı',
+    tt_tap: 'Taramak için balona dokun', tt_drag: 'Etrafa bakmak için sürükle', tt_walk: 'Yürümek için sol başparmak', tt_grab: 'Almak için tarayıcının yanına yürü',
   },
 };
 let currentLang = 'en';
@@ -4724,12 +4829,76 @@ function applyLang(lang) {
     b.classList.toggle('active', b.getAttribute('data-lang') === currentLang));
 }
 document.querySelectorAll('#lang-toggle button').forEach((b) =>
-  b.addEventListener('click', () => { applyLang(b.getAttribute('data-lang')); if (typeof refreshWalletUi === 'function') refreshWalletUi(); zcRenderStartBest(); zcRenderGoals(true); }));
+  b.addEventListener('click', () => { applyLang(b.getAttribute('data-lang')); if (typeof refreshWalletUi === 'function') refreshWalletUi(); zcRenderStartBest(); zcRenderGoals(true); if (lastScannedProduct) fillProductPanel(lastScannedProduct); if (gameActive) { updateLevelHud(); updateBossHud(); if (currentWeapon >= 0) trySwitch(currentWeapon); } }));
 // Translate a dynamic key with {placeholder} substitution.
 function t(key, vars) {
   let s = (I18N[currentLang] && I18N[currentLang][key]) || I18N.en[key] || key;
   if (vars) for (const k in vars) s = s.replace(new RegExp('\\{' + k + '\\}', 'g'), vars[k]);
   return s;
+}
+
+// Turkish product copy for the scan panel (English lives on WEAPONS itself).
+const WEAPONS_TR = {
+  MC9400: { fullName: 'Zebra MC9400 Mobil Bilgisayar',
+    desc: 'En zorlu endüstriyel ortamlar için üretilmiş, ultra dayanıklı kurumsal mobil bilgisayar.',
+    specs: ['Android 11 işletim sistemi', '5G ve WiFi 6E', 'IP65/IP67 + MIL-STD-810H', '6" WVGA dokunmatik ekran', 'SE58 tarama motoru – SE4850 seçeneği', '8000 mAh, çalışırken değiştirilebilir batarya'] },
+  MC3400: { fullName: 'Zebra MC3400 Mobil Bilgisayar',
+    desc: 'Hız ve esnekliğe ihtiyaç duyan saha çalışanları için kompakt, ergonomik mobil bilgisayar.',
+    specs: ['Android 13 işletim sistemi', 'WiFi 6 (802.11ax)', 'IP54 koruma sınıfı', '4" HD dokunmatik ekran', 'SE4710 tarama motoru', '3000 mAh çıkarılabilir batarya'] },
+  PS30: { fullName: 'Zebra PS30 Giyilebilir Tarayıcı',
+    desc: 'Depo toplama işlerinde en yüksek verimlilik için parmağa takılan, eller serbest yüzük tarayıcı.',
+    specs: ['Bluetooth 5.0, yüzük formunda', 'IP42 koruma sınıfı', '1D ve 2D barkod desteği', '8 saat batarya ömrü', 'İşaret parmağıyla tetikleme', 'MC9400/TC5X/TC7X ile uyumlu'] },
+  TC8300: { fullName: 'Zebra TC8300 Dokunmatik Bilgisayar',
+    desc: 'Soğuk depolama için –30°C ile 50°C arasında çalışan, dondurucu ve soğutucuya hazır mobil bilgisayar.',
+    specs: ['Android 10 işletim sistemi', '–30°C ile +50°C arası çalışma', 'IP65 ve IP67 koruma sınıfı', '4,3" WVGA ekran', 'Isıtmalı ekran teknolojisi', 'Eldivenle kullanılabilen dokunmatik'] },
+  DS3678: { fullName: 'Zebra DS3678 Ultra Dayanıklı Tarayıcı',
+    desc: 'En zorlu koşullarda barkod okuyan, ultra dayanıklı kablosuz tarayıcı.',
+    specs: ['1D/2D barkod okuma', 'IP65 ve IP67 koruma sınıfı', 'Bluetooth kablosuz', '6.500 lüks ışıkta tarama', '2,4 m düşmeye dayanıklı', 'Uzun menzilli tarama'] },
+  DS2278: { fullName: 'Zebra DS2278 El Tipi Tarayıcı',
+    desc: 'Günlük tarama işleri için kablosuz 1D/2D el tipi görüntüleyici.',
+    specs: ['1D/2D barkod okuma', 'Bluetooth kablosuz', 'Hafif tasarım', '13 saat batarya ömrü', 'Eller serbest kullanım seçeneği', 'Genel amaçlı'] },
+};
+// Localised product field (fullName / desc / specs) for a WEAPONS entry.
+function wText(w, field) {
+  const tr = currentLang === 'tr' ? WEAPONS_TR[w.id] : null;
+  return (tr && tr[field]) || w[field];
+}
+// Display name of a prize in the current language (data/analytics keep the English label).
+function prizeName(key) { return t('prize_' + key); }
+function upperLocal(str) { return String(str).toLocaleUpperCase(currentLang === 'tr' ? 'tr-TR' : 'en-US'); }
+let lastScannedProduct = null;
+function fillProductPanel(w) {
+  document.getElementById('ip-title').textContent = wText(w, 'fullName');
+  document.getElementById('prod-desc').textContent = wText(w, 'desc');
+  const specEl = document.getElementById('prod-specs');
+  specEl.innerHTML = '';
+  wText(w, 'specs').forEach((line) => { const li = document.createElement('li'); li.textContent = line; specEl.appendChild(li); });
+  document.getElementById('prod-effect').textContent = t('weff_' + w.id + '_d');
+}
+// Phones have no keyboard: swap the key-based wording for touch wording.
+if (IS_TOUCH) {
+  Object.assign(I18N.en, {
+    tut3_b: 'Tap balloons to pop them with your scanner. Walk into other devices to collect them. Chain pops for combos — and never tap the <strong style="color:#ff4060">black ✖ balloons</strong>.',
+    dyn_press_e_weapon: 'Walk into a scanner to grab it!',
+    dyn_press_e_pickup: 'Grabbing {name}…',
+    dyn_rfid_unlocked: 'ALL ZEBRA PRODUCTS SCANNED — RFID BULK READ UNLOCKED! Tap the RFID button',
+    dyn_rfid_unlocked_kf: '★ RFID BULK READ UNLOCKED — tap the RFID button',
+    rfid_ready: '📡 RFID BULK READ <span style="color:#38d66b">TAP!</span>',
+    dyn_l4_go: '🎯 POLIGON! Tap the barcode balloons — tap a slot below to switch scanner!',
+    dyn_prize_won: '🎉 YOU WON A {emoji} {label}! Voucher {coupon} — Menu → CLAIM',
+    l2_unlocked: '— Level 2 unlocked!',
+  });
+  Object.assign(I18N.tr, {
+    tut3_b: 'Tarayıcınla patlatmak için balonlara dokun. Diğer cihazları toplamak için yanlarına yürü. Art arda patlatıp kombo yap — <strong style="color:#ff4060">siyah ✖ balonlara</strong> asla dokunma.',
+    dyn_press_e_weapon: 'Almak için bir tarayıcının yanına yürü!',
+    dyn_press_e_pickup: '{name} alınıyor…',
+    dyn_rfid_unlocked: 'TÜM ZEBRA ÜRÜNLERİ TARANDI — RFID TOPLU OKUMA AÇILDI! RFID düğmesine dokun',
+    dyn_rfid_unlocked_kf: '★ RFID TOPLU OKUMA AÇILDI — RFID düğmesine dokun',
+    rfid_ready: '📡 RFID TOPLU OKUMA <span style="color:#38d66b">DOKUN!</span>',
+    dyn_l4_go: '🎯 POLİGON! Barkodlu balonlara dokun — tarayıcı değiştirmek için alttaki kutulara dokun!',
+    dyn_prize_won: '🎉 BİR {emoji} {label} KAZANDIN! Kupon {coupon} — Menü → AL',
+    l2_unlocked: '— 2. Bölüm açıldı!',
+  });
 }
 applyLang(localStorage.getItem('zebraLang') || 'en');
 
@@ -4787,6 +4956,7 @@ function zcBegin() {
   zc.startedAt = performance.now();
   zc.nextStarAt = zc.startedAt + 28000;
   document.body.classList.add('zc-playing');
+  zcFitCamera();
   zcRenderGoals(true);
 }
 function zcReset() {
@@ -5069,6 +5239,12 @@ function zcTick(delta) {
   // Slower UI + state checks (~5 Hz).
   if (now - zc.lastUiAt > 200) {
     zc.lastUiAt = now;
+    // Phones start with a scanner already in hand so the first tap pops a balloon.
+    if (IS_TOUCH && !zc.autoArmed && weaponObjs.length) {
+      zc.autoArmed = true;
+      const first = weaponObjs.find((o) => o.w.id === 'MC9400' && !o.collected) || weaponObjs.find((o) => !o.collected);
+      if (first && currentWeapon < 0 && collected.size === 0) pickupWeapon(first);
+    }
     for (const b of balloons) if (b.jammer && (now > b.jammer.until || !b.alive)) zcSetJammer(b, false);
     zcCheckGoals();
     if (level4Active && zc.l4EndAt) {
@@ -5137,7 +5313,7 @@ function zcCloseFinale() {
     const text = t('zc_share_text', { score: zcFmt(score), rank: t(zcRankKey(score)) });
     LunaAnalytics.track('share_score', { score });
     try {
-      if (navigator.share) { await navigator.share({ title: 'Zebra Circus Blaster', text, url }); return; }
+      if (navigator.share) { await navigator.share({ title: t('zc_share_title'), text, url }); return; }
       await navigator.clipboard.writeText(text + ' ' + url);
       btn.textContent = t('zc_share_copied');
     } catch (_) {
@@ -5484,6 +5660,59 @@ function zcCrowdTick(delta, time, force) {
   if (force) { parts.legs.instanceMatrix.needsUpdate = true; parts.legsShort.instanceMatrix.needsUpdate = true; }
   for (const key of ['legsStand', 'torso', 'head', 'eyes', 'hairA', 'hairB', 'hat', 'upper', 'fore', 'flag']) parts[key].instanceMatrix.needsUpdate = true;
 }
+
+// ═══════════════════════════════════════════════
+//  EASY MOBILE PLAY — tap a target to shoot it, aim assist, auto-pickup,
+//  hold-to-fire with every scanner, portrait-friendly field of view.
+// ═══════════════════════════════════════════════
+// Nudge a shot direction onto the nearest worthwhile target inside `cone`
+// radians (never onto a jammer balloon).
+function zcAssistDir(dir, cone) {
+  let best = null, bestAng = cone;
+  const tryPoint = (pt) => {
+    const to = new THREE.Vector3().subVectors(pt, camera.position);
+    const dist = to.length();
+    if (dist < 0.5 || dist > 60) return;
+    const ang = Math.acos(Math.max(-1, Math.min(1, to.multiplyScalar(1 / dist).dot(dir))));
+    if (ang < bestAng) { bestAng = ang; best = to.clone(); }
+  };
+  for (const b of balloons) if (b.alive && !b.jammer) tryPoint(b.mesh.position);
+  if (zc.star) tryPoint(zc.star.mesh.position);
+  if (level3Active && boss && boss.mesh) tryPoint(boss.mesh.position);
+  for (const q of qrObjs) if (!q.scanned) tryPoint(q.g.position);
+  return best || dir;
+}
+// Fire one shot along `dir` without swinging the player's view.
+function zcFireAlong(dir) {
+  camera.rotation.set(Math.asin(Math.max(-1, Math.min(1, dir.y))), Math.atan2(-dir.x, -dir.z), 0, 'YXZ');
+  camera.updateMatrixWorld(true);
+  shoot();
+  camera.rotation.set(pitch, yaw, 0, 'YXZ');
+  camera.updateMatrixWorld(true);
+}
+// FIRE button / held fire: shoot where the crosshair points, with assist.
+function zcTouchFire() {
+  const fwd = new THREE.Vector3(0, 0, -1).applyEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ'));
+  zcFireAlong(zcAssistDir(fwd, 0.1));
+}
+// Tap on the scene: shoot at the tapped point, with a wider assist.
+function zcTapFire(clientX, clientY) {
+  if (!gameActive || infoOpen || pauseOpen || zc.finaleOpen) return;
+  const ring = document.createElement('div');
+  ring.className = 'zc-tap'; ring.style.left = clientX + 'px'; ring.style.top = clientY + 'px';
+  document.body.appendChild(ring); setTimeout(() => ring.remove(), 340);
+  camera.rotation.set(pitch, yaw, 0, 'YXZ'); camera.updateMatrixWorld(true);
+  const dir = new THREE.Vector3((clientX / window.innerWidth) * 2 - 1, -(clientY / window.innerHeight) * 2 + 1, 0.5)
+    .unproject(camera).sub(camera.position).normalize();
+  zcFireAlong(zcAssistDir(dir, 0.15));
+}
+// Portrait phones get a taller field of view so the ring isn't a narrow slit.
+function zcFitCamera() {
+  if (!camera || STUDIO_AUTHORING_MODE) return;
+  const fov = (IS_TOUCH && window.innerHeight > window.innerWidth) ? 96 : 72;
+  if (camera.fov !== fov) { camera.fov = fov; camera.updateProjectionMatrix(); }
+}
+window.addEventListener('resize', () => setTimeout(zcFitCamera, 50));
 
 async function startGame() {
   document.getElementById('start-screen').style.display = 'none';
@@ -5933,7 +6162,7 @@ function showComboText(n, bonus) {
       + 'color:#ffd200;text-shadow:0 2px 12px rgba(255,106,0,0.8);letter-spacing:2px;text-align:center;';
     document.body.appendChild(el);
   }
-  el.innerHTML = `COMBO ×${n}<div style="font-size:0.45em;color:#fff">+${bonus} BONUS</div>`;
+  el.innerHTML = t('combo_title', {n}) + '<div style="font-size:0.45em;color:#fff">' + t('combo_bonus', {n: bonus}) + '</div>';
   el.style.fontSize = Math.min(64, 30 + n * 4) + 'px';
   el.style.opacity = '1';
   el.style.transition = 'none';
@@ -5957,8 +6186,8 @@ function activatePowerup(key, pos) {
     const w = currentWeapon >= 0 ? WEAPONS[currentWeapon] : WEAPONS[0];
     balloons.filter(b => b.alive).forEach((b, i) => setTimeout(() => { if (b.alive) { zc.safePop++; try { popBalloon(b, w); } finally { zc.safePop--; } addScore(w.pts); } }, i * 25));
   }
-  showPrompt(t('dyn_powerup', {icon: p.icon, label: p.label}), 2200);
-  addKillFeed(t('dyn_powerup_kf', {icon: p.icon, label: p.label}));
+  showPrompt(t('dyn_powerup', {icon: p.icon, label: t('pwl_' + key)}), 2200);
+  addKillFeed(t('dyn_powerup_kf', {icon: p.icon, label: t('pwl_' + key)}));
   updatePowerupHud();
 }
 function updatePowerupHud() {
@@ -5972,9 +6201,9 @@ function updatePowerupHud() {
   }
   const now = performance.now();
   const active = [];
-  if (now < goldenRushUntil) active.push('✨ GOLDEN RUSH ' + Math.ceil((goldenRushUntil - now) / 1000) + 's');
-  if (now < balloonSlowUntil) active.push('⏱ SLOW-MO ' + Math.ceil((balloonSlowUntil - now) / 1000) + 's');
-  if (now < fireRapidUntil) active.push('🔥 RAPID ' + Math.ceil((fireRapidUntil - now) / 1000) + 's');
+  if (now < goldenRushUntil) active.push('✨ ' + t('pw_golden') + ' ' + Math.ceil((goldenRushUntil - now) / 1000) + 's');
+  if (now < balloonSlowUntil) active.push('⏱ ' + t('pw_slow') + ' ' + Math.ceil((balloonSlowUntil - now) / 1000) + 's');
+  if (now < fireRapidUntil) active.push('🔥 ' + t('pw_rapid') + ' ' + Math.ceil((fireRapidUntil - now) / 1000) + 's');
   el.innerHTML = active.map(a => '<div style="background:rgba(5,5,15,0.8);border:1px solid #ff6a00;padding:3px 8px;margin-bottom:4px;color:#fff">' + a + '</div>').join('');
   el.style.display = active.length ? 'block' : 'none';
 }
@@ -5994,11 +6223,11 @@ function updateLevelHud() {
     const left = Math.max(0, Math.ceil((level2EndAt - performance.now()) / 1000));
     const mm = Math.floor(left / 60), ss = String(left % 60).padStart(2, '0');
     el.style.borderColor = '#ff2d55';
-    el.innerHTML = `⚡ LEVEL 2 · BALLOON FRENZY &nbsp; <span style="color:#ffd200">${mm}:${ss}</span> &nbsp; ${level2Score}/${LEVEL2_TARGET}`;
+    el.innerHTML = `${t('level_2')} &nbsp; <span style="color:#ffd200">${mm}:${ss}</span> &nbsp; ${level2Score}/${LEVEL2_TARGET}`;
     el.style.display = 'block';
   } else if (level3Active) {
     el.style.borderColor = '#ff2d55';
-    el.innerHTML = '👑 LEVEL 3 · BIG TOP BOSS';
+    el.innerHTML = t('level_3');
     el.style.display = 'block';
   } else if (level4Active) {
     el.style.borderColor = '#8ac640';
@@ -6011,7 +6240,7 @@ function updateLevelHud() {
     el.style.display = 'block';
   } else if (currentLevel === 1) {
     el.style.borderColor = '#ff6a00';
-    el.innerHTML = 'LEVEL 1 · CIRCUS BLASTER' + (level2Unlocked ? ' &nbsp;<span style="color:#38d66b">— L2 unlocked! Pause → Level 2</span>' : '');
+    el.innerHTML = t('level_1') + (level2Unlocked ? ' &nbsp;<span style="color:#38d66b">' + t('l2_unlocked') + '</span>' : '');
     el.style.display = 'block';
   } else { el.style.display = 'none'; }
 }
@@ -6181,12 +6410,13 @@ function updateBossHud() {
     el.id = '__boss';
     el.style.cssText = 'position:fixed;top:44px;left:50%;transform:translateX(-50%);z-index:929;'
       + 'pointer-events:none;width:340px;max-width:70vw;text-align:center;font-family:"Barlow Condensed",sans-serif;';
-    el.innerHTML = '<div style="font-weight:800;letter-spacing:2px;color:#ff2d55;font-size:14px;margin-bottom:3px">👑 BIG TOP BOSS</div>'
+    el.innerHTML = '<div style="font-weight:800;letter-spacing:2px;color:#ff2d55;font-size:14px;margin-bottom:3px" id="__bossname"></div>'
       + '<div style="height:14px;background:rgba(5,5,15,0.8);border:1px solid #ff2d55"><div id="__bosshp" style="height:100%;width:100%;background:linear-gradient(90deg,#ff2d55,#ffcf3f)"></div></div>';
     document.body.appendChild(el);
   }
   if (!level3Active || !boss) { el.style.display = 'none'; return; }
   el.style.display = 'block';
+  document.getElementById('__bossname').textContent = t('boss_name');
   document.getElementById('__bosshp').style.width = Math.max(0, (boss.hp / boss.maxHp) * 100) + '%';
 }
 
@@ -6235,7 +6465,7 @@ function showBigMessage(title, sub, onClose) {
     + '<div style="font-size:30px;font-weight:800;letter-spacing:2px;color:#ffd200">' + title + '</div>'
     + '<div style="font-family:\'Source Sans 3\',sans-serif;font-size:14px;color:#cdd3ea;margin:10px 0 18px;line-height:1.5">' + sub + '</div>'
     + '<button id="__bigmsg-btn" style="width:100%;background:#ff6a00;color:#fff;border:none;padding:12px;'
-    + 'font-family:\'Barlow Condensed\',sans-serif;font-weight:800;font-size:16px;letter-spacing:2px;cursor:pointer">CONTINUE</button></div>';
+    + 'font-family:\'Barlow Condensed\',sans-serif;font-weight:800;font-size:16px;letter-spacing:2px;cursor:pointer">' + t('continue_btn') + '</button></div>';
   el.style.display = 'flex';
   // Robust for both mouse (click) and touch (touchend) — guard against the
   // touchend + synthesized-click firing onClose twice.
@@ -7652,7 +7882,7 @@ let __touchSetup = false;
 function setupTouchControls() {
   if (!IS_TOUCH || __touchSetup) return;
   __touchSetup = true;
-  document.body.classList.add('touch');
+  document.body.classList.add('touch', 'rotate-ok');
 
   // If the browser ever drops fullscreen (e.g. on a rotation), the next tap
   // during play re-enters it, hiding the tab/address bar again. No-op once
@@ -7673,11 +7903,11 @@ function setupTouchControls() {
   const JOY_R = 52;
 
   // Movement joystick — appears wherever the left thumb lands.
-  let moveId = null, moveOx = 0, moveOy = 0;
+  let moveId = null, moveOx = 0, moveOy = 0, moveAt = 0, moveTravel = 0;
   moveZone.addEventListener('touchstart', (e) => {
     if (moveId !== null) return;
     const t = e.changedTouches[0];
-    moveId = t.identifier; moveOx = t.clientX; moveOy = t.clientY;
+    moveId = t.identifier; moveOx = t.clientX; moveOy = t.clientY; moveAt = performance.now(); moveTravel = 0;
     joy.style.left = moveOx + 'px'; joy.style.top = moveOy + 'px';
     knob.style.left = '50%'; knob.style.top = '50%'; joy.classList.add('on');
     e.preventDefault();
@@ -7687,6 +7917,7 @@ function setupTouchControls() {
       if (t.identifier !== moveId) continue;
       let dx = t.clientX - moveOx, dy = t.clientY - moveOy;
       const len = Math.hypot(dx, dy);
+      moveTravel = Math.max(moveTravel, len);
       if (len > JOY_R) { dx = dx / len * JOY_R; dy = dy / len * JOY_R; }
       knob.style.left = (50 + dx / JOY_R * 50) + '%';
       knob.style.top  = (50 + dy / JOY_R * 50) + '%';
@@ -7697,6 +7928,8 @@ function setupTouchControls() {
   const endMove = (e) => {
     for (const t of e.changedTouches) {
       if (t.identifier !== moveId) continue;
+      // a quick still touch on the walking side is also a tap-to-shoot
+      if (e.type === 'touchend' && performance.now() - moveAt < 280 && moveTravel < 12) zcTapFire(moveOx, moveOy);
       moveId = null; touchMove.x = 0; touchMove.y = 0; joy.classList.remove('on');
     }
   };
@@ -7705,21 +7938,29 @@ function setupTouchControls() {
 
   // Look drag — right thumb pans yaw/pitch.
   let lookId = null, lookX = 0, lookY = 0;
+  let tapX = 0, tapY = 0, tapAt = 0, tapMoved = 0; // a short, still touch is a tap-to-shoot
   lookZone.addEventListener('touchstart', (e) => {
     if (lookId !== null) return;
     const t = e.changedTouches[0];
     lookId = t.identifier; lookX = t.clientX; lookY = t.clientY; e.preventDefault();
+    tapX = t.clientX; tapY = t.clientY; tapAt = performance.now(); tapMoved = 0;
   }, { passive: false });
   lookZone.addEventListener('touchmove', (e) => {
     for (const t of e.changedTouches) {
       if (t.identifier !== lookId) continue;
       const s = 0.006;
+      tapMoved += Math.abs(t.clientX - lookX) + Math.abs(t.clientY - lookY);
       yaw -= (t.clientX - lookX) * s;
       pitch = Math.max(-1.4, Math.min(1.4, pitch - (t.clientY - lookY) * s));
       lookX = t.clientX; lookY = t.clientY; e.preventDefault();
     }
   }, { passive: false });
   const endLook = (e) => { for (const t of e.changedTouches) if (t.identifier === lookId) lookId = null; };
+  lookZone.addEventListener('touchend', (e) => {
+    for (const touch of e.changedTouches) {
+      if (touch.identifier === lookId && performance.now() - tapAt < 300 && tapMoved < 16) zcTapFire(tapX, tapY);
+    }
+  });
   lookZone.addEventListener('touchend', endLook);
   lookZone.addEventListener('touchcancel', endLook);
 
@@ -7730,7 +7971,7 @@ function setupTouchControls() {
     if (onEnd) { el.addEventListener('touchend', (e) => { e.preventDefault(); onEnd(); }); el.addEventListener('touchcancel', onEnd); }
   };
   bind('tc-fire',
-    () => { if (gameActive && !infoOpen && !pauseOpen) { mouseDown = true; shoot(); } },
+    () => { if (gameActive && !infoOpen && !pauseOpen) { mouseDown = true; zcTouchFire(); } },
     () => { mouseDown = false; });
   bind('tc-jump', () => { if (gameActive && !infoOpen && !pauseOpen && grounded) { verticalVel = JUMP_SPEED; grounded = false; } });
   bind('tc-pickup', () => { if (gameActive && !pauseOpen) tryPickup(); });
@@ -7789,7 +8030,7 @@ function pickupWeapon(obj) {
   trySwitch(idx); // grabbing a device always equips it
   flashScreen(obj.w.accent, 0.35);
   showPrompt(t('dyn_picked_up', {name: obj.w.name}), 2200);
-  addKillFeed(obj.w.name + ' equipped');
+  addKillFeed(t('kf_equipped', {name: obj.w.name}));
 }
 
 function dropWeapon() {
@@ -7840,7 +8081,7 @@ function dropWeapon() {
     document.getElementById('weapon-info').style.display = 'none';
   }
   showPrompt(t('dyn_dropped', {name: obj.w.name}), 1600);
-  addKillFeed(obj.w.name + ' dropped');
+  addKillFeed(t('kf_dropped', {name: obj.w.name}));
 }
 
 function trySwitch(idx) {
@@ -7891,7 +8132,8 @@ function shoot() {
   if (currentWeapon<0) { showPrompt(t('dyn_press_e_weapon'),1800); return; }
   const w = WEAPONS[currentWeapon];
   const now = Date.now();
-  const rate = (performance.now() < fireRapidUntil) ? w.fireRate * 0.4 : w.fireRate;
+  let rate = (performance.now() < fireRapidUntil) ? w.fireRate * 0.4 : w.fireRate;
+  if (IS_TOUCH && w.effect !== 'rapid') rate *= 0.55; // tapping should feel snappy on phones
   if (now-lastShot < rate) return;
   lastShot = now;
   Sound.sfx.shoot();
@@ -8010,7 +8252,7 @@ function fireRing(w) {
     if (hitQ) scanQR(hitQ);
   }
   createRingWave(center, w.areaR, w.projColor);
-  addKillFeed(t('dyn_ring_shockwave') + (closest ? ' +'+w.pts+'pts!' : ''));
+  addKillFeed(t('dyn_ring_shockwave') + (closest ? t('pts_gain', {n: w.pts}) : ''));
 }
 
 function fireCryo(w) {
@@ -8109,12 +8351,8 @@ function scanQR(qObj) {
   },20);
 
   // Fill popup with product info
-  document.getElementById('ip-title').textContent = w.fullName;
-  document.getElementById('prod-desc').textContent = w.desc;
-  const specEl = document.getElementById('prod-specs');
-  specEl.innerHTML = '';
-  w.specs.forEach(s => { const li = document.createElement('li'); li.textContent = s; specEl.appendChild(li); });
-  document.getElementById('prod-effect').textContent = w.effectDesc;
+  lastScannedProduct = w;
+  fillProductPanel(w);
   document.getElementById('prod-visit-btn').onclick = () => {
     LunaAnalytics.track('product_visit', { product: w.name, url: w.url });
     window.open(w.url, '_blank', 'noopener,noreferrer');
@@ -8157,13 +8395,14 @@ function updateRfidHud() {
       + 'font-family:"Barlow Condensed",sans-serif;font-weight:800;letter-spacing:1px;font-size:15px;'
       + 'padding:7px 14px;border:1px solid #00a651;color:#fff;background:rgba(5,5,15,0.85);';
     document.body.appendChild(el);
+    el.addEventListener('touchstart', (e) => { e.preventDefault(); rfidBulkRead(); }, { passive: false });
   }
   if (!rfidUnlocked) { el.style.display = 'none'; return; }
   el.style.display = 'block';
   const ready = performance.now() >= rfidCooldownUntil;
   el.innerHTML = ready
-    ? '📡 RFID BULK READ <span style="color:#38d66b">READY</span> — R'
-    : '📡 RFID <span style="color:#ff6a00">CHARGING…</span>';
+    ? t('rfid_ready')
+    : t('rfid_charging');
 }
 function rfidBulkRead() {
   const now = performance.now();
@@ -8276,8 +8515,8 @@ function awardPrize(key) {
   LunaAnalytics.track('prize_won', { prize: p.label });
   cheerCrowd();
   spawnConfetti(camera.position.clone().add(new THREE.Vector3(0, 0.5, -2)), 24, 0.25);
-  showPrompt(t('dyn_prize_won', {emoji: p.emoji, label: p.label.toUpperCase(), coupon: rec.coupon}), 6500);
-  addKillFeed(t('dyn_prize_won_kf', {label: p.label, coupon: rec.coupon}));
+  showPrompt(t('dyn_prize_won', {emoji: p.emoji, label: upperLocal(prizeName(key)), coupon: rec.coupon}), 6500);
+  addKillFeed(t('dyn_prize_won_kf', {label: prizeName(key), coupon: rec.coupon}));
   saveWallet();
 }
 // Back-compat alias.
@@ -8332,7 +8571,7 @@ function refreshWalletUi() {
   const bbs = document.getElementById('buy-balloons-sub');
   if (bb) {
     if (score >= 1000) { bb.disabled = false; bb.textContent = t('buy_ready'); if (bbs) bbs.textContent = t('buy_ready_sub'); }
-    else { bb.disabled = true; bb.textContent = `NEED ${1000 - score}`; if (bbs) bbs.textContent = t('buy_need_sub'); }
+    else { bb.disabled = true; bb.textContent = t('need_n', {n: 1000 - score}); if (bbs) bbs.textContent = t('buy_need_sub'); }
   }
   for (const p of Object.values(PRIZES)) {
     const rec = wallet.prizes[p.key];
@@ -8341,7 +8580,7 @@ function refreshWalletUi() {
     if (!btn) continue;
     if (rec.claimed) { btn.disabled = true; btn.textContent = t('prize_claimed_btn'); if (sub) sub.textContent = t('prize_claimed_sub', {coupon: rec.coupon || ''}); }
     else if (rec.won) { btn.disabled = false; btn.textContent = t('prize_claim_btn'); if (sub) sub.textContent = t('prize_won_sub', {coupon: rec.coupon || ''}); }
-    else { btn.disabled = true; btn.textContent = `${Math.min(wallet.earned, p.goal)}/${p.goal}`; if (sub) sub.textContent = t('prize_locked_sub', {label: p.label.toLowerCase(), goal: p.goal}); }
+    else { btn.disabled = true; btn.textContent = `${Math.min(wallet.earned, p.goal)}/${p.goal}`; if (sub) sub.textContent = t('prize_locked_sub', {label: prizeName(p.key), goal: p.goal}); }
   }
 }
 function armThenRedeem(key) {
@@ -8500,8 +8739,8 @@ function awardPrizeAndAutoShip(key, cb) {
     rec.claimed = true; saveWallet(); refreshWalletUi();
     LunaAnalytics.track('prize_claimed', { prize: PRIZES[key].label, auto: true });
     const addr = [ship.address, ship.city, ship.postcode, ship.country].filter(Boolean).join(', ');
-    showBigMessage(t('autoship_title', { emoji: PRIZES[key].emoji, label: PRIZES[key].label.toUpperCase() }),
-      t('autoship_sub', { label: PRIZES[key].label, addr }), () => { if (cb) cb(); });
+    showBigMessage(t('autoship_title', { emoji: PRIZES[key].emoji, label: upperLocal(prizeName(key)) }),
+      t('autoship_sub', { label: prizeName(key), addr }), () => { if (cb) cb(); });
   } else {
     // No address on file yet — collect it once, then continue.
     awardPrizeAndClaim(key, cb);
@@ -8541,7 +8780,7 @@ document.getElementById('prize-form').addEventListener('submit', async (e) => {
   btn.disabled = false; btn.textContent = t('pm_submit');
   document.getElementById('prize-form').style.display = 'none';
   document.getElementById('pm-done-sub').innerHTML = t('pm_done_ship', {
-    prize: claim.prize,
+    prize: (() => { const pz = Object.values(PRIZES).find((x) => x.label === claim.prize); return pz ? prizeName(pz.key) : claim.prize; })(),
     addr: claim.address + ', ' + claim.city + ' ' + claim.postcode + ', ' + claim.country,
     coupon: claim.coupon,
   });
@@ -8685,7 +8924,7 @@ function addKillFeed(txt) {
 
 function showFloatingScore(pts) {
   // Show brief message near center
-  addKillFeed('+'+pts+(pts>=25?' PRECISION!':''));
+  addKillFeed('+'+pts+(pts>=25?t('precision'):''));
 }
 
 // ═══════════════════════════════════════════════
@@ -8740,8 +8979,8 @@ function updateGame(delta, simTime) {
   if (MP.enabled) MP.tick(delta, simTime);
 
   // Auto-fire for rapid weapon
-  if(mouseDown && gameActive && !infoOpen && !pauseOpen && currentWeapon>=0 && WEAPONS[currentWeapon].effect==='rapid') {
-    shoot();
+  if(mouseDown && gameActive && !infoOpen && !pauseOpen && currentWeapon>=0 && (IS_TOUCH || WEAPONS[currentWeapon].effect==='rapid')) {
+    if (IS_TOUCH) zcTouchFire(); else shoot();
   }
 
   // Persistent authored visuals stay frozen until gameplay actually begins.
@@ -8751,7 +8990,7 @@ function updateGame(delta, simTime) {
     o.mesh.position.y = o.baseY+Math.sin(simTime*1.6+o.bob)*0.1;
     o.mesh.rotation.y += 0.018;
     o.pl.intensity = 0.6+Math.sin(simTime*2.5+o.bob)*0.35;
-    if(camera.position.distanceTo(o.mesh.position)<2.6) showPrompt(t('dyn_press_e_pickup', {name: o.w.name}),80);
+    if(camera.position.distanceTo(o.mesh.position)<2.6) { if (IS_TOUCH && !pauseOpen && !infoOpen) pickupWeapon(o); else showPrompt(t('dyn_press_e_pickup', {name: o.w.name}),80); }
   });
 
   if (gameActive) balloons.forEach(b=>{

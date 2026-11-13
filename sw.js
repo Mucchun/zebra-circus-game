@@ -1,5 +1,5 @@
 // Zebra Circus Blaster — service worker (offline + installability)
-const CACHE = 'zcb-v33-carnival'
+const CACHE = 'zcb-v34-mobile-tr'
 const CORE = [
   './',
   './index.html',
